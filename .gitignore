@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Prisma generated client (Prisma 7 `output`)
+/src/generated/
+**/generated/prisma/
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Build / framework output
+.next/
+out/
+dist/
+build/
+.turbo/
+
+# Logs / OS / editor
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Test / coverage
+coverage/

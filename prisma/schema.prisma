@@ -1,0 +1,632 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// PULSE Gym SaaS — Prisma Schema
+//
+// Deterministic translation of the Database Design Specification (DDS):
+// /docs/architecture/database-design-specification.md. No business rule is
+// introduced or modified here. Reviewed & finalized at the pre-bootstrap
+// Database Architecture Review — see /docs/database/database-architecture-review.md.
+//
+// FINALIZED IMPLEMENTATION DECISIONS (all traced to the DDS / its §16):
+//   • Identifier  → UUID v7, native `uuid` column:  @id @default(uuid(7)) @db.Uuid
+//                   Every FK scalar is also @db.Uuid (type-match required by Postgres).
+//                   Rationale & strategy: /docs/database/identifier-strategy.md.
+//   • MoneyMinorUnits → BigInt   (§16 "BigInt/Integer"; overflow-safe; money is sacred)
+//   • CurrencyCode    → @db.Char(3)   (§16 "Char(3)/VarChar(3)"; fixed ISO-4217)
+//   • ShortText/Text  → default `text` (DDS gives no length caps; VarChar(n) would be
+//                                       a new decision)
+//   • Timestamp-UTC → @db.Timestamptz ; Date → @db.Date (§16)
+//
+// PRISMA 7 CONFIGURATION MODEL (see /docs/database/prisma-7-strategy.md):
+//   • datasource carries `provider` ONLY — the connection URL lives in
+//     `prisma.config.ts` (`datasource.url`). `url` in this block is removed in v7.
+//   • generator is the new `prisma-client` (TS/ESM), with a required `output`.
+//   • Runtime connection uses the `@prisma/adapter-pg` driver adapter.
+//
+// MVP-ONLY (YAGNI, Task 4): the following DDS Optional Attributes were REMOVED from
+// the live schema — no MVP consumer; each is documented in its entity's "Future
+// Expansion" and traced to an authoritative rule:
+//   • Gym.branding, Gym.business_hours       (business-rules GYM-2 → future)
+//   • Branch.time_zone                       (GYM-2: tz is a gym setting; per-branch future)
+//   • GymUser.branch_id                      (authorization-architecture A1 → future)
+//   • GymUser.invited_at, GymUser.accepted_at(domain-model: invitation workflow future)
+//
+// ┌───────────────────────────────────────────────────────────────────────────┐
+// │ NOT ENFORCEABLE in schema.prisma — REQUIRED in the initial migration (raw   │
+// │ SQL). Full spec: /docs/database/initial-migration-specification.md.          │
+// │ schema.prisma ALONE does NOT guarantee these:                                │
+// │  Extensions:  pg_trgm, btree_gist                                            │
+// │  Partial UNIQUE:                                                             │
+// │   • Role        (key) WHERE gym_id IS NULL                  -- platform roles │
+// │   • Member      (gym_id,phone) WHERE phone IS NOT NULL AND archived_at IS NULL│
+// │   • Member      (gym_id,email) WHERE email IS NOT NULL AND archived_at IS NULL│
+// │   • TrainerAssignment (member_id) WHERE unassigned_at IS NULL    -- INV-35    │
+// │   • MembershipFreeze  (membership_id) WHERE status='ACTIVE'      -- FRZ       │
+// │  Partial INDEX: TrainerAssignment (trainer_gym_user_id) WHERE unassigned_at  │
+// │                 IS NULL                                                       │
+// │  Search: GIN trigram on Member.full_name (+phone/email)                      │
+// │  GiST EXCLUDE (INV-13, immutable-date backstop):                            │
+// │   Membership: (member_id WITH =, daterange(start_date,original_end_date,'[]')│
+// │                WITH &&) WHERE (cancelled_at IS NULL)                          │
+// │  CHECK: Member(phone OR email), Payment(amount>0),                           │
+// │         Plan(price>=0 AND duration_value>0),                                  │
+// │         Gym(expiring_soon_window_days>=0 AND grace_period_days>=0),           │
+// │         MembershipFreeze(frozen_days>=0)                                      │
+// │  WRITE-PATH ONLY (never a DB constraint — DDS §2.13/§16):                     │
+// │   INV-12 (≤1 ACTIVE + ≤1 SCHEDULED, SERIALIZABLE), INV-13 clock-relative,    │
+// │   INV-36 (no dangling trainer on revoke), INV-11 (archive guard),            │
+// │   Payment.currency = membership snapshot currency (cross-table).             │
+// └───────────────────────────────────────────────────────────────────────────┘
+//
+// Append-only (Payment, AuditLog) and append-only history (Membership snapshots,
+// MembershipFreeze, TrainerAssignment) carry NO updated_at (DDS §1.3) and get no
+// UPDATE/DELETE code paths.
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma" // provisional; aligns to the package at bootstrap
+  runtime      = "nodejs"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Prisma 7: connection URL configured in prisma.config.ts (datasource.url).
+}
+
+// ── Enumerations (controlled vocabularies — DDS §1.8; values are UPPER_SNAKE) ──
+
+enum DurationUnit {
+  DAY
+  WEEK
+  MONTH
+}
+
+enum MembershipOrigin {
+  NEW
+  RENEWAL
+  UPGRADE
+  DOWNGRADE
+}
+
+/// Derived status; the only persisted use is the `cached_status` accelerator
+/// (DDS §1.6/§2.13). EXPIRING_SOON is a derived boolean over ACTIVE, not a status
+/// value (DDS §1.8) — see Membership.cachedIsExpiringSoon.
+enum MembershipStatus {
+  SCHEDULED
+  ACTIVE
+  FROZEN
+  EXPIRED
+  CANCELLED
+}
+
+enum FreezeStatus {
+  ACTIVE
+  ENDED
+}
+
+enum PaymentEntryType {
+  PAYMENT
+  VOID
+  // future: REFUND, CREDIT, DISCOUNT (DDS §8 — additive, never edits to history)
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CARD_MANUAL
+  OTHER
+}
+
+/// DERIVED, never persisted (DDS §1.6/§8): computed from the Payment ledger.
+/// Declared to mirror the DDS §1.8 vocabulary; intentionally not a stored column.
+enum PaymentStanding {
+  PENDING
+  PARTIALLY_PAID
+  PAID
+}
+
+enum MemberStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum NotificationType {
+  MEMBERSHIP_EXPIRING_SOON
+  MEMBERSHIP_EXPIRED
+  // future: PAYMENT_DUE, ONBOARDING (DDS §1.8)
+}
+
+enum NotificationState {
+  UNREAD
+  READ
+  DISMISSED
+}
+
+/// GymUser access state (DDS §2.4 inline enum). Soft-revoke; never hard-deleted.
+enum GymUserStatus {
+  ACTIVE
+  REVOKED
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IAM / Tenant & Identity
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// DDS §2.1 — The business tenant; root of ownership and isolation.
+model Gym {
+  id                     String    @id @default(uuid(7)) @db.Uuid
+  name                   String
+  defaultCurrency        String    @map("default_currency") @db.Char(3)
+  timeZone               String    @map("time_zone") // IANA tz (gym-wide — GYM-2)
+  expiringSoonWindowDays Int       @default(7) @map("expiring_soon_window_days")
+  contactEmail           String?   @map("contact_email")
+  contactPhone           String?   @map("contact_phone")
+  gracePeriodDays        Int       @default(0) @map("grace_period_days") // time-rules T-11
+  archivedAt             DateTime? @map("archived_at") @db.Timestamptz
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  branches           Branch[]
+  gymUsers           GymUser[]
+  roles              Role[]
+  members            Member[]
+  memberNotes        MemberNote[]
+  trainerAssignments TrainerAssignment[]
+  plans              Plan[]
+  memberships        Membership[]
+  membershipFreezes  MembershipFreeze[]
+  payments           Payment[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+
+  // raw SQL: CHECK (expiring_soon_window_days >= 0 AND grace_period_days >= 0)
+  @@map("gyms")
+}
+
+/// DDS §2.2 — A physical location within a gym (BRN-1).
+model Branch {
+  id           String    @id @default(uuid(7)) @db.Uuid
+  gymId        String    @map("gym_id") @db.Uuid
+  name         String
+  address      Json? // DDS "address (JSON/Text)" — structured JSON chosen
+  contactPhone String?   @map("contact_phone")
+  isActive     Boolean   @default(true) @map("is_active")
+  archivedAt   DateTime? @map("archived_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  gym         Gym          @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  members     Member[]
+  memberships Membership[]
+  payments    Payment[]
+  auditLogs   AuditLog[]
+
+  @@map("branches")
+}
+
+/// DDS §2.3 — A global, authenticatable staff identity (NOT tenant-scoped).
+model User {
+  id            String    @id @default(uuid(7)) @db.Uuid
+  email         String    @unique
+  displayName   String    @map("display_name")
+  passwordHash  String    @map("password_hash") // hashed only; never plaintext
+  phone         String?
+  avatarUrl     String?   @map("avatar_url")
+  lastLoginAt   DateTime? @map("last_login_at") @db.Timestamptz
+  isActive      Boolean   @default(true) @map("is_active")
+  deactivatedAt DateTime? @map("deactivated_at") @db.Timestamptz
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  gymMemberships         GymUser[]           @relation("UserGymMembership")
+  gymUsersCreated        GymUser[]           @relation("GymUserCreatedBy")
+  membersCreated         Member[]            @relation("MemberCreatedBy")
+  memberNotesAuthored    MemberNote[]        @relation("MemberNoteAuthor")
+  trainerAssignmentsMade TrainerAssignment[] @relation("TrainerAssignmentAssignedBy")
+  plansCreated           Plan[]              @relation("PlanCreatedBy")
+  membershipsCreated     Membership[]        @relation("MembershipCreatedBy")
+  membershipsCancelled   Membership[]        @relation("MembershipCancelledBy")
+  freezesCreated         MembershipFreeze[]  @relation("MembershipFreezeCreatedBy")
+  freezesEnded           MembershipFreeze[]  @relation("MembershipFreezeEndedBy")
+  paymentsRecorded       Payment[]           @relation("PaymentRecordedBy")
+  notificationsRead      Notification[]      @relation("NotificationReadBy")
+  notificationsDismissed Notification[]      @relation("NotificationDismissedBy")
+  auditLogs              AuditLog[]          @relation("AuditLogActor")
+
+  @@map("users")
+}
+
+/// DDS §2.4 — The staff-membership link (User ↔ Gym ↔ Role); multi-gym enabler.
+model GymUser {
+  id          String        @id @default(uuid(7)) @db.Uuid
+  gymId       String        @map("gym_id") @db.Uuid
+  userId      String        @map("user_id") @db.Uuid
+  roleId      String        @map("role_id") @db.Uuid
+  status      GymUserStatus @default(ACTIVE)
+  revokedAt   DateTime?     @map("revoked_at") @db.Timestamptz
+  createdById String?       @map("created_by") @db.Uuid
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  gym                Gym                 @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  user               User                @relation("UserGymMembership", fields: [userId], references: [id], onDelete: Restrict)
+  role               Role                @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  createdBy          User?               @relation("GymUserCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  trainerAssignments TrainerAssignment[] @relation("TrainerAssignmentTrainer")
+
+  @@unique([gymId, userId])
+  @@index([gymId, status])
+  @@map("gym_users")
+}
+
+/// DDS §2.5 — A named bundle of permissions (no behavior). gym_id null = platform.
+model Role {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  key          String // stable identifier e.g. owner, trainer, front_desk
+  name         String
+  isSystem     Boolean  @map("is_system")
+  isAssignable Boolean  @map("is_assignable") // false = dormant (seeded unassignable)
+  gymId        String?  @map("gym_id") @db.Uuid // null = platform role; non-null = future gym-custom
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  gym             Gym?             @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  gymUsers        GymUser[]
+  rolePermissions RolePermission[]
+
+  // @@unique([gymId, key]) covers gym-custom roles; platform roles (gym_id NULL)
+  // need partial-unique `UNIQUE (key) WHERE gym_id IS NULL` (raw SQL — NULLs are
+  // distinct in a standard composite unique).
+  @@unique([gymId, key])
+  @@map("roles")
+}
+
+/// DDS §2.6 — Global reference data: a stable named right. Key immutable (INV-7).
+model Permission {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  key          String   @unique // e.g. payments.record — NEVER renamed (INV-7)
+  capabilityId String   @map("capability_id") @db.Uuid
+  description  String // label may change; the key may not
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  capability      Capability       @relation(fields: [capabilityId], references: [id], onDelete: Restrict)
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+/// DDS §2.7 — Global reference data: a business grouping that owns permissions.
+model Capability {
+  id                 String   @id @default(uuid(7)) @db.Uuid
+  key                String   @unique // e.g. payment_management
+  name               String
+  responsibleContext String   @map("responsible_context") // e.g. Billing
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  permissions Permission[]
+
+  @@map("capabilities")
+}
+
+/// DDS §2.8 — Join (Role ↔ Permission): the data that IS a role's access.
+model RolePermission {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  roleId       String   @map("role_id") @db.Uuid
+  permissionId String   @map("permission_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Cascade ONLY on these owned join rows (DDS §3); no other relationship cascades.
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@map("role_permissions")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Member Management
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// DDS §2.9 — A customer of the gym (MBR-1).
+model Member {
+  id           String       @id @default(uuid(7)) @db.Uuid
+  gymId        String       @map("gym_id") @db.Uuid
+  branchId     String       @map("branch_id") @db.Uuid // home branch (required — §2.9)
+  fullName     String       @map("full_name")
+  status       MemberStatus @default(ACTIVE)
+  phone        String? // at least one of phone/email required (CHECK — raw SQL)
+  email        String?
+  dateOfBirth  DateTime?    @map("date_of_birth") @db.Date
+  gender       String?
+  notesSummary String?      @map("notes_summary")
+  joinedOn     DateTime?    @map("joined_on") @db.Date
+  archivedAt   DateTime?    @map("archived_at") @db.Timestamptz
+  createdById  String?      @map("created_by") @db.Uuid
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  gym                Gym                 @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  branch             Branch              @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  createdBy          User?               @relation("MemberCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  notes              MemberNote[]
+  memberships        Membership[]
+  trainerAssignments TrainerAssignment[]
+  notifications      Notification[]
+
+  // raw SQL: partial-unique (gym_id, phone)/(gym_id, email) WHERE <col> IS NOT NULL
+  //          AND archived_at IS NULL (INV-3); GIN trigram on full_name (+contact);
+  //          CHECK (phone IS NOT NULL OR email IS NOT NULL) (MBR-2/INV-9).
+  // R-1 (perf optimization, approved 2026-06-25): (gym_id,status,full_name) serves the
+  // VH active-list filter+sort in one index and subsumes the former (gym_id,status)
+  // prefix. All-status name sort (rare) falls back to a sort/trigram.
+  @@index([gymId, status, fullName])
+  @@index([gymId, branchId])
+  @@map("members")
+}
+
+/// DDS §2.10 — Qualitative note about a member.
+model MemberNote {
+  id           String    @id @default(uuid(7)) @db.Uuid
+  gymId        String    @map("gym_id") @db.Uuid
+  memberId     String    @map("member_id") @db.Uuid
+  body         String
+  authorUserId String    @map("author_user_id") @db.Uuid
+  category     String?
+  archivedAt   DateTime? @map("archived_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  gym    Gym    @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  member Member @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  author User   @relation("MemberNoteAuthor", fields: [authorUserId], references: [id], onDelete: Restrict)
+
+  @@index([memberId, createdAt])
+  @@map("member_notes")
+}
+
+/// DDS §2.11 — Append-only trainer↔member relationship history (informational only).
+model TrainerAssignment {
+  id               String    @id @default(uuid(7)) @db.Uuid
+  gymId            String    @map("gym_id") @db.Uuid
+  memberId         String    @map("member_id") @db.Uuid
+  trainerGymUserId String    @map("trainer_gym_user_id") @db.Uuid
+  assignedAt       DateTime  @default(now()) @map("assigned_at") @db.Timestamptz
+  assignedById     String    @map("assigned_by") @db.Uuid
+  unassignedAt     DateTime? @map("unassigned_at") @db.Timestamptz // null = current/open
+
+  gym        Gym     @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  member     Member  @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  trainer    GymUser @relation("TrainerAssignmentTrainer", fields: [trainerGymUserId], references: [id], onDelete: Restrict)
+  assignedBy User    @relation("TrainerAssignmentAssignedBy", fields: [assignedById], references: [id], onDelete: Restrict)
+
+  // raw SQL: partial-unique (member_id) WHERE unassigned_at IS NULL (INV-35);
+  //          partial index (trainer_gym_user_id) WHERE unassigned_at IS NULL.
+  // INV-36 (no dangling trainer) is write-path enforced on GymUser revoke.
+  @@map("trainer_assignments")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plan Catalog
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// DDS §2.12 — A sellable offering (PLN-1). Present-state; history lives in
+/// membership snapshots, never here.
+model Plan {
+  id            String       @id @default(uuid(7)) @db.Uuid
+  gymId         String       @map("gym_id") @db.Uuid
+  name          String
+  price         BigInt // MoneyMinorUnits; affects FUTURE memberships only (PLN-3)
+  currency      String       @db.Char(3)
+  durationValue Int          @map("duration_value")
+  durationUnit  DurationUnit @map("duration_unit")
+  isActive      Boolean      @default(true) @map("is_active")
+  description   String?
+  tier          String? // data-viz tier, not status
+  archivedAt    DateTime?    @map("archived_at") @db.Timestamptz
+  createdById   String?      @map("created_by") @db.Uuid
+  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  gym         Gym          @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  createdBy   User?        @relation("PlanCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  memberships Membership[]
+
+  // raw SQL: CHECK (price >= 0 AND duration_value > 0)
+  @@index([gymId, isActive])
+  @@map("plans")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Membership Lifecycle
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// DDS §2.13 — Append-only access periods + operational state. Snapshot/date/
+/// origin fields are write-once (INV-14/19). Status is DERIVED; cached_* columns
+/// are recomputable accelerators, never the source of truth (§1.6).
+model Membership {
+  // Immutable (write-once)
+  id                      String           @id @default(uuid(7)) @db.Uuid
+  gymId                   String           @map("gym_id") @db.Uuid
+  branchId                String           @map("branch_id") @db.Uuid
+  memberId                String           @map("member_id") @db.Uuid
+  sourcePlanId            String           @map("source_plan_id") @db.Uuid
+  snapshotPlanName        String           @map("snapshot_plan_name")
+  snapshotPrice           BigInt           @map("snapshot_price") // = amount_due (M-4)
+  snapshotCurrency        String           @map("snapshot_currency") @db.Char(3)
+  snapshotDurationValue   Int              @map("snapshot_duration_value")
+  snapshotDurationUnit    DurationUnit     @map("snapshot_duration_unit")
+  origin                  MembershipOrigin
+  predecessorMembershipId String?          @map("predecessor_membership_id") @db.Uuid
+  startDate               DateTime         @map("start_date") @db.Date
+  originalEndDate         DateTime         @map("original_end_date") @db.Date
+  scheduledEffectiveFrom  DateTime?        @map("scheduled_effective_from") @db.Date
+  createdById             String           @map("created_by") @db.Uuid // NOT NULL (F-2 resolved): system-originated creations use the reserved system-actor User (seed)
+  createdAt               DateTime         @default(now()) @map("created_at") @db.Timestamptz
+
+  // Operational (mutable)
+  activatedAt   DateTime? @map("activated_at") @db.Timestamptz
+  cancelledAt   DateTime? @map("cancelled_at") @db.Timestamptz
+  cancelledById String?   @map("cancelled_by") @db.Uuid
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Cache (derived, recomputable — §1.6; NEVER authoritative)
+  cachedStatus           MembershipStatus @map("cached_status")
+  cachedEffectiveEndDate DateTime         @map("cached_effective_end_date") @db.Date
+  cachedTotalFrozenDays  Int              @default(0) @map("cached_total_frozen_days")
+  cachedIsExpiringSoon   Boolean          @default(false) @map("cached_is_expiring_soon")
+
+  gym           Gym                @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  branch        Branch             @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  member        Member             @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  sourcePlan    Plan               @relation(fields: [sourcePlanId], references: [id], onDelete: Restrict)
+  predecessor   Membership?        @relation("MembershipChain", fields: [predecessorMembershipId], references: [id], onDelete: Restrict)
+  successors    Membership[]       @relation("MembershipChain")
+  createdBy     User               @relation("MembershipCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  cancelledBy   User?              @relation("MembershipCancelledBy", fields: [cancelledById], references: [id], onDelete: Restrict)
+  freezes       MembershipFreeze[]
+  payments      Payment[]
+  notifications Notification[]
+
+  // raw SQL: EXCLUDE USING gist (member_id WITH =, daterange(start_date,
+  //          original_end_date, '[]') WITH &&) WHERE (cancelled_at IS NULL) (INV-13).
+  // INV-12 (≤1 ACTIVE, ≤1 SCHEDULED per member) is a SERIALIZABLE write-path check,
+  // NOT an index — (member_id, cached_status) below is an accelerator only.
+  @@index([gymId, memberId])
+  @@index([memberId, cachedStatus])
+  @@index([gymId, cachedStatus, cachedEffectiveEndDate])
+  @@index([gymId, sourcePlanId])
+  @@index([predecessorMembershipId])
+  @@index([gymId, createdAt])
+  @@map("memberships")
+}
+
+/// DDS §2.14 — Append-only freeze record; the immutable source of end-date
+/// extension (FRZ). Resume closes the row (sets actual_end / status=ENDED).
+model MembershipFreeze {
+  id           String       @id @default(uuid(7)) @db.Uuid
+  gymId        String       @map("gym_id") @db.Uuid
+  membershipId String       @map("membership_id") @db.Uuid
+  freezeStart  DateTime     @map("freeze_start") @db.Date
+  plannedEnd   DateTime?    @map("planned_end") @db.Date
+  actualEnd    DateTime?    @map("actual_end") @db.Date // set on resume
+  status       FreezeStatus @default(ACTIVE)
+  frozenDays   Int          @default(0) @map("frozen_days") // finalized on resume (INV-18)
+  createdById  String       @map("created_by") @db.Uuid
+  endedById    String?      @map("ended_by") @db.Uuid
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  gym        Gym        @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  membership Membership @relation(fields: [membershipId], references: [id], onDelete: Restrict)
+  createdBy  User       @relation("MembershipFreezeCreatedBy", fields: [createdById], references: [id], onDelete: Restrict)
+  endedBy    User?      @relation("MembershipFreezeEndedBy", fields: [endedById], references: [id], onDelete: Restrict)
+
+  // raw SQL: partial-unique (membership_id) WHERE status = 'ACTIVE' (≤1 active freeze);
+  //          CHECK (frozen_days >= 0).
+  @@index([gymId, status])
+  @@map("membership_freezes")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Billing & Payments
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// DDS §2.15 — Append-only financial ledger. NO row is ever updated/deleted
+/// (INV-21); a correction is a new VOID entry referencing the original. No
+/// updated_at, no soft-delete (append-only).
+model Payment {
+  id             String           @id @default(uuid(7)) @db.Uuid
+  gymId          String           @map("gym_id") @db.Uuid
+  branchId       String?          @map("branch_id") @db.Uuid // inherited from membership
+  membershipId   String           @map("membership_id") @db.Uuid // never null (PAY-6/INV-20)
+  entryType      PaymentEntryType @map("entry_type")
+  amount         BigInt // positive magnitude; effect by entry_type (CHECK amount > 0)
+  currency       String           @db.Char(3) // captured (PAY-2)
+  method         PaymentMethod
+  receivedAt     DateTime         @map("received_at") @db.Timestamptz // revenue period basis
+  recordedAt     DateTime         @default(now()) @map("recorded_at") @db.Timestamptz
+  recordedById   String           @map("recorded_by") @db.Uuid
+  voidsPaymentId String?          @map("voids_payment_id") @db.Uuid // required iff entry_type = VOID
+  reference      String? // receipt no.
+  note           String?
+  voidReason     String?          @map("void_reason")
+
+  gym          Gym        @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  branch       Branch?    @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  membership   Membership @relation(fields: [membershipId], references: [id], onDelete: Restrict)
+  recordedBy   User       @relation("PaymentRecordedBy", fields: [recordedById], references: [id], onDelete: Restrict)
+  voidsPayment Payment?   @relation("PaymentVoid", fields: [voidsPaymentId], references: [id], onDelete: Restrict)
+  voidedBy     Payment?   @relation("PaymentVoid")
+
+  // @@unique on the nullable voids_payment_id enforces "a payment is voided at most
+  // once" (Postgres treats NULLs as distinct). raw SQL: CHECK (amount > 0).
+  // Currency-matches-membership is write-path (cross-table).
+  @@unique([voidsPaymentId])
+  @@index([gymId, membershipId])
+  @@index([gymId, receivedAt])
+  @@index([gymId, entryType, receivedAt])
+  @@map("payments")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Notifications
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// DDS §2.16 — An in-app alert for staff (NTF-1). Append-only generation;
+/// forward-only state. dedupe_key unique within gym (INV-33).
+model Notification {
+  id            String            @id @default(uuid(7)) @db.Uuid
+  gymId         String            @map("gym_id") @db.Uuid
+  type          NotificationType
+  memberId      String            @map("member_id") @db.Uuid
+  membershipId  String            @map("membership_id") @db.Uuid
+  dedupeKey     String            @map("dedupe_key") // encodes (membership_id, type, period)
+  state         NotificationState @default(UNREAD)
+  generatedAt   DateTime          @default(now()) @map("generated_at") @db.Timestamptz
+  message       String
+  readAt        DateTime?         @map("read_at") @db.Timestamptz
+  readById      String?           @map("read_by") @db.Uuid
+  dismissedAt   DateTime?         @map("dismissed_at") @db.Timestamptz
+  dismissedById String?           @map("dismissed_by") @db.Uuid
+
+  gym         Gym        @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  member      Member     @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  membership  Membership @relation(fields: [membershipId], references: [id], onDelete: Restrict)
+  readBy      User?      @relation("NotificationReadBy", fields: [readById], references: [id], onDelete: Restrict)
+  dismissedBy User?      @relation("NotificationDismissedBy", fields: [dismissedById], references: [id], onDelete: Restrict)
+
+  @@unique([gymId, dedupeKey])
+  @@index([gymId, state])
+  @@index([gymId, membershipId])
+  @@map("notifications")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IAM / cross-cutting
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// DDS §2.17 — Append-only, write-once permanent record of sensitive actions
+/// (INV-39). No updated_at; never updated/deleted. Target is polymorphic
+/// (target_type + target_id), so it is NOT modeled as an FK relation.
+model AuditLog {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  gymId         String   @map("gym_id") @db.Uuid
+  branchId      String?  @map("branch_id") @db.Uuid
+  action        String // domain.action e.g. payment.recorded
+  actorUserId   String?  @map("actor_user_id") @db.Uuid // null for system actions
+  targetType    String   @map("target_type")
+  targetId      String?  @map("target_id") @db.Uuid // Identifier of the affected row
+  occurredAt    DateTime @default(now()) @map("occurred_at") @db.Timestamptz
+  metadata      Json?    @map("metadata") // non-sensitive context: ids, not bodies (nullable — F-1 resolved 2026-06-25)
+  correlationId String   @map("correlation_id")
+
+  gym    Gym     @relation(fields: [gymId], references: [id], onDelete: Restrict)
+  branch Branch? @relation(fields: [branchId], references: [id], onDelete: Restrict)
+  actor  User?   @relation("AuditLogActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([gymId, occurredAt])
+  @@index([gymId, targetType, targetId])
+  @@index([gymId, actorUserId, occurredAt])
+  @@map("audit_logs")
+}
