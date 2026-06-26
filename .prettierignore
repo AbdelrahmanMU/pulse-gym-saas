@@ -1,0 +1,15 @@
+# Generated / vendored output — never formatted
+**/dist/**
+**/.next/**
+**/.turbo/**
+**/coverage/**
+**/node_modules/**
+**/generated/**
+pnpm-lock.yaml
+
+# Frozen Foundation v1.0 governance & artifacts — authored prose / pre-existing,
+# not reformatted by Session 1 (globals.css relocates in T-14; prisma/ in T-09).
+docs/**
+CLAUDE.md
+globals.css
+prisma/**
