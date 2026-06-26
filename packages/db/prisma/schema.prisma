@@ -63,10 +63,11 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 generator client {
-  provider     = "prisma-client"
-  output       = "../src/generated/prisma" // provisional; aligns to the package at bootstrap
-  runtime      = "nodejs"
-  moduleFormat = "esm"
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma" // → packages/db/src/generated/prisma (git-ignored; T-09)
+  runtime             = "nodejs"
+  moduleFormat        = "esm"
+  importFileExtension = "js" // emit .js on relative imports so tsc-built ESM runs under Node
 }
 
 datasource db {

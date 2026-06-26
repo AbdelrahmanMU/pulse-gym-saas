@@ -12,4 +12,6 @@ pnpm-lock.yaml
 docs/**
 CLAUDE.md
 globals.css
-prisma/**
+
+# Prisma artifacts (schema + migrations) are managed by Prisma, not Prettier.
+**/prisma/**

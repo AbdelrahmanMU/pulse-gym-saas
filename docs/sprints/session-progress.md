@@ -69,10 +69,40 @@ rules from T-27 pulled forward into Session 2 delivery. See `session-2-execution
 
 | Field | Value |
 |---|---|
-| **Status** | 🔜 Pending — awaiting Session 2 execution plan approval |
-| **Tasks** | T-06, T-09, T-10, T-11, T-15, T-16, T-18, T-23 + foundational T-27 fitness rules |
+| **Status** | ✅ Completed / Verified — awaiting human acceptance |
+| **Verified date** | 2026-06-26 |
+| **Branch** | `feat/platform-foundation` (not merged) |
+| **Tasks** | T-06, T-09, T-10, T-11, T-15, T-16, T-18, T-23 + foundational T-27 fitness rules (ESLint layer + initial Vitest suite) |
+| **Report** | `docs/sprints/session-2-verification-report.md` (full criterion-by-criterion evidence) |
 
-*This row will be updated to Completed / Verified / Approved when Session 2 closes.*
+### Acceptance criteria — all satisfied (evidence in the verification report)
+
+| Criterion | Result |
+|---|---|
+| App boots; strict TS; `pnpm verify` green | ✅ `next build` + full verify green; packages consumed via `dist` (no `transpilePackages`). |
+| Zod env fail-fast (missing var → refuses to boot, clear message) | ✅ Reproduced: build refuses listing `DATABASE_URL`/`AUTH_SECRET`; no value leak. |
+| Pino structured logging + redaction | ✅ Standard fields + `AsyncLocalStorage` correlation; secret redaction unit-verified. |
+| `docker compose up` → healthy Postgres 18 | ✅ `postgres:18.4` healthy; native `uuidv7()` confirmed; host port 55432. |
+| Migrate + seed clean; raw-SQL tail present; idempotent | ✅ `migrate status` clean; extensions/partial-uniques/GiST/CHECKs/trigram verified in-DB; 13 caps / 40 perms / 5 roles / 102 mappings / Gym+Branch+Owner+system-actor; re-run stable. |
+| `/api/health` healthy→200, DB down→503, no secrets | ✅ Both paths reproduced. |
+| Vitest / Playwright / axe-core + isolated test DB | ✅ 7 unit/fitness + 3 integration (test DB :55433) + 1 E2E (zero axe violations). |
+| ESLint fitness rules catch planted violations | ✅ deep-import / role-name / hardcoded-permission fail `pnpm lint`; cycle caught by dependency-cruiser suite (see report §3.1 for the `import/no-cycle` Windows note). |
+| Initial Vitest fitness suite | ✅ clean graph passes; planted cycle fails the suite. |
+
+### Key decisions & deviations
+
+1. **ADR-028 (seed role set)** — human-approved: seed Owner/Trainer (assignable) + Front Desk/Manager/Accountant (dormant); **Receptionist & Branch Manager not seeded** (no canonical permission matrix — strategic definitions, not seed data). DDS §16 seed line flagged for reconciliation. Recorded in `decision-log.md`.
+2. **No new unapproved deps** — `dotenv`/`tsx`/`pino-pretty` avoided via Node built-ins (`process.loadEnvFile`, `--env-file`), a compiled seed, and plain Pino JSON.
+3. **Prisma generator `importFileExtension="js"`** — so the tsc-built ESM client runs under Node (the seed runs as `node dist/seed.js`).
+4. **Host DB ports 55432/55433** — avoid a native host PostgreSQL already bound to 5432.
+
+### Known follow-ups (non-blocking)
+
+- Owner User credential is a placeholder until auth lands (T-19, Session 3).
+- `import/no-cycle` has a Windows/flat-config limitation; dependency-cruiser is the cross-platform cycle gate.
+- App container + health-check wiring in Compose is a Phase-1 deployment item.
+
+**Branch status:** `feat/platform-foundation` — NOT merged to main. Session 3 must not begin until human acceptance.
 
 ---
 

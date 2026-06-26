@@ -1,5 +1,0 @@
-# The `apps/` workspace root. Only `apps/web` (the MVP modular monolith) is
-# created — in T-06 (Session 2). Future apps (member-portal, mobile,
-# super-admin, marketing, public-api) are documented-only and NEVER scaffolded
-# ahead of need (monorepo-strategy §1, §11). This file keeps the directory
-# tracked while it is empty.

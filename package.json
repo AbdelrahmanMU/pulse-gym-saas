@@ -17,9 +17,15 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "verify": "pnpm build && pnpm lint && pnpm type-check && pnpm format:check",
-    "db:migrate": "prisma migrate dev",
-    "db:seed": "prisma db seed",
-    "db:reset": "prisma migrate reset"
+    "test:integration": "pnpm --filter @pulse/web test:integration",
+    "test:e2e": "pnpm --filter @pulse/web test:e2e",
+    "db:migrate": "pnpm --filter @pulse/db db:migrate",
+    "db:seed": "pnpm --filter @pulse/db db:seed",
+    "db:status": "pnpm --filter @pulse/db db:status",
+    "db:reset": "pnpm --filter @pulse/db db:reset",
+    "db:up": "docker compose up -d postgres",
+    "db:test:up": "docker compose --profile test up -d postgres-test",
+    "db:down": "docker compose down"
   },
   "devDependencies": {
     "@pulse/config": "workspace:*",
