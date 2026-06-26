@@ -72,6 +72,8 @@ rules from T-27 pulled forward into Session 2 delivery. See `session-2-execution
 | **Status** | ✅ Completed / Verified — awaiting human acceptance |
 | **Verified date** | 2026-06-26 |
 | **Branch** | `feat/platform-foundation` (not merged) |
+| **Commit** | `0b566d7` — `feat(platform): app, data & runtime foundations (Sprint 0 Session 2)` |
+| **Tag** | `v0.2.0-platform` (annotated, on `0b566d7`) |
 | **Tasks** | T-06, T-09, T-10, T-11, T-15, T-16, T-18, T-23 + foundational T-27 fitness rules (ESLint layer + initial Vitest suite) |
 | **Report** | `docs/sprints/session-2-verification-report.md` (full criterion-by-criterion evidence) |
 
@@ -110,8 +112,9 @@ rules from T-27 pulled forward into Session 2 delivery. See `session-2-execution
 
 | Field | Value |
 |---|---|
-| **Status** | 🔜 Pending |
+| **Status** | 🔜 Pending — **gated by the Session 3 Security Checklist** (`session-3-security-checklist.md`); implementation begins only after the human approves that checklist |
 | **Tasks** | T-07, T-19, T-20, T-26 |
+| **Security gate** | This is the first security-sensitive session (R6). A mandatory `/security-review` runs **before** T-19/T-20 land. From here the focus shifts from project infrastructure to **code quality + security behavior**. |
 
 ---
 
