@@ -1,0 +1,157 @@
+# PULSE — Continuous Integration (T-25, decision D-6).
+#
+# DORMANT-UNTIL-REMOTE: this workflow is authored and inspectable but no git remote
+# exists yet, so it has never executed. It is intentionally minimal (D-6: "prepare the
+# pipeline; do not overbuild before the repo is actively used"). When a remote is added,
+# enable branch protection requiring the `gate` and `database` jobs to pass before a
+# squash-merge — red blocks merge.
+#
+# Two jobs mirror the cost split:
+#   • gate     — the DB-free Turbo gate (build, lint, type-check, format, unit+fitness).
+#                The unit+fitness run includes the full six-rule architectural-fitness
+#                suite (T-27) and the token-compliance scan (R-3), which CONSOLIDATE the
+#                role-name authz grep gate and the no-design-literal check — so no
+#                separate grep steps are needed here (T-27 Definition of Done).
+#   • database — integration + E2E against a real PostgreSQL 18 service.
+#
+# axe-core a11y runs only inside the Playwright E2E (D-5: CI/test only, never on commit).
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Node matches the workspace `engines`. pnpm is NOT pinned here: pnpm/action-setup
+  # reads the exact version from package.json `packageManager` (pnpm@9.15.4) — passing
+  # a `version` input alongside that field is an error, so it is intentionally omitted.
+  NODE_VERSION: "20"
+
+jobs:
+  gate:
+    name: Turbo gate (build · lint · type-check · format · unit+fitness)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Turbo caches build/test outputs across runs (keyed by content hash).
+      - name: Restore Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-
+
+      - name: Build
+        run: pnpm build
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type-check
+        run: pnpm type-check
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Unit + architectural-fitness tests
+        run: pnpm test
+
+  database:
+    name: Integration + E2E (PostgreSQL 18)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: pulse
+          POSTGRES_PASSWORD: pulse
+          POSTGRES_DB: pulse
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pulse -d pulse"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # CI-only, non-secret values (the dev/test databases are ephemeral service
+      # containers). Real secrets always come from the host secret store, never here.
+      DATABASE_URL: postgresql://pulse:pulse@localhost:5432/pulse?schema=public
+      DATABASE_URL_TEST: postgresql://pulse:pulse@localhost:5432/pulse_test?schema=public
+      AUTH_SECRET: ci-only-not-a-real-secret-padding-0000000000
+      OWNER_INITIAL_PASSWORD: CiOwner!Pass1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The integration globalSetup and the compiled seed read the root `.env`
+      # (process.loadEnvFile / --env-file). Materialize it from the CI env above.
+      - name: Write CI .env
+        run: |
+          cat > .env <<EOF
+          DATABASE_URL=${DATABASE_URL}
+          DATABASE_URL_TEST=${DATABASE_URL_TEST}
+          AUTH_SECRET=${AUTH_SECRET}
+          OWNER_INITIAL_PASSWORD=${OWNER_INITIAL_PASSWORD}
+          EOF
+
+      # Build first: generates the Prisma client and the compiled seed (dist/seed.js)
+      # that the integration globalSetup and the E2E seed step depend on.
+      - name: Build
+        run: pnpm build
+
+      - name: Create isolated test database
+        run: PGPASSWORD=pulse psql -h localhost -U pulse -d pulse -c 'CREATE DATABASE pulse_test;'
+
+      # Integration: globalSetup migrates + seeds DATABASE_URL_TEST itself.
+      - name: Integration tests
+        run: pnpm test:integration
+
+      # E2E: prepare the dev database (migrate + seed) so the Owner can sign in,
+      # then run Playwright (CI=true → it boots its own dev server; axe runs inside).
+      - name: Prepare E2E database
+        run: |
+          pnpm --filter @pulse/db db:deploy
+          pnpm --filter @pulse/db db:seed
+
+      - name: Install Playwright browser
+        run: pnpm --filter @pulse/web exec playwright install --with-deps chromium
+
+      - name: E2E tests
+        env:
+          CI: "true"
+        run: pnpm test:e2e

@@ -84,6 +84,33 @@ const NEXT_AUTH_BAN_MESSAGE =
 const NEXT_AUTH_PATHS = [{ name: "next-auth", message: NEXT_AUTH_BAN_MESSAGE }];
 const NEXT_AUTH_PATTERNS = [{ group: ["next-auth/*"], message: NEXT_AUTH_BAN_MESSAGE }];
 
+// T-26/T-27 platform-adapter rule: domain/business code (feature slices under
+// `modules/**`) must obtain time and ids through the injected platform adapters
+// (`IClock` / `IIdGenerator`, @pulse/types), never via raw runtime calls — so it
+// stays deterministically testable and free of hidden non-determinism. The adapter
+// IMPLEMENTATIONS (`lib/platform/**`) and cross-cutting infra (`lib/**`) legitimately
+// call these primitives, so the ban is scoped to `modules/**` only (which lands with
+// the first feature). Zero matches today → lint stays green; the rule is proven by a
+// planted-violation test in the architectural-fitness suite (T-27).
+const PLATFORM_CALL_GUARDS = [
+  {
+    selector: "CallExpression[callee.object.name='Date'][callee.property.name='now']",
+    message:
+      "No Date.now() in domain code — inject IClock (@pulse/types) so time is deterministic. T-26/T-27.",
+  },
+  {
+    selector: "NewExpression[callee.name='Date'][arguments.length=0]",
+    message:
+      "No `new Date()` (current time) in domain code — inject IClock (@pulse/types). T-26/T-27.",
+  },
+  {
+    selector:
+      "CallExpression[callee.property.name='randomUUID'], CallExpression[callee.name='randomUUID']",
+    message:
+      "No crypto.randomUUID() in domain code — inject IIdGenerator (@pulse/types). T-26/T-27.",
+  },
+];
+
 export default tseslint.config(
   {
     ignores: [
@@ -152,6 +179,21 @@ export default tseslint.config(
     files: ["**/lib/auth/**"],
     rules: {
       "no-restricted-imports": ["error", { patterns: DEEP_IMPORT_PATTERNS }],
+    },
+  },
+  // Domain/business feature slices (`modules/**`) additionally ban raw time/id calls
+  // (T-26 platform-adapter rule). `no-restricted-syntax` options REPLACE (never merge),
+  // so the role-name + hardcoded-permission guards are re-included here; dropping them
+  // would silently re-open those holes inside feature code.
+  {
+    files: ["**/modules/**"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...ROLE_NAME_GUARDS,
+        HARDCODED_PERMISSION_GUARD,
+        ...PLATFORM_CALL_GUARDS,
+      ],
     },
   },
   prettier,
