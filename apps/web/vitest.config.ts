@@ -1,9 +1,12 @@
+import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
 // Unit + architectural-fitness suite (T-23 / T-27). Runs in a Node environment
 // and needs NO database — it is the fast suite executed by `turbo run test`.
 // Database-backed integration tests live in vitest.integration.config.ts.
 export default defineConfig({
+  // Mirror the app's `@/*` → `src/*` path alias so unit tests resolve it.
+  resolve: { alias: { "@": resolve(import.meta.dirname, "src") } },
   test: {
     environment: "node",
     include: ["src/**/*.test.ts", "fitness/**/*.test.ts"],

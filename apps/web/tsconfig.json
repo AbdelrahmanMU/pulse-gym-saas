@@ -6,6 +6,10 @@
     "allowJs": true,
     "incremental": true,
     "noEmit": true,
+    // Apps never emit declarations; disabling avoids TS2742 "non-portable inferred
+    // type" errors on re-exported third-party values (e.g. Auth.js NextAuth()).
+    "declaration": false,
+    "declarationMap": false,
     "plugins": [{ "name": "next" }],
     "paths": {
       "@/*": ["./src/*"]

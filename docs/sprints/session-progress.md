@@ -112,9 +112,14 @@ rules from T-27 pulled forward into Session 2 delivery. See `session-2-execution
 
 | Field | Value |
 |---|---|
-| **Status** | 🔜 Pending — **gated by the Session 3 Security Checklist** (`session-3-security-checklist.md`); implementation begins only after the human approves that checklist |
+| **Status** | ✅ **Completed / Verified / APPROVED (2026-06-29).** Security gate PASSED at start; all exit criteria empirically reproduced; human-accepted. Committed on `feat/platform-foundation`; annotated tag **`v0.3.0-iam-foundation`**. |
 | **Tasks** | T-07, T-19, T-20, T-26 |
-| **Security gate** | This is the first security-sensitive session (R6). A mandatory `/security-review` runs **before** T-19/T-20 land. From here the focus shifts from project infrastructure to **code quality + security behavior**. |
+| **Report** | `docs/sprints/session-3-verification-report.md` (criterion-by-criterion evidence) |
+| **Accepted follow-ups** | (1) **Evaluate Argon2id before production release** — keep scrypt for Sprint 0; switch only with a compelling reason (KDF change needs rehash-on-next-login). (2) **Re-run automated `/security-review` after the first git remote is configured** — it could not run this session (no remote); a manual review was done. Both recorded in the report §8. |
+| **Security gate** | ✅ **PASSED (2026-06-26)** — checklist reviewed + formally approved; "PASSED" = *authorized to begin*. `advisor` consulted twice on the security design (its blocking findings were acted on). **`/security-review` automated skill could not run (no git remote)** → a manual security review was performed (report §2; no critical/high). The checklist exit boxes are now resolved honestly (verified ✅ / mechanism-ready ~ / pending human acceptance). |
+| **Approved decisions** | JWT session strategy; `crypto.scrypt` hashing (human-vetoable vs bcrypt/argon2); `@pulse/auth` pure-surface/server-subpath split + `@pulse/auth` as the single authorization catalog source the seed materializes (no `auth↔db` cycle); idempotent seed Owner hash from seed-scoped `OWNER_INITIAL_PASSWORD`; MVP branch = gym default branch; `assertSameGym→404` tenancy helper as the Session-3 isolation target. Full rationale in the checklist head note. |
+| **Verification** | `pnpm -w run verify` green; **45 tests** — 33 unit/fitness, 7 integration (real test DB), 5 E2E (incl. full Owner sign-in → gated dashboard → sign-out). Stack added: `next-auth@5.0.0-beta.31`. |
+| **Carry-in** | All three resolved: real Owner scrypt hash; `@pulse/auth` permission-key constants; `AuthenticationAdapter` interface in `@pulse/types` + scoped `next-auth` lint exception (subpath ban fixed). |
 
 ---
 
