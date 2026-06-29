@@ -127,14 +127,32 @@ rules from T-27 pulled forward into Session 2 delivery. See `session-2-execution
 
 | Field | Value |
 |---|---|
-| **Status** | 🔜 Pending |
-| **Tasks** | T-12, T-13, T-14, T-08, T-17 |
+| **Status** | ✅ **Completed / Verified / ACCEPTED (2026-06-29).** Plan approved 2026-06-29 with six quality refinements (R-1…R-6); implemented in order T-12→T-13→T-14→T-08→T-17; human-accepted. |
+| **Tasks** | T-12 (Tailwind v4 on PULSE tokens), T-13 (shadcn primitives via PULSE), T-14 (design-system integration + `next/font`), T-08 (Application Shell), T-17 (error boundary + UI states) |
+| **Plan / Report** | `session-4-ui-ux-execution-plan.md` (approved, §8 refinements) · `session-4-verification-report.md` (criterion-by-criterion evidence) |
+| **Result** | `pnpm -w run verify` green; **61 tests** (39 unit/fitness incl. R-1 layering + R-3 token-compliance, 7 integration, 15 E2E incl. light+dark axe, keyboard/focus, responsive 375/768/1280, forced-error boundary). **Auth/authz perimeter untouched/frozen.** |
+| **Stack added** | Tailwind v4 + `@tailwindcss/postcss`; shadcn-idiom primitives (Radix avatar/dialog/dropdown-menu/slot) restyled to PULSE tokens; `class-variance-authority`/`clsx`/`tailwind-merge`; `lucide-react`; `next/font` (Space Grotesk/Inter/JetBrains Mono). `globals.css` relocated to `@pulse/design-tokens`. |
+| **Key deferrals** | Dark-mode toggle (light default; dark verified via `.dark`); data-bearing widgets (search/notifications/branch switch); `@pulse/ui` not created (components live in `apps/web`); sign-in left as-is. |
 
 ---
 
-## Session 5 — Hooks, CI & Architectural Fitness
+## Sprint 0 — Exit Checklist (gate into the closing session)
 
 | Field | Value |
 |---|---|
-| **Status** | 🔜 Pending |
-| **Tasks** | T-24, T-25, T-27 (full CI-wired suite; foundational rules established in Session 2) |
+| **Status** | 🟡 **GATE PASSED — ready to enter Session 5.** Sessions 1–4 verified across all 15 dimensions; 12 ✅ verified, 3 🟡 partial (carrying only their named Session-5 task). Sprint 0 **NOT yet closed** — closure gated on Session 5 + the Completion Report. |
+| **Document** | `sprint-0-exit-checklist.md` (dimension-by-dimension verification + Platform Baseline) |
+| **Date** | 2026-06-29 · HEAD `8ec6cc2` · re-grounded: build 5/5, 61 tests green (39 unit/fitness + 7 integration + 15 E2E) |
+| **Baseline (record only)** | build 20.85s · verify ≈24s · test exec ≈39s (7.58s unit/fitness + 4.11s integration + 27.2s E2E) · dev startup ≈1.96s |
+| **Pending → Session 5 scope** | T-24 (pre-commit hook) · T-25 (CI gate) · T-27 (full six-rule fitness suite) · final verification · closure |
+
+---
+
+## Session 5 — Hooks, CI & Architectural Fitness (Release Hardening — the closing session)
+
+| Field | Value |
+|---|---|
+| **Status** | 📋 **Plan prepared — awaiting human approval; not started.** |
+| **Tasks** | T-24, T-25, T-27 (full CI-wired six-rule suite; foundational rules established in Session 2) |
+| **Plan** | `session-5-release-hardening-plan.md` (scoped to exactly the Exit Checklist §3 gaps; **no new product features**) |
+| **Closes** | Sprint 0 — followed by the **Sprint 0 Completion Report**, then Sprint 1 planning may begin. |

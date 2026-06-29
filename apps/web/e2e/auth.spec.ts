@@ -38,12 +38,15 @@ test("Owner signs in, reaches the gated dashboard, and signs out", async ({ page
   await page.getByLabel("Password").fill(OWNER_PASSWORD);
   await page.getByRole("button", { name: /sign in/i }).click();
 
-  // Permission-gated placeholder renders (Owner holds dashboard.view).
+  // Permission-gated dashboard renders inside the Application Shell (Owner holds
+  // dashboard.view). The page title is the single <h1> via PageHeader.
   await expect(page).toHaveURL(/\/dashboard/);
-  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
-  await expect(page.getByText(new RegExp(OWNER_EMAIL))).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Dashboard" })).toBeVisible();
 
-  // Sign out returns to the public sign-in route.
-  await page.getByRole("button", { name: /sign out/i }).click();
+  // The signed-in user's email lives in the TopBar user menu; open it to reveal it,
+  // then sign out (a proper menuitem). Sign-out returns to the public sign-in route.
+  await page.getByRole("button", { name: /user menu/i }).click();
+  await expect(page.getByText(new RegExp(OWNER_EMAIL))).toBeVisible();
+  await page.getByRole("menuitem", { name: /sign out/i }).click();
   await expect(page).toHaveURL(/\/sign-in/);
 });

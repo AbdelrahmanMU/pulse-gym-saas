@@ -1,16 +1,21 @@
+import Link from "next/link";
 import { PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError } from "@/lib/errors";
+import { PageContainer } from "@/components/pulse/page-container";
+import { PageHeader } from "@/components/pulse/page-header";
+import { ErrorState } from "@/components/pulse/error-state";
+import { Button } from "@/components/pulse/button";
 
 /**
- * The permission-gated placeholder protected route (T-07 demo of T-20). Access is
- * decided **by permission** (`dashboard.view`), never by role: the seeded Owner holds
- * it and sees the page; an actor without it gets a minimal forbidden notice (the full
- * Catalog `ErrorState` + 403 mapping is T-17, Session 4). The session/redirect for
- * unauthenticated access is enforced one level up in the `(app)` layout; the gate
- * here re-checks the permission (deny-by-default, server-side every time).
+ * The permission-gated dashboard (T-07 demo of T-20), now rendered inside the real
+ * Application Shell (T-08). Access is decided **by permission** (`dashboard.view`), never
+ * by role. The seeded Owner holds it; an actor lacking it sees the inline **Forbidden**
+ * `ErrorState` (T-17, decision 0.3.7 — a 403 is an expected in-page outcome, not a thrown
+ * boundary error). Unauthenticated access is handled one level up by the `(app)` layout.
  *
- * No business logic lives here — `app/` is routing only (constitution §2).
+ * No business logic here — `app/` is routing only (constitution §2). Real dashboard
+ * content (KPIs, revenue, activity) is a later feature phase.
  */
 export default async function DashboardPage() {
   let displayName: string;
@@ -20,22 +25,38 @@ export default async function DashboardPage() {
   } catch (error) {
     if (error instanceof AuthorizationError) {
       return (
-        <section>
-          <h1>Access denied</h1>
-          <p role="alert">You don&apos;t have access to this page.</p>
-        </section>
+        <PageContainer width="narrow">
+          <ErrorState
+            variant="inline"
+            title="Access denied"
+            description="You don't have permission to view this page. If you believe this is a mistake, contact your gym owner."
+            action={
+              <Button asChild variant="secondary">
+                <Link href="/sign-in">Switch account</Link>
+              </Button>
+            }
+          />
+        </PageContainer>
       );
     }
     throw error;
   }
 
   return (
-    <section>
-      <h1>Dashboard</h1>
-      <p>
-        Protected placeholder route — visible because {displayName} holds the{" "}
-        <code>dashboard.view</code> permission. Real dashboard content is a later phase.
+    <PageContainer>
+      <PageHeader
+        title="Dashboard"
+        subtitle={`Signed in as ${displayName}. Real dashboard content arrives in a later phase.`}
+        actions={
+          <Button asChild variant="secondary">
+            <Link href="/ui-states">View UI states</Link>
+          </Button>
+        }
+      />
+      <p className="text-body text-muted-foreground">
+        This is the authenticated application shell — structural only for Sprint&nbsp;0. Navigation
+        links under “Manage” are placeholders until their feature slices exist.
       </p>
-    </section>
+    </PageContainer>
   );
 }

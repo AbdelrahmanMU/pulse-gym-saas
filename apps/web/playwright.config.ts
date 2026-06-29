@@ -7,7 +7,11 @@ const PORT = 3100;
 
 export default defineConfig({
   testDir: "./e2e",
-  fullyParallel: true,
+  // Serial, single-worker: the suite runs against `next dev`, which compiles routes
+  // on first request. Parallel workers hitting cold routes simultaneously race the
+  // compile and flake; one worker keeps the gate deterministic (the suite is small).
+  fullyParallel: false,
+  workers: 1,
   reporter: "list",
   use: {
     baseURL: `http://localhost:${PORT}`,

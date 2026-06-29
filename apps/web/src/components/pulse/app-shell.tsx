@@ -1,0 +1,79 @@
+"use client";
+
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Sidebar } from "./sidebar";
+import { TopBar, type TopBarUser } from "./topbar";
+import type { NavGroupDef } from "./nav";
+
+/**
+ * PULSE AppShell (Catalog §1) — the root authenticated frame. Composes Sidebar + TopBar +
+ * a content `<main>`, and owns the responsive layout: a **persistent rail ≥lg**, an
+ * **off-canvas drawer <lg** (the nav never disappears — audit fix). It is the client
+ * boundary; the server layout enforces the session and passes the principal + the
+ * sign-out server action as props (enforcement never moves client-side — plan §T-08.5).
+ *
+ * Landmarks: skip-link (first focusable) → `<header>` (banner, in TopBar) → `<nav>`
+ * (primary, in Sidebar) → `<main id="main-content">`. The drawer (Radix Dialog) supplies
+ * the focus trap, Esc-close, scrim, and focus-return-to-trigger.
+ */
+export interface AppShellProps {
+  user: TopBarUser;
+  navGroups: readonly NavGroupDef[];
+  /** Sign-out server action, threaded from the server layout. */
+  signOut: () => void;
+  children: ReactNode;
+}
+
+export function AppShell({ user, navGroups, signOut, children }: AppShellProps) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const pathname = usePathname();
+
+  // Navigating from a drawer NavItem closes the drawer.
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [pathname]);
+
+  return (
+    <div className="min-h-dvh bg-background text-foreground">
+      <a href="#main-content" className="skip-link">
+        Skip to content
+      </a>
+
+      {/* Persistent rail (≥lg). Hidden from the a11y tree below lg (drawer takes over). */}
+      <div className="fixed inset-y-0 left-0 hidden w-(--sidebar-w) lg:block">
+        <Sidebar groups={navGroups} />
+      </div>
+
+      {/* Off-canvas drawer (<lg). Returns focus to the toggle on close — we open it
+          programmatically (no Radix Trigger), so focus return is wired explicitly. */}
+      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <SheetContent
+          className="lg:hidden"
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            menuButtonRef.current?.focus();
+          }}
+        >
+          <SheetTitle className="sr-only">Navigation</SheetTitle>
+          <Sidebar groups={navGroups} />
+        </SheetContent>
+      </Sheet>
+
+      {/* Content column — offset by the rail width on desktop. */}
+      <div className="flex min-h-dvh flex-col lg:pl-(--sidebar-w)">
+        <TopBar
+          menuButtonRef={menuButtonRef}
+          onMenuClick={() => setDrawerOpen(true)}
+          user={user}
+          signOut={signOut}
+        />
+        <main id="main-content" className="flex-1">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}

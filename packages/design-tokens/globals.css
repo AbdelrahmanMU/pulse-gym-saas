@@ -3,17 +3,22 @@
    Gym Membership Management SaaS · "Athletic Operations" identity
 
    AUTHORITY: This file is the single implementation source of truth for tokens.
+   OWNER: `@pulse/design-tokens` (relocated from the repo root in T-14, Session 4).
    Supersedes: PULSE v1 globals.css.
    Companion docs: /docs/design/design-system-v1.1.md, /docs/design/design-tokens.md
    Stack: Tailwind v4 (CSS-first) · next/font · CSS variables only.
+
+   CONSUMPTION: the app entry (`apps/web/src/app/globals.css`) loads Tailwind first
+   via `@import "tailwindcss"` — which roots Tailwind v4 content-detection at the app
+   source — then imports THIS file (`@pulse/design-tokens/globals.css`). Keeping
+   `@import "tailwindcss"` OUT of this file avoids re-rooting content scanning at the
+   package directory inside `node_modules` (which Tailwind would then ignore).
 
    RULES (enforced):
      - No hardcoded colors, spacing, radii, or font names in any component.
      - All sizing is rem-based (user zoom / large-text safe).
      - Light + dark are first-class. Status/neutral fixed; brand is themeable.
    ============================================================================ */
-
-@import "tailwindcss";
 
 /* Dark mode is class-based (.dark on <html>) */
 @custom-variant dark (&:where(.dark, .dark *));
