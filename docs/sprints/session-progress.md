@@ -152,7 +152,20 @@ rules from T-27 pulled forward into Session 2 delivery. See `session-2-execution
 
 | Field | Value |
 |---|---|
-| **Status** | 📋 **Plan prepared — awaiting human approval; not started.** |
-| **Tasks** | T-24, T-25, T-27 (full CI-wired six-rule suite; foundational rules established in Session 2) |
-| **Plan** | `session-5-release-hardening-plan.md` (scoped to exactly the Exit Checklist §3 gaps; **no new product features**) |
-| **Closes** | Sprint 0 — followed by the **Sprint 0 Completion Report**, then Sprint 1 planning may begin. |
+| **Status** | ✅ **Completed / Verified — awaiting human acceptance.** Implemented in order T-24 → T-27 → T-25; final verification green. Commit `c6e9c45`. |
+| **Tasks** | T-24 (pre-commit hook, no pre-push), T-25 (GitHub Actions CI, dormant), T-27 (full six-rule fitness suite + T-26 platform-adapter rule; planted-violation proof per rule) |
+| **Plan / Report** | `session-5-release-hardening-plan.md` (approved) · `session-5-verification-report.md` (criterion-by-criterion evidence) |
+| **Result** | `pnpm verify` green; **78 tests** (56 unit/fitness, 7 integration, 15 E2E). Unit/fitness 39 → 56. Auth/authz perimeter untouched. CI authored-but-dormant (no remote, D-6). |
+
+---
+
+## Sprint 0 — CLOSURE
+
+| Field | Value |
+|---|---|
+| **Status** | ✅ **SPRINT 0 COMPLETE — all exit criteria green; formally closed pending human acceptance.** |
+| **Document** | `sprint-0-completion-report.md` (close-out: §8 Definition of Success met; closure gates green; carried follow-ups) |
+| **HEAD** | `c6e9c45` · branch `feat/platform-foundation` (not merged) · 2026-06-30 |
+| **Closure gates** | All Exit-Checklist items green · no critical TODO/FIXME · all session reports exist · Completion Report generated · ready for tag |
+| **Release tag** | `v1.0.0-sprint-0` — created **only after** human acceptance of the Completion Report. |
+| **Next** | Sprint 1 planning (first product features) — **must not begin until Sprint 0 is formally closed.** |

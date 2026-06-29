@@ -6,6 +6,7 @@
 |---|---|
 | **Purpose** | Verify, dimension-by-dimension, that the execution platform Sessions 1–4 delivered is structurally complete and sound — and to surface the *exact* remaining work that Sprint 0 closure depends on. |
 | **Status** | 🟡 **GATE INTO SESSION 5 — not a close-out.** Sessions 1–4 verified ✅; platform is structurally ready to close. **Closure is gated on Session 5 (T-24 / T-25 / T-27) + the Sprint 0 Completion Report — Sprint 0 is NOT yet closed.** |
+| **⟶ RESOLVED (2026-06-30, HEAD `c6e9c45`)** | ✅ **All three 🟡 partial dimensions are now green** — Session 5 delivered T-24 (Development Workflow), T-25 (Testing CI gate), T-27 (Architectural Fitness Tests). This document remains the point-in-time gate snapshot at `8ec6cc2`; the authoritative close-out is **`sprint-0-completion-report.md`**, and the Session-5 evidence is **`session-5-verification-report.md`**. |
 | **Verified on** | 2026-06-29 · HEAD `8ec6cc2` · branch `feat/platform-foundation` (not merged) · Node 20.20.0 · pnpm 9.15.4 · Windows 11 + Docker 27.4.0 |
 | **Authority** | Exit criteria: `sprint-0-technical-specification.md` §7.1 (per-session) + §8 (sprint-level Definition of Success). Per-area evidence lives in the per-session verification reports — **this checklist cites them, it does not re-prove them** (a fact lives in one document). |
 | **Scope discipline** | This is a verification artifact. It introduces no code, no decision, and no scope change. The gaps it surfaces (§Pending) are *precisely* the Session 5 scope — no more, no less. |
