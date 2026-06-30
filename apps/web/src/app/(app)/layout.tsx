@@ -6,6 +6,7 @@ import {
   CreditCard,
   LayoutDashboard,
   MapPin,
+  Tags,
   Users,
 } from "lucide-react";
 import { hasPermission, PERMISSION_KEYS } from "@pulse/auth";
@@ -21,15 +22,18 @@ import { signOutAction } from "./actions";
  * `/sign-in`) and passes the domain principal + the sign-out server action as props into
  * the client {@link AppShell}. Session enforcement never moves client-side.
  *
- * Nav: Dashboard + the real, permission-gated **Members** entry (Sprint-1 Epic-2) and the
- * **Settings** group (Sprint-1 Epic-1 — Gym / Branch / My Profile). Memberships/Payments
- * remain placeholders until their feature slices exist. Items are shown **by permission**
- * (never by role).
+ * Nav: Dashboard + the real, permission-gated **Members** (Epic-2) and **Plans** (Epic-3)
+ * entries and the **Settings** group (Epic-1 — Gym / Branch / My Profile).
+ * Memberships/Payments remain placeholders until their feature slices exist. Items are shown
+ * **by permission** (never by role).
  */
 function buildNavGroups(principal: AuthenticatedPrincipal): NavGroupDef[] {
   const manageItems: NavItemDef[] = [];
   if (hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERS_READ)) {
     manageItems.push({ href: "/members", label: "Members", icon: <Users aria-hidden /> });
+  }
+  if (hasPermission(principal.permissions, PERMISSION_KEYS.PLANS_READ)) {
+    manageItems.push({ href: "/plans", label: "Plans", icon: <Tags aria-hidden /> });
   }
   manageItems.push(
     {
