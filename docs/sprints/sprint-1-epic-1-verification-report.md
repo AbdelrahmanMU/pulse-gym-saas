@@ -107,7 +107,8 @@ Settings nav items render **by permission** (`gym.view` / `branches.read`); My P
 3. **Toast deferred; inline `Alert` used** as the form-result surface (catalog-valid; the floating Toast system is on-demand). **Searchable Select** deferred — native `SelectInput` used (currency/timezone).
 4. **Currency/timezone immutability guard** (once financial records exist) is **deferred** to a later Epic (OQ-3) — freely editable now (no plans/memberships/payments yet).
 5. **E2E onboarding mutates `setupCompletedAt`** — handled by a Playwright `global-setup` (marks the e2e gym configured) + the onboarding spec's `before/afterAll` (opts into first-run, restores after). One run showed the **known Session-4 dark-mode-axe single-worker flake**; it passed on re-run (20/20).
-6. **`authorization-architecture.md` §4/§6** still lists the pre-`gym.view` matrix — a governance-doc reconciliation flagged (the human's call, like the carried DDS §16 item); the code catalog (`@pulse/auth`) is the materialized source of truth and is updated.
+6. **`authorization-architecture.md` §4/§6 reconciled** — `gym.view` added under Tenant/Gym (§4) and the matrix (§6, Owner-only), in this change set. *(This was an **instructed** change — the human directed "use gym.view" — so its canonical home is updated now, distinct from the **discovered** DDS §16 conflict that remains a deferred human decision.)*
+7. **Inline-403 *render* path on the settings pages is not e2e-exercised** — the seeded Owner holds every permission, so no principal triggers the in-page `ErrorState` (same constraint as Session-4 §8.9). The **deny decision** itself is proven at the service layer (integration: `AuthorizationError` for a no-permission principal); only the rendered 403 view lacks an automated exercise. The forbidden control-flow is the same pattern already verified on `/dashboard`.
 
 ---
 
