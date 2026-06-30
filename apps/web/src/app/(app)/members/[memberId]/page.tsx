@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { hasPermission, PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError, NotFoundError } from "@/lib/errors";
@@ -55,19 +55,34 @@ export default async function MemberProfilePage({
     PERMISSION_KEYS.ASSIGNMENTS_MANAGE,
   );
   const trainerOptions = canManageAssignments ? await loadAssignableTrainers() : [];
+  const canSellMembership =
+    member.status === "ACTIVE" &&
+    hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERSHIPS_CREATE);
 
   return (
     <PageContainer>
       <PageHeader
         title={member.fullName}
         actions={
-          canUpdate ? (
-            <Button asChild variant="secondary">
-              <Link href={`/members/${member.id}/edit`}>
-                <Pencil aria-hidden className="size-4" />
-                Edit
-              </Link>
-            </Button>
+          canUpdate || canSellMembership ? (
+            <>
+              {canSellMembership ? (
+                <Button asChild>
+                  <Link href={`/memberships/new?memberId=${member.id}`}>
+                    <Plus aria-hidden className="size-4" />
+                    Sell membership
+                  </Link>
+                </Button>
+              ) : null}
+              {canUpdate ? (
+                <Button asChild variant="secondary">
+                  <Link href={`/members/${member.id}/edit`}>
+                    <Pencil aria-hidden className="size-4" />
+                    Edit
+                  </Link>
+                </Button>
+              ) : null}
+            </>
           ) : undefined
         }
       />

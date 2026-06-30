@@ -22,9 +22,9 @@ import { signOutAction } from "./actions";
  * `/sign-in`) and passes the domain principal + the sign-out server action as props into
  * the client {@link AppShell}. Session enforcement never moves client-side.
  *
- * Nav: Dashboard + the real, permission-gated **Members** (Epic-2) and **Plans** (Epic-3)
- * entries and the **Settings** group (Epic-1 — Gym / Branch / My Profile).
- * Memberships/Payments remain placeholders until their feature slices exist. Items are shown
+ * Nav: Dashboard + the real, permission-gated **Members** (Epic-2), **Plans** (Epic-3), and
+ * **Memberships** (Epic-4) entries and the **Settings** group (Epic-1 — Gym / Branch / My
+ * Profile). Payments remains a placeholder until its feature slice exists. Items are shown
  * **by permission** (never by role).
  */
 function buildNavGroups(principal: AuthenticatedPrincipal): NavGroupDef[] {
@@ -35,15 +35,19 @@ function buildNavGroups(principal: AuthenticatedPrincipal): NavGroupDef[] {
   if (hasPermission(principal.permissions, PERMISSION_KEYS.PLANS_READ)) {
     manageItems.push({ href: "/plans", label: "Plans", icon: <Tags aria-hidden /> });
   }
-  manageItems.push(
-    {
+  if (hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERSHIPS_READ)) {
+    manageItems.push({
       href: "/memberships",
       label: "Memberships",
       icon: <ClipboardList aria-hidden />,
-      placeholder: true,
-    },
-    { href: "/payments", label: "Payments", icon: <CreditCard aria-hidden />, placeholder: true },
-  );
+    });
+  }
+  manageItems.push({
+    href: "/payments",
+    label: "Payments",
+    icon: <CreditCard aria-hidden />,
+    placeholder: true,
+  });
 
   const settingsItems: NavItemDef[] = [];
   if (hasPermission(principal.permissions, PERMISSION_KEYS.GYM_VIEW)) {
