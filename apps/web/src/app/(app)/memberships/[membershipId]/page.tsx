@@ -20,6 +20,11 @@ import {
   MembershipLifecycleControls,
   type LifecyclePermissions,
 } from "@/modules/memberships/ui/membership-lifecycle-controls";
+import { loadMembershipBilling } from "@/modules/payments/queries";
+import type { MembershipBilling } from "@/modules/payments/service";
+import { PaymentSummary } from "@/modules/payments/ui/payment-summary";
+import { PaymentHistory } from "@/modules/payments/ui/payment-history";
+import { RecordPaymentForm } from "@/modules/payments/ui/record-payment-form";
 
 /**
  * Membership detail (Sprint-1 Epic-4). Gated by `memberships.read`. Shows the member, the
@@ -63,6 +68,15 @@ export default async function MembershipDetailPage({
     perms.canUpgrade && membership.status === MembershipStatus.ACTIVE
       ? await loadSellablePlans()
       : [];
+
+  // Billing is a separate concern (Epic-5): loaded through the payments module's public query,
+  // gated by `payments.read`. Standing/balance are derived; payment activity never changes status.
+  const canViewBilling = hasPermission(principal.permissions, PERMISSION_KEYS.PAYMENTS_READ);
+  const canRecordPayment = hasPermission(principal.permissions, PERMISSION_KEYS.PAYMENTS_RECORD);
+  const canVoidPayment = hasPermission(principal.permissions, PERMISSION_KEYS.PAYMENTS_VOID);
+  const billing: MembershipBilling | null = canViewBilling
+    ? await loadMembershipBilling(membershipId)
+    : null;
 
   return (
     <PageContainer>
@@ -134,6 +148,27 @@ export default async function MembershipDetailPage({
               perms={perms}
             />
           </Section>
+        ) : null}
+
+        {billing ? (
+          <>
+            <Section title="Billing">
+              <PaymentSummary billing={billing} />
+              {canRecordPayment ? (
+                <div className="mt-2 border-t border-border pt-4">
+                  <RecordPaymentForm membershipId={membership.id} currency={billing.currency} />
+                </div>
+              ) : null}
+            </Section>
+
+            <Section title="Payment history">
+              <PaymentHistory
+                membershipId={membership.id}
+                entries={billing.history}
+                canVoid={canVoidPayment}
+              />
+            </Section>
+          </>
         ) : null}
       </div>
     </PageContainer>
