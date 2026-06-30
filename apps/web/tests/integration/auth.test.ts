@@ -32,10 +32,12 @@ describe("integration: credential resolution (T-19)", () => {
     expect(principal?.branchId).toBeTruthy();
     expect(principal?.gymUserId).toBeTruthy();
     expect(principal?.email).toBe(OWNER_EMAIL);
-    // Owner holds every permission (40) — checked by permission, not role.
-    expect(principal?.permissions.length).toBe(40);
+    // Owner holds every permission (41 after Sprint-1 Epic-1 added gym.view) —
+    // checked by permission, not role.
+    expect(principal?.permissions.length).toBe(41);
     expect(principal?.permissions).toContain(PERMISSION_KEYS.DASHBOARD_VIEW);
     expect(principal?.permissions).toContain(PERMISSION_KEYS.PAYMENTS_RECORD);
+    expect(principal?.permissions).toContain(PERMISSION_KEYS.GYM_VIEW);
   });
 
   it("rejects a wrong password (no principal)", async () => {

@@ -1,0 +1,11 @@
+-- Sprint-1 Epic-1 (Gym Initialization): additive-only.
+-- Adds the onboarding-completion marker on the gym (null = first-run, not yet set up).
+--
+-- NOTE: `prisma migrate dev` also proposed `DROP INDEX "members_full_name_trgm_idx"`
+-- because that trigram GIN index is created in the initial migration's hand-authored
+-- raw-SQL tail and is intentionally NOT represented in schema.prisma (see the schema
+-- header + initial-migration-specification.md). Dropping it would destroy member search.
+-- That DROP is deliberately REMOVED — this migration is purely additive. (Future
+-- `migrate dev` runs will re-propose it; apply migrations to non-dev DBs with
+-- `migrate deploy`, which never diffs.)
+ALTER TABLE "gyms" ADD COLUMN "setup_completed_at" TIMESTAMPTZ;

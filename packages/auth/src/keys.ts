@@ -61,6 +61,7 @@ export const PERMISSION_KEYS = {
   BRANCHES_READ: "branches.read",
   BRANCHES_MANAGE: "branches.manage",
 
+  GYM_VIEW: "gym.view",
   GYM_MANAGE: "gym.manage",
 } as const;
 

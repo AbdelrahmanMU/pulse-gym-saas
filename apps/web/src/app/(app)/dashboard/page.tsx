@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
+import { needsOnboarding } from "@/modules/gym/queries";
 import { AuthorizationError } from "@/lib/errors";
 import { PageContainer } from "@/components/pulse/page-container";
 import { PageHeader } from "@/components/pulse/page-header";
@@ -18,6 +20,9 @@ import { Button } from "@/components/pulse/button";
  * content (KPIs, revenue, activity) is a later feature phase.
  */
 export default async function DashboardPage() {
+  // First-run: guide a setup-capable owner through onboarding before the dashboard.
+  if (await needsOnboarding()) redirect("/onboarding/gym");
+
   let displayName: string;
   try {
     const principal = await requirePermission(PERMISSION_KEYS.DASHBOARD_VIEW);

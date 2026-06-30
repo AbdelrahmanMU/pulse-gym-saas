@@ -43,7 +43,8 @@ describe("integration: health endpoint + test-DB isolation (T-23)", () => {
   });
 
   it("ran migrate + seed against the isolated test database", async () => {
-    expect(await prisma.permission.count()).toBe(40);
+    // 41 after Sprint-1 Epic-1 added `gym.view` (append-only, human-approved).
+    expect(await prisma.permission.count()).toBe(41);
     expect(await prisma.capability.count()).toBe(13);
     expect(await prisma.role.count()).toBe(5);
   });

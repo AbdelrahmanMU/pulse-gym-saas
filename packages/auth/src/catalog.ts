@@ -160,6 +160,7 @@ export const PERMISSIONS: readonly PermissionDef[] = [
     capabilityKey: "branch_management",
     description: "Manage branches (future)",
   },
+  { key: K.GYM_VIEW, capabilityKey: "tenant_gym", description: "View gym configuration" },
   { key: K.GYM_MANAGE, capabilityKey: "tenant_gym", description: "Manage gym settings" },
 ];
 

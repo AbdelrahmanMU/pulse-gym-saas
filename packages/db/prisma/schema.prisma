@@ -164,6 +164,7 @@ model Gym {
   contactEmail           String?   @map("contact_email")
   contactPhone           String?   @map("contact_phone")
   gracePeriodDays        Int       @default(0) @map("grace_period_days") // time-rules T-11
+  setupCompletedAt       DateTime? @map("setup_completed_at") @db.Timestamptz // Sprint-1 Epic-1: gym-initialization onboarding completion (null = first-run)
   archivedAt             DateTime? @map("archived_at") @db.Timestamptz
   createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz

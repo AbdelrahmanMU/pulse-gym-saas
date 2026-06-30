@@ -1,8 +1,18 @@
 import type { ReactNode } from "react";
-import { ClipboardList, CreditCard, LayoutDashboard, Settings, Users } from "lucide-react";
+import {
+  Building2,
+  CircleUser,
+  ClipboardList,
+  CreditCard,
+  LayoutDashboard,
+  MapPin,
+  Users,
+} from "lucide-react";
+import { hasPermission, PERMISSION_KEYS } from "@pulse/auth";
+import type { AuthenticatedPrincipal } from "@pulse/types";
 import { requireSession } from "@/lib/auth/guard";
 import { AppShell } from "@/components/pulse/app-shell";
-import type { NavGroupDef } from "@/components/pulse/nav";
+import type { NavGroupDef, NavItemDef } from "@/components/pulse/nav";
 import { signOutAction } from "./actions";
 
 /**
@@ -11,31 +21,47 @@ import { signOutAction } from "./actions";
  * `/sign-in`) and passes the domain principal + the sign-out server action as props into
  * the client {@link AppShell}. Session enforcement never moves client-side.
  *
- * Nav is **placeholder/structural only** (refinement R-2): only Dashboard routes today;
- * Members/Memberships/Payments/Settings are inert until their feature slices exist.
+ * Nav: Dashboard + the real, permission-gated **Settings** group (Sprint-1 Epic-1 — Gym /
+ * Branch / My Profile). Members/Memberships/Payments remain placeholders until their
+ * feature slices exist. Settings items are shown **by permission** (never by role).
  */
-const NAV_GROUPS: NavGroupDef[] = [
-  { items: [{ href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard aria-hidden /> }] },
-  {
-    label: "Manage",
-    items: [
-      { href: "/members", label: "Members", icon: <Users aria-hidden />, placeholder: true },
-      {
-        href: "/memberships",
-        label: "Memberships",
-        icon: <ClipboardList aria-hidden />,
-        placeholder: true,
-      },
-      { href: "/payments", label: "Payments", icon: <CreditCard aria-hidden />, placeholder: true },
-    ],
-  },
-  {
-    label: "Settings",
-    items: [
-      { href: "/settings", label: "Settings", icon: <Settings aria-hidden />, placeholder: true },
-    ],
-  },
-];
+function buildNavGroups(principal: AuthenticatedPrincipal): NavGroupDef[] {
+  const settingsItems: NavItemDef[] = [];
+  if (hasPermission(principal.permissions, PERMISSION_KEYS.GYM_VIEW)) {
+    settingsItems.push({ href: "/settings/gym", label: "Gym", icon: <Building2 aria-hidden /> });
+  }
+  if (hasPermission(principal.permissions, PERMISSION_KEYS.BRANCHES_READ)) {
+    settingsItems.push({ href: "/settings/branch", label: "Branch", icon: <MapPin aria-hidden /> });
+  }
+  settingsItems.push({
+    href: "/settings/profile",
+    label: "My Profile",
+    icon: <CircleUser aria-hidden />,
+  });
+
+  return [
+    { items: [{ href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard aria-hidden /> }] },
+    {
+      label: "Manage",
+      items: [
+        { href: "/members", label: "Members", icon: <Users aria-hidden />, placeholder: true },
+        {
+          href: "/memberships",
+          label: "Memberships",
+          icon: <ClipboardList aria-hidden />,
+          placeholder: true,
+        },
+        {
+          href: "/payments",
+          label: "Payments",
+          icon: <CreditCard aria-hidden />,
+          placeholder: true,
+        },
+      ],
+    },
+    { label: "Settings", items: settingsItems },
+  ];
+}
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const principal = await requireSession();
@@ -43,7 +69,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <AppShell
       user={{ displayName: principal.displayName, email: principal.email }}
-      navGroups={NAV_GROUPS}
+      navGroups={buildNavGroups(principal)}
       signOut={signOutAction}
     >
       {children}
