@@ -21,11 +21,26 @@ import { signOutAction } from "./actions";
  * `/sign-in`) and passes the domain principal + the sign-out server action as props into
  * the client {@link AppShell}. Session enforcement never moves client-side.
  *
- * Nav: Dashboard + the real, permission-gated **Settings** group (Sprint-1 Epic-1 — Gym /
- * Branch / My Profile). Members/Memberships/Payments remain placeholders until their
- * feature slices exist. Settings items are shown **by permission** (never by role).
+ * Nav: Dashboard + the real, permission-gated **Members** entry (Sprint-1 Epic-2) and the
+ * **Settings** group (Sprint-1 Epic-1 — Gym / Branch / My Profile). Memberships/Payments
+ * remain placeholders until their feature slices exist. Items are shown **by permission**
+ * (never by role).
  */
 function buildNavGroups(principal: AuthenticatedPrincipal): NavGroupDef[] {
+  const manageItems: NavItemDef[] = [];
+  if (hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERS_READ)) {
+    manageItems.push({ href: "/members", label: "Members", icon: <Users aria-hidden /> });
+  }
+  manageItems.push(
+    {
+      href: "/memberships",
+      label: "Memberships",
+      icon: <ClipboardList aria-hidden />,
+      placeholder: true,
+    },
+    { href: "/payments", label: "Payments", icon: <CreditCard aria-hidden />, placeholder: true },
+  );
+
   const settingsItems: NavItemDef[] = [];
   if (hasPermission(principal.permissions, PERMISSION_KEYS.GYM_VIEW)) {
     settingsItems.push({ href: "/settings/gym", label: "Gym", icon: <Building2 aria-hidden /> });
@@ -41,24 +56,7 @@ function buildNavGroups(principal: AuthenticatedPrincipal): NavGroupDef[] {
 
   return [
     { items: [{ href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard aria-hidden /> }] },
-    {
-      label: "Manage",
-      items: [
-        { href: "/members", label: "Members", icon: <Users aria-hidden />, placeholder: true },
-        {
-          href: "/memberships",
-          label: "Memberships",
-          icon: <ClipboardList aria-hidden />,
-          placeholder: true,
-        },
-        {
-          href: "/payments",
-          label: "Payments",
-          icon: <CreditCard aria-hidden />,
-          placeholder: true,
-        },
-      ],
-    },
+    { label: "Manage", items: manageItems },
     { label: "Settings", items: settingsItems },
   ];
 }
