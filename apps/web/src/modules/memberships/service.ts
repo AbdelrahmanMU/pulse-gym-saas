@@ -470,6 +470,36 @@ export async function getExpiryCandidates(
   return candidates;
 }
 
+/** Whether a member currently holds a live (Active) or pending (Scheduled) membership. */
+export interface MemberMembershipStanding {
+  hasActiveMembership: boolean;
+  hasScheduledMembership: boolean;
+}
+
+/**
+ * Whether the member has an Active or Scheduled membership, judged from **derived** status
+ * (`deriveMemberLifecycle` in the gym time zone via the read-only {@link deriveForMember}) — never
+ * trusted from `cached_status`, and never writing on this read path. Gated by `memberships.read`.
+ * The single home for "does this member have a live/pending membership?", composed by the Member
+ * archive policy (ARC-3 / INV-11) through the module's public index.
+ */
+export async function getMemberMembershipStanding(
+  principal: AuthenticatedPrincipal,
+  memberId: string,
+  clock: IClock = systemClock,
+): Promise<MemberMembershipStanding> {
+  authorize(principal, PERMISSION_KEYS.MEMBERSHIPS_READ);
+  const ctx = await gymContext(principal.gymId, clock);
+  const derived = await deriveForMember(principal.gymId, memberId, ctx);
+  let hasActiveMembership = false;
+  let hasScheduledMembership = false;
+  for (const d of derived.values()) {
+    if (d.status === MembershipStatus.ACTIVE) hasActiveMembership = true;
+    else if (d.status === MembershipStatus.SCHEDULED) hasScheduledMembership = true;
+  }
+  return { hasActiveMembership, hasScheduledMembership };
+}
+
 /** Active members eligible to be sold a membership (for the create form). */
 export async function listSellableMembers(
   principal: AuthenticatedPrincipal,

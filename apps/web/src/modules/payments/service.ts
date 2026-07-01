@@ -260,6 +260,30 @@ export async function getOutstandingBalances(
   };
 }
 
+/** A member's net outstanding balance across their non-cancelled, non-scheduled memberships. */
+export interface MemberOutstandingBalance {
+  hasOutstanding: boolean;
+  /** Net remaining in minor units (string — bigint never crosses a module boundary as-is). */
+  totalMinor: string;
+}
+
+/**
+ * The member's outstanding balance total — the **same** "outstanding" definition and exclusions as
+ * the dashboard + report (cancelled written-off + not-yet-started SCHEDULED excluded), reusing the
+ * shared {@link loadOutstandingRows} + `summarizeLedger` (the single balance calculation, never
+ * duplicated) scoped to one member. Gated by `payments.read`. Composed by the Member archive policy
+ * (ARC-3 / INV-11) through the module's public index.
+ */
+export async function getMemberOutstandingBalance(
+  principal: AuthenticatedPrincipal,
+  memberId: string,
+): Promise<MemberOutstandingBalance> {
+  authorize(principal, PERMISSION_KEYS.PAYMENTS_READ);
+  const rows = await loadOutstandingRows(principal.gymId, memberId);
+  const total = rows.reduce((sum, r) => sum + r.remainingMinor, 0n);
+  return { hasOutstanding: total > 0n, totalMinor: total.toString() };
+}
+
 /**
  * The full Outstanding Balance report (Epic-8): **every** membership with a balance due, each with
  * price / paid / remaining. Reuses the exact same derivation and exclusions as
@@ -345,9 +369,14 @@ export async function getRevenueReport(
  * and sorted largest-remaining first. The single home for the "outstanding" definition + calculation
  * shared by the dashboard widget and the report.
  */
-async function loadOutstandingRows(gymId: string): Promise<OutstandingRow[]> {
+async function loadOutstandingRows(gymId: string, memberId?: string): Promise<OutstandingRow[]> {
   const memberships = await prisma.membership.findMany({
-    where: { gymId, cancelledAt: null, cachedStatus: { not: MembershipStatus.SCHEDULED } },
+    where: {
+      gymId,
+      cancelledAt: null,
+      cachedStatus: { not: MembershipStatus.SCHEDULED },
+      ...(memberId ? { memberId } : {}),
+    },
     select: {
       id: true,
       memberId: true,

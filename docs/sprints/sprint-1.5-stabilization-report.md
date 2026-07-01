@@ -5,6 +5,16 @@
 business features, permissions, roles, schema, or ADRs. Triage: fix high-value
 consistency/UX/reliability in-place; defer the rest into the Technical Debt Summary.
 
+> **Update 2026-07-01 — Reliability Slice 1 (Member Archive Guard) shipped; TD-1 CLOSED.**
+> The headline finding below (TD-1: ARC-3 / INV-11 archive preconditions live-unenforced) has
+> since been fully enforced in a dedicated reliability slice — a reusable Member policy layer
+> (`modules/members/policy.ts`) composes the memberships + payments **public** reads to block
+> archiving a member who has an Active membership, a Scheduled membership, or an Outstanding
+> Balance, with 7 new **live-DB** P0 integration tests (allow / denied-by-active /
+> denied-by-scheduled / denied-by-outstanding / tenant-isolation / permission). Gate green:
+> 178 unit · **75 integration** (+7) · build. Details in the closing "Reliability Slice 1"
+> section; the score table and TD list below are updated accordingly.
+
 > **Honesty note (how each area was verified).** This sprint mixes reviews that only mean
 > something against a running app with reviews that are legitimately code-inspectable. Each
 > section states its method explicitly. Where a claim rests on the running app, the app (or
@@ -197,8 +207,9 @@ status this sprint (TD-1, ARC-3/INV-11 — see below).
 
 ## 11. Beta Readiness Score
 
-**Overall: 8 / 10 — Beta-ready for a single supervised pilot gym, with one correctness gap
-to close first.**
+**Overall: 8.5 / 10 — Beta-ready for a single supervised pilot gym.** (Was 8/10; TD-1, the one
+correctness gap, is now closed by Reliability Slice 1. The remaining drag is integration-test
+depth on the E5/E7/E8 service paths — improved but not resolved.)
 
 | Dimension | Score | Basis |
 |---|---:|---|
@@ -209,28 +220,29 @@ to close first.**
 | Accessibility (verified surfaces) | 9 | axe-clean where scanned |
 | Accessibility (newer modules) | 7 | Inspected, not independently scanned |
 | Product-flow completeness | 8 | Coherent; nav placeholder + 404/loading (now fixed) |
-| **Business-invariant enforcement** | **6** | **ARC-3/INV-11 now live-unenforced (TD-1)** |
-| Test depth | 6.5 | Excellent pure-core + e2e shell; **no live-DB integration on E5/E7/E8 service paths** |
+| **Business-invariant enforcement** | **9** | **ARC-3/INV-11 now enforced + live-DB tested (TD-1 closed)** |
+| Test depth | 7 | Strong pure-core + e2e shell + first live-DB tests on the new per-member reads; **record/void/report allow-paths still lack live-DB coverage (TD-6 partial)** |
 
-The two low scores are the honest blockers to a clean 9+: the archive precondition (TD-1) and
-integration-test depth on the money/notification/report service layers (TD-6).
+The remaining drag on a clean 9+ is integration-test depth on the money/notification/report
+service layers (TD-6) — Slice 1 added the first live-DB coverage of the payments/memberships
+per-member reads, but the E5/E7/E8 command allow-paths remain deny-path-only.
 
 ---
 
 ## TD — Technical Debt Summary
 
-Consolidated from the Epic 1–8 verification reports + project memory. **Fix-in-place items
-this sprint: TD-13, TD-14** (done). Everything else is confirmed intentionally deferred or
-re-classified with rationale.
+Consolidated from the Epic 1–8 verification reports + project memory. **Fixed this sprint:
+TD-13, TD-14** (review pass) and **TD-1** (Reliability Slice 1). Everything else is confirmed
+intentionally deferred or re-classified with rationale.
 
 | # | Item | Status / rationale | Priority |
 |---|---|---|---|
-| **TD-1** | **ARC-3 / INV-11 archive preconditions unenforced.** `assertArchivable` is still an empty stub. It was *vacuously* safe when deferred in Epic 2 (no memberships/payments existed). **Epics 4–5 shipped both, so a member with an Active/Scheduled membership or an Outstanding Balance can now be archived — a live violation of a documented invariant** (money/tenant-correctness adjacent). | **Re-classified: was safe, now a real gap.** Fixing it enforces an *existing* rule (no new feature/schema) but needs cross-module reads (memberships/payments public index) **and P0 integration tests** — more than a polish fix, so surfaced for decision rather than silently patched. | **Beta blocker (highest)** |
+| **TD-1** | **ARC-3 / INV-11 archive preconditions.** Was an empty `assertArchivable` stub — a live invariant violation once Epics 4–5 shipped memberships + payments. | **CLOSED — Reliability Slice 1.** A reusable Member policy layer (`modules/members/policy.ts`) composes the memberships + payments **public** reads (`getMemberMembershipStanding`, `getMemberOutstandingBalance`) to block archiving a member with an Active/Scheduled membership or an Outstanding Balance; 7 new **live-DB** P0 integration tests. No schema/permission/role change. | ✅ Done |
 | TD-2 | Count-vs-cached-list drift (memberships report / dashboard). Counts derive live (`deriveRow`); list filters use the `cachedStatus` accelerator → a time-drifted row can count "Expired" yet list "Active" with an Expired badge. | Intentional/inherited (Epic 4/6/8). Fix touches cache-reconciliation; **flagged, not changed**. | Post-beta |
 | TD-3 | Notifications & Reports are **Owner-only** in MVP (Manager/Accountant hold the perms but are dormant/unassignable). | Intentional. | Post-beta |
 | TD-4 | `assignTrainer` race not serialized (concurrent set → possible P2002/500). | E2 carryover; low-frequency. | Post-beta |
 | TD-5 | INV-36 revoke side (clear a removed trainer's open assignments) not wired. | Deferred until Staff Management exists. | Post-beta |
-| TD-6 | **No live-DB integration tests** for the E5 (payments), E7 (notifications), E8 (reports) **service** paths — pure-core + authz-deny unit tests only (E1–E4 have real-DB P0 tests). | Standing gap; the biggest test-depth risk for beta. | **Beta consideration (high)** |
+| TD-6 | **Thin live-DB integration coverage** on the E5 (payments), E7 (notifications), E8 (reports) **service** paths — pure-core + authz-deny unit tests only for the command allow-paths. | **Partially addressed** — Slice 1 added live-DB tests exercising the payments + memberships per-member reads (`getMemberOutstandingBalance`, `getMemberMembershipStanding`) via real `recordPayment`/`createMembership`/`upgrade`/`cancel`. The record/void/report **command** allow-paths still lack direct live-DB tests. | **Beta consideration (high)** |
 | TD-7 | A11y/mobile for members/plans/memberships/payments/notifications/reports pages not independently e2e-axe-scanned (reuse verified primitives). | Extend e2e axe to newer routes. | High (cheap) |
 | TD-8 | Notification generation trigger = idempotent server action on page-open (no cron). | MVP-only, swappable for cron/worker; documented. | Post-beta |
 | TD-9 | Membership-level trainer / freeze-reason / cancel-reason / membership-notes not persisted (no column). | Schema change → out of scope. | Post-beta |
@@ -259,37 +271,36 @@ re-classified with rationale.
   shell verified at three viewports.
 
 ### Weaknesses
-- **TD-1: a documented invariant (ARC-3/INV-11) is now live-unenforced.** The single most
-  important correctness gap.
-- **TD-6: shallow integration-test depth on the newest service layers** (payments/notifications/
-  reports) — correctness currently rests on tested pure cores + deny-path unit tests, not on
-  real-DB allow-path/404/idempotency tests.
+- **TD-6: still-thin integration-test depth on the newest service *command* layers**
+  (payments/notifications/reports) — Slice 1 added the first live-DB coverage of the per-member
+  reads, but record/void/report allow-paths still rest on tested pure cores + deny-path unit
+  tests, not real-DB allow-path/404/idempotency tests.
 - **TD-7: newer module pages not independently a11y-scanned.**
+- *(Resolved) TD-1 — the ARC-3/INV-11 archive invariant is now enforced + live-DB tested.*
 
 ### Risks
-- Archiving a member mid-membership (or with a balance) would desync operational reality from
-  the record (TD-1) — an owner-visible data-integrity surprise.
 - A regression in an untested service allow-path (TD-6) would not be caught by the current
   suite until manual/e2e testing.
+- *(Retired) the "archive a member mid-membership/with a balance" data-integrity risk is closed
+  by Reliability Slice 1.*
 
 ### Recommended Beta Blockers (close before the first real gym)
-1. **TD-1 — enforce ARC-3/INV-11** (compose memberships/payments reads in the archive guard;
-   add P0 integration tests). *Highest.*
-2. **TD-6 — add live-DB integration tests** for at least the payment record/void and
-   membership-report allow-paths + 404 + idempotency.
-3. **TD-15 — resolve the Payments nav placeholder** (remove or repoint). *Cheap.*
-4. **TD-7 — extend e2e axe** to the newer module pages. *Cheap, closes the a11y honesty gap.*
+1. **TD-6 — add live-DB integration tests** for at least the payment record/void and
+   membership-report **command** allow-paths + 404 + idempotency. *Now highest.*
+2. **TD-15 — resolve the Payments nav placeholder** (remove or repoint). *Cheap.*
+3. **TD-7 — extend e2e axe** to the newer module pages. *Cheap, closes the a11y honesty gap.*
 
-Everything else (TD-2/3/4/5/8/9/12/16) is genuinely post-beta; TD-10/11/17 are pre-prod.
+**Closed:** TD-1 (Reliability Slice 1). Everything else (TD-2/3/4/5/8/9/12/16) is genuinely
+post-beta; TD-10/11/17 are pre-prod.
 
 ---
 
 ## Recommended Post-Beta Roadmap
 
-1. **Reliability slice** — TD-1 (archive guard + tests), TD-4 (serialize `assignTrainer`),
-   TD-2 (reconcile count-vs-cached-list at a single derive source).
-2. **Test-depth slice** — TD-6 (integration tests across E5/E7/E8 service paths) + TD-7
-   (e2e axe on all module pages), making the P0 layer uniform across every epic.
+1. **Reliability slice** — ✅ *Slice 1 (Member Archive Guard, TD-1) done.* Remaining: TD-4
+   (serialize `assignTrainer`), TD-2 (reconcile count-vs-cached-list at a single derive source).
+2. **Test-depth slice** — TD-6 (live-DB integration on the E5/E7/E8 **command** allow-paths) +
+   TD-7 (e2e axe on all module pages), making the P0 layer uniform across every epic.
 3. **Staff Management (Epic 9-adjacent)** — activates dormant roles, unlocks TD-5 (INV-36
    revoke side) and TD-3 (multi-role visibility for Notifications/Reports).
 4. **Notification delivery** — replace the on-open generation trigger with a scheduled
@@ -316,3 +327,48 @@ these files were added — type-check · lint + all fitness · format · build �
 `(app)` page, including the timing-sensitive onboarding wizard, so e2e was deliberately
 re-executed against the committed tree, not just the pre-change tree). No business logic,
 schema, permission, role, or ADR was touched.
+
+---
+
+## Reliability Slice 1 — Member Archive Guard (TD-1 closed)
+
+A dedicated reliability slice (no new feature, no schema/permission/role/ADR) that fully enforces
+ARC-3 / INV-11: **a Member may be archived only if they have no Active membership, no Scheduled
+membership, and no Outstanding Balance.**
+
+**Architecture — a reusable Member policy layer.** The rule is not an isolated assertion; it lives
+in a new `apps/web/src/modules/members/policy.ts` — the future home for all Member lifecycle
+policies. `evaluateMemberArchive(principal, memberId, clock?)` composes two module reads **only
+through their public indexes** (constitution §2; `no-cross-context` fitness green — the real graph
+still has no cycles):
+
+- **Memberships** — new public read `getMemberMembershipStanding` → `{ hasActiveMembership,
+  hasScheduledMembership }`, judged from **derived** status (`deriveMemberLifecycle` in the gym
+  time zone via the read-only `deriveForMember` — no write-on-read), never `cached_status`.
+- **Payments** — new public read `getMemberOutstandingBalance` → `{ hasOutstanding, totalMinor }`,
+  reusing the shared `loadOutstandingRows` + `summarizeLedger` with the **same** exclusions as the
+  dashboard/report (cancelled written-off + not-yet-started SCHEDULED excluded) — the single
+  balance definition (INV-24), never duplicated.
+
+The policy returns `{ archivable, blocks[] }`; `archiveMember` maps a non-archivable result to a
+user-facing `ActionState` error (`archiveBlockedMessage`) — an *expected* business outcome, not a
+thrown 500. Ordering is preserved: **tenancy load (`assertSameGym` → 404) first, then the
+idempotent already-ARCHIVED short-circuit, then the policy** (so a cross-gym id still 404s). The
+existing `clock` is threaded into the guard; no second clock parameter. The old empty
+`assertArchivable` stub and its `it.todo` placeholders are removed.
+
+**Authorization.** Each sub-read authorizes its own permission (`memberships.read` /
+`payments.read`); both are held by every seeded role that holds `members.archive` (Owner + Manager),
+so a legitimate archiver can always compose them — verified against the catalog.
+
+**Testing — 7 new live-DB P0 integration tests** (`tests/integration/member-archive-guard.test.ts`),
+each on its own member (shared DB not reset): archive **allowed** (no memberships; and an
+expired-fully-paid membership → guard runs and permits); **denied by active**; **denied by
+scheduled** (isolated to `["SCHEDULED_MEMBERSHIP"]` via an upgrade-then-cancel-predecessor setup);
+**denied by outstanding** (isolated to `["OUTSTANDING_BALANCE"]` via an expired membership with a
+partial payment); **tenant isolation** (cross-gym → 404 before the guard); **permission** (no
+`members.archive` → `AuthorizationError`).
+
+**Gate (all green):** type-check · lint + all fitness (incl. `no-cross-context`, `no-role-checks`,
+token-compliance) · format · build · **178 unit** · **75 integration** (+7). No client-bundle
+regression (the policy is server-only; `member-form` type-imports the service, which is erased).

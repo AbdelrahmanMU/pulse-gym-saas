@@ -23,7 +23,7 @@ import {
  * member contract (INV-9 contact-present, INV-3 contact-unique-per-gym), archive/reactivate
  * (ARC-1/2 + the partial-unique contact recycle), and trainer assignment (INV-35 one open
  * assignment, INV-36 same-gym active target). ARC-3's membership/balance preconditions are
- * `it.todo` — deferred to Epic D (see service `assertArchivable`).
+ * enforced by the Member archive policy and covered by `member-archive-guard.test.ts`.
  */
 let owner: AuthenticatedPrincipal;
 let noPerms: AuthenticatedPrincipal;
@@ -269,10 +269,9 @@ describe("archive & reactivate (ARC-1/2)", () => {
     );
   });
 
-  // ARC-3 / INV-11 — deferred to Epic D (Memberships/Billing own these queries). See the
-  // service `assertArchivable` seam; both preconditions are vacuously satisfied in Epic 2.
-  it.todo("rejects archive when the member has an Active or Scheduled membership (ARC-3)");
-  it.todo("rejects archive when the member has an Outstanding Balance (ARC-3)");
+  // ARC-3 / INV-11 (Active/Scheduled membership + Outstanding Balance preconditions) are now
+  // enforced by the Member archive policy and covered by `member-archive-guard.test.ts`
+  // (Reliability Slice 1). See `@/modules/members/policy`.
 });
 
 describe("responsible trainer assignment (ASN-1/2/3, INV-35/36)", () => {

@@ -11,6 +11,7 @@ import {
   type MemberInput,
   type MemberListParams,
 } from "./validation";
+import { archiveBlockedMessage, evaluateMemberArchive } from "./policy";
 
 /**
  * Member Management domain service (Sprint-1 Epic-2) — the testable core of the mutation
@@ -236,9 +237,16 @@ export async function archiveMember(
   clock: IClock = systemClock,
 ): Promise<ActionState> {
   authorize(principal, PERMISSION_KEYS.MEMBERS_ARCHIVE);
-  const member = await loadOwnedMember(principal, memberId);
-  assertArchivable(member);
-  if (member.status === "ARCHIVED") return { status: "success" }; // idempotent
+  const member = await loadOwnedMember(principal, memberId); // tenancy first (cross-gym → 404)
+  if (member.status === "ARCHIVED") return { status: "success" }; // idempotent (already archived)
+
+  // ARC-3 / INV-11: block archive while the member has a live/pending membership or a balance
+  // due. The rule composes the memberships + payments modules via the Member policy layer.
+  const eligibility = await evaluateMemberArchive(principal, memberId, clock);
+  if (!eligibility.archivable) {
+    return { status: "error", message: archiveBlockedMessage(eligibility.blocks) };
+  }
+
   await prisma.member.update({
     where: { id: memberId },
     data: { status: "ARCHIVED", archivedAt: clock.now() },
@@ -346,18 +354,6 @@ async function loadOwnedMember(
   if (!member) throw new NotFoundError();
   assertSameGym(principal.gymId, member.gymId);
   return member;
-}
-
-/**
- * ARC-3 / INV-11 archive guard. The rule rejects archiving when the member has an Active or
- * Scheduled membership OR an Outstanding Balance. Both preconditions are **deferred**: in
- * Epic 2, Memberships and Payments are out of scope and uncreatable, so both are vacuously
- * satisfied. They are wired in Epic D (Memberships/Billing), which owns membership-state and
- * the balance derivation (INV-24) — duplicating money math here would violate single
- * ownership. Tracked by `it.todo` tests naming both preconditions.
- */
-function assertArchivable(_member: MemberWithTrainer): void {
-  // Intentionally empty until Epic D. See doc comment above.
 }
 
 /** The member fields a user may write — plain scalar values valid for both create and update. */
