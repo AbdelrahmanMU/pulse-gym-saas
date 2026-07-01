@@ -240,8 +240,8 @@ export async function archiveMember(
   const member = await loadOwnedMember(principal, memberId); // tenancy first (cross-gym → 404)
   if (member.status === "ARCHIVED") return { status: "success" }; // idempotent (already archived)
 
-  // ARC-3 / INV-11: block archive while the member has a live/pending membership or a balance
-  // due. The rule composes the memberships + payments modules via the Member policy layer.
+  // ARC-3 / INV-11: block archive while the member has an Active, Scheduled, or Frozen membership
+  // or a balance due. The rule composes the memberships + payments modules via the Member policy.
   const eligibility = await evaluateMemberArchive(principal, memberId, clock);
   if (!eligibility.archivable) {
     return { status: "error", message: archiveBlockedMessage(eligibility.blocks) };

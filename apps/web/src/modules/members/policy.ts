@@ -9,19 +9,22 @@ import { getMemberOutstandingBalance } from "@/modules/payments";
  * their internals, and never re-derives membership status or balance here (single ownership).
  *
  * The archive policy (ARC-3 / INV-11) is the first policy implemented: a Member may be archived
- * only if they have **no Active membership, no Scheduled membership, and no Outstanding Balance**.
- * Future member-lifecycle policies (e.g. delete/merge eligibility) belong here too. The
+ * only if they have **no Active, Scheduled, or Frozen membership, and no Outstanding Balance**. A
+ * Frozen membership is paused but resumable (FRZ-4) — an unsettled live commitment the gym must
+ * close first (ARC-3 clarification, human-ruled 2026-07-01; recorded in business-rules.md). Future
+ * member-lifecycle policies (e.g. delete/merge eligibility) belong here too. The
  * {@link ../service member service} calls `evaluateMemberArchive` inside its archive command and
  * maps a non-archivable result to a user-facing error via {@link archiveBlockedMessage}.
  */
 export type ArchiveBlockReason =
   | "ACTIVE_MEMBERSHIP"
   | "SCHEDULED_MEMBERSHIP"
+  | "FROZEN_MEMBERSHIP"
   | "OUTSTANDING_BALANCE";
 
 export interface ArchiveEligibility {
   archivable: boolean;
-  /** Every reason archive is blocked (order: active, scheduled, outstanding) — empty when eligible. */
+  /** Every reason archive is blocked (order: active, scheduled, frozen, outstanding) — empty when eligible. */
   blocks: ArchiveBlockReason[];
 }
 
@@ -45,6 +48,7 @@ export async function evaluateMemberArchive(
   const blocks: ArchiveBlockReason[] = [];
   if (standing.hasActiveMembership) blocks.push("ACTIVE_MEMBERSHIP");
   if (standing.hasScheduledMembership) blocks.push("SCHEDULED_MEMBERSHIP");
+  if (standing.hasFrozenMembership) blocks.push("FROZEN_MEMBERSHIP");
   if (balance.hasOutstanding) blocks.push("OUTSTANDING_BALANCE");
 
   return { archivable: blocks.length === 0, blocks };
@@ -53,6 +57,7 @@ export async function evaluateMemberArchive(
 const REASON_PHRASE: Record<ArchiveBlockReason, string> = {
   ACTIVE_MEMBERSHIP: "an active membership",
   SCHEDULED_MEMBERSHIP: "a scheduled membership",
+  FROZEN_MEMBERSHIP: "a frozen (paused) membership",
   OUTSTANDING_BALANCE: "an outstanding balance",
 };
 

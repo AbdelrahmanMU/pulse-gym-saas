@@ -84,10 +84,10 @@
 ## 8. Archive Member
 - **Goal** — Remove a member from active lists while keeping their history.
 - **Actors** — An actor holding **`members.archive`** (Owner bundle in MVP).
-- **Preconditions** — Member exists, has **no Active or Scheduled membership**, and has **no Outstanding Balance** (ARC-3).
-- **Business Flow** — 1) Select the member. 2) The system verifies no Active/Scheduled membership and zero Outstanding Balance. 3) Confirm. 4) The member becomes Archived (history retained, hidden from active lists).
+- **Preconditions** — Member exists, has **no Active, Scheduled, or Frozen membership**, and has **no Outstanding Balance** (ARC-3).
+- **Business Flow** — 1) Select the member. 2) The system verifies no Active/Scheduled/Frozen membership and zero Outstanding Balance. 3) Confirm. 4) The member becomes Archived (history retained, hidden from active lists).
 - **Alternative Flows** — Reactivate later (ARC-2).
-- **Failure Scenarios** — **Active/Scheduled membership exists or balance is owed → archive rejected** (cancel/settle first — ARC-3). Actor lacks `members.archive` → denied.
+- **Failure Scenarios** — **Active/Scheduled/Frozen membership exists or balance is owed → archive rejected** (cancel/settle first — ARC-3). Actor lacks `members.archive` → denied.
 - **Expected Result** — Member Archived; event **MemberArchived**.
 - **Business Notes** — Reversible; never an erasure (MBR-5).
 

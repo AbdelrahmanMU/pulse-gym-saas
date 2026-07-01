@@ -129,7 +129,7 @@
 |---|---|---|---|---|
 | ARC-1 | **Archiving** a member removes them from active lists while **retaining all history**. | Keep working lists clean without destroying records. | None. | Bulk archive of long-lapsed members. |
 | ARC-2 | Archiving is **reversible** (a member may be reactivated); destruction of records is not. | People return; the business shouldn't lose them. | None. | Re-onboarding flow. |
-| ARC-3 | **Archiving is allowed only when the member has NO Active (or Scheduled) membership AND NO Outstanding Balance.** Otherwise archiving is **rejected**. | An archived person must never silently retain access, a queued period, or unpaid debt; the gym must settle and close first. | None — absolute (see `business-invariants.md`). | Guided "close-out" flow that cancels/settles, then archives. |
+| ARC-3 | **Archiving is allowed only when the member has NO Active, Scheduled, or Frozen membership AND NO Outstanding Balance.** Otherwise archiving is **rejected**. *(Frozen clarification, human-ruled 2026-07-01: a Frozen membership is paused but **resumable** (FRZ-4) — a live, unsettled commitment — so it must be cancelled/closed before archive, exactly like Active/Scheduled.)* | An archived person must never silently retain access, a queued period, a paused-but-resumable membership, or unpaid debt; the gym must settle and close first. | None — absolute (see `business-invariants.md`). | Guided "close-out" flow that cancels/settles, then archives. |
 
 ## 14. Assignment (member ↔ trainer)
 
@@ -167,7 +167,7 @@ All open questions are **resolved and binding** as of the final governance recon
 - **OQ-1 — Front desk / roles → RESOLVED (decision-log ADR-014).** MVP roles are **Owner + Trainer**; front-desk operations are Owner permissions in MVP. **Front Desk, Receptionist, Manager, Accountant, Branch Manager** exist as **dormant** future bundles (documented, in the permission strategy, migration-ready) — no UI, no creation, no activation in MVP.
 - **OQ-2 — Upgrade money handling → RESOLVED.** **Deferred upgrade, no proration/refunds/adjustments** (UPG-1…3).
 - **OQ-3 — Payment vs access → RESOLVED.** **Membership status controls access; payment standing never does** (MSH-6). New memberships begin **Pending** and progress Pending → Partially Paid → Paid (PAY-3).
-- **OQ-4 — Archive policy → RESOLVED.** Archive allowed **only when no Active/Scheduled membership AND no Outstanding Balance** (ARC-3).
+- **OQ-4 — Archive policy → RESOLVED.** Archive allowed **only when no Active, Scheduled, or Frozen membership AND no Outstanding Balance** (ARC-3; Frozen clarified 2026-07-01).
 - **OQ-5 — Scheduled memberships → RESOLVED.** **Scheduled** memberships now exist, but **only** as the queued next period from a deferred Upgrade (and optionally early Renewal): at most one Active + one Scheduled (MSH-7). Arbitrary future-dating remains out of scope.
 - **OQ-6 — Multiple trainers → RESOLVED.** **One trainer per member** in MVP; multiple is future.
 - **OQ-7 — Freeze limits / who may freeze → RESOLVED.** **No hard cap** in MVP (duration recorded); freezing requires the **`memberships.freeze`** permission (not a role).

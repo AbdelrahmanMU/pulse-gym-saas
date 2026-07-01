@@ -470,18 +470,20 @@ export async function getExpiryCandidates(
   return candidates;
 }
 
-/** Whether a member currently holds a live (Active) or pending (Scheduled) membership. */
+/** Whether a member currently holds a live (Active), paused (Frozen), or pending (Scheduled) membership. */
 export interface MemberMembershipStanding {
   hasActiveMembership: boolean;
   hasScheduledMembership: boolean;
+  /** A Frozen membership is paused but **resumable** (FRZ-4) → an unsettled live commitment. */
+  hasFrozenMembership: boolean;
 }
 
 /**
- * Whether the member has an Active or Scheduled membership, judged from **derived** status
+ * Whether the member has an Active, Scheduled, or Frozen membership, judged from **derived** status
  * (`deriveMemberLifecycle` in the gym time zone via the read-only {@link deriveForMember}) — never
  * trusted from `cached_status`, and never writing on this read path. Gated by `memberships.read`.
- * The single home for "does this member have a live/pending membership?", composed by the Member
- * archive policy (ARC-3 / INV-11) through the module's public index.
+ * The single home for "does this member have a live/paused/pending membership?", composed by the
+ * Member archive policy (ARC-3 / INV-11) through the module's public index.
  */
 export async function getMemberMembershipStanding(
   principal: AuthenticatedPrincipal,
@@ -493,11 +495,13 @@ export async function getMemberMembershipStanding(
   const derived = await deriveForMember(principal.gymId, memberId, ctx);
   let hasActiveMembership = false;
   let hasScheduledMembership = false;
+  let hasFrozenMembership = false;
   for (const d of derived.values()) {
     if (d.status === MembershipStatus.ACTIVE) hasActiveMembership = true;
     else if (d.status === MembershipStatus.SCHEDULED) hasScheduledMembership = true;
+    else if (d.status === MembershipStatus.FROZEN) hasFrozenMembership = true;
   }
-  return { hasActiveMembership, hasScheduledMembership };
+  return { hasActiveMembership, hasScheduledMembership, hasFrozenMembership };
 }
 
 /** Active members eligible to be sold a membership (for the create form). */

@@ -26,7 +26,7 @@
 ## Member
 - **INV-9** — A member has a name and at least one contact method. *(MBR-2)*
 - **INV-10** — A member is **archived, never erased** while history exists. *(MBR-5)*
-- **INV-11** — A member may be **archived only when they have no Active or Scheduled membership AND no Outstanding Balance**. *(ARC-3)*
+- **INV-11** — A member may be **archived only when they have no Active, Scheduled, or Frozen membership AND no Outstanding Balance**. *(ARC-3; a Frozen membership is resumable (FRZ-4), so it must be closed first — clarified 2026-07-01)*
 
 ## Membership
 - **INV-12** — A member holds **at most one Active and at most one Scheduled** membership at a time. *(MBR-4, MSH-7)*

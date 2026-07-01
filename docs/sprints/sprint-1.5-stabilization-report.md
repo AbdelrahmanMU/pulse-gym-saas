@@ -9,10 +9,12 @@ consistency/UX/reliability in-place; defer the rest into the Technical Debt Summ
 > The headline finding below (TD-1: ARC-3 / INV-11 archive preconditions live-unenforced) has
 > since been fully enforced in a dedicated reliability slice — a reusable Member policy layer
 > (`modules/members/policy.ts`) composes the memberships + payments **public** reads to block
-> archiving a member who has an Active membership, a Scheduled membership, or an Outstanding
-> Balance, with 7 new **live-DB** P0 integration tests (allow / denied-by-active /
-> denied-by-scheduled / denied-by-outstanding / tenant-isolation / permission). Gate green:
-> 178 unit · **75 integration** (+7) · build. Details in the closing "Reliability Slice 1"
+> archiving a member who has an Active, Scheduled, or **Frozen** membership, or an Outstanding
+> Balance (frozen-blocks-archive was a letter-vs-intent ambiguity in ARC-3, **human-ruled
+> 2026-07-01** and reconciled across the domain docs), with 8 new **live-DB** P0 integration
+> tests (allow / denied-by-active / denied-by-scheduled / denied-by-frozen / denied-by-outstanding
+> / tenant-isolation / permission). Gate green: 178 unit · **76 integration** (+8) · build.
+> Details in the closing "Reliability Slice 1"
 > section; the score table and TD list below are updated accordingly.
 
 > **Honesty note (how each area was verified).** This sprint mixes reviews that only mean
@@ -237,7 +239,7 @@ intentionally deferred or re-classified with rationale.
 
 | # | Item | Status / rationale | Priority |
 |---|---|---|---|
-| **TD-1** | **ARC-3 / INV-11 archive preconditions.** Was an empty `assertArchivable` stub — a live invariant violation once Epics 4–5 shipped memberships + payments. | **CLOSED — Reliability Slice 1.** A reusable Member policy layer (`modules/members/policy.ts`) composes the memberships + payments **public** reads (`getMemberMembershipStanding`, `getMemberOutstandingBalance`) to block archiving a member with an Active/Scheduled membership or an Outstanding Balance; 7 new **live-DB** P0 integration tests. No schema/permission/role change. | ✅ Done |
+| **TD-1** | **ARC-3 / INV-11 archive preconditions.** Was an empty `assertArchivable` stub — a live invariant violation once Epics 4–5 shipped memberships + payments. | **CLOSED — Reliability Slice 1.** A reusable Member policy layer (`modules/members/policy.ts`) composes the memberships + payments **public** reads (`getMemberMembershipStanding`, `getMemberOutstandingBalance`) to block archiving a member with an Active/Scheduled/**Frozen** membership or an Outstanding Balance (frozen-blocks per the 2026-07-01 ARC-3 clarification); 8 new **live-DB** P0 integration tests. No schema/permission/role change. | ✅ Done |
 | TD-2 | Count-vs-cached-list drift (memberships report / dashboard). Counts derive live (`deriveRow`); list filters use the `cachedStatus` accelerator → a time-drifted row can count "Expired" yet list "Active" with an Expired badge. | Intentional/inherited (Epic 4/6/8). Fix touches cache-reconciliation; **flagged, not changed**. | Post-beta |
 | TD-3 | Notifications & Reports are **Owner-only** in MVP (Manager/Accountant hold the perms but are dormant/unassignable). | Intentional. | Post-beta |
 | TD-4 | `assignTrainer` race not serialized (concurrent set → possible P2002/500). | E2 carryover; low-frequency. | Post-beta |
@@ -333,8 +335,16 @@ schema, permission, role, or ADR was touched.
 ## Reliability Slice 1 — Member Archive Guard (TD-1 closed)
 
 A dedicated reliability slice (no new feature, no schema/permission/role/ADR) that fully enforces
-ARC-3 / INV-11: **a Member may be archived only if they have no Active membership, no Scheduled
+ARC-3 / INV-11: **a Member may be archived only if they have no Active, Scheduled, or Frozen
 membership, and no Outstanding Balance.**
+
+> **Business-rule clarification (human-ruled 2026-07-01).** ARC-3/INV-11 literally enumerated only
+> "Active or Scheduled", and FRZ-1 defines a frozen member as "not active" — so the *letter* left a
+> **fully-paid Frozen** membership archivable. But a Frozen membership is **resumable** (FRZ-4), so
+> archiving one leaves a resumable path to access — the exact desync this slice prevents. This
+> letter-vs-intent gap was surfaced as a STOP (ambiguous business rule); the human ruled **Frozen
+> blocks archive**. The clarification was reconciled across every canonical enumeration
+> (business-rules ARC-3, business-invariants INV-11, glossary, state-machines, workflows).
 
 **Architecture — a reusable Member policy layer.** The rule is not an isolated assertion; it lives
 in a new `apps/web/src/modules/members/policy.ts` — the future home for all Member lifecycle
@@ -343,8 +353,9 @@ through their public indexes** (constitution §2; `no-cross-context` fitness gre
 still has no cycles):
 
 - **Memberships** — new public read `getMemberMembershipStanding` → `{ hasActiveMembership,
-  hasScheduledMembership }`, judged from **derived** status (`deriveMemberLifecycle` in the gym
-  time zone via the read-only `deriveForMember` — no write-on-read), never `cached_status`.
+  hasScheduledMembership, hasFrozenMembership }`, judged from **derived** status
+  (`deriveMemberLifecycle` in the gym time zone via the read-only `deriveForMember` — no
+  write-on-read), never `cached_status`.
 - **Payments** — new public read `getMemberOutstandingBalance` → `{ hasOutstanding, totalMinor }`,
   reusing the shared `loadOutstandingRows` + `summarizeLedger` with the **same** exclusions as the
   dashboard/report (cancelled written-off + not-yet-started SCHEDULED excluded) — the single
@@ -361,14 +372,15 @@ existing `clock` is threaded into the guard; no second clock parameter. The old 
 `payments.read`); both are held by every seeded role that holds `members.archive` (Owner + Manager),
 so a legitimate archiver can always compose them — verified against the catalog.
 
-**Testing — 7 new live-DB P0 integration tests** (`tests/integration/member-archive-guard.test.ts`),
+**Testing — 8 new live-DB P0 integration tests** (`tests/integration/member-archive-guard.test.ts`),
 each on its own member (shared DB not reset): archive **allowed** (no memberships; and an
 expired-fully-paid membership → guard runs and permits); **denied by active**; **denied by
 scheduled** (isolated to `["SCHEDULED_MEMBERSHIP"]` via an upgrade-then-cancel-predecessor setup);
-**denied by outstanding** (isolated to `["OUTSTANDING_BALANCE"]` via an expired membership with a
-partial payment); **tenant isolation** (cross-gym → 404 before the guard); **permission** (no
-`members.archive` → `AuthorizationError`).
+**denied by frozen** (isolated to `["FROZEN_MEMBERSHIP"]` via a fully-paid then frozen membership —
+proves frozen blocks even with a zero balance); **denied by outstanding** (isolated to
+`["OUTSTANDING_BALANCE"]` via an expired membership with a partial payment); **tenant isolation**
+(cross-gym → 404 before the guard); **permission** (no `members.archive` → `AuthorizationError`).
 
 **Gate (all green):** type-check · lint + all fitness (incl. `no-cross-context`, `no-role-checks`,
-token-compliance) · format · build · **178 unit** · **75 integration** (+7). No client-bundle
+token-compliance) · format · build · **178 unit** · **76 integration** (+8). No client-bundle
 regression (the policy is server-only; `member-form` type-imports the service, which is erased).

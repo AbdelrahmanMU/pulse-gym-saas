@@ -9,6 +9,7 @@ import { evaluateMemberArchive } from "@/modules/members/policy";
 import {
   cancelMembership,
   createMembership,
+  freezeMembership,
   upgradeMembership,
 } from "@/modules/memberships/service";
 import { recordPayment } from "@/modules/payments/service";
@@ -16,8 +17,9 @@ import { recordPayment } from "@/modules/payments/service";
 /**
  * Integration P0 tests for **Reliability Slice 1 — Member Archive Guard** (ARC-3 / INV-11)
  * against the isolated test DB. Proves the invariant that a member may be archived **only if**
- * they have no Active membership, no Scheduled membership, and no Outstanding Balance — enforced
- * by the Member policy layer composing the memberships + payments public reads. Time is supplied
+ * they have no Active, Scheduled, or Frozen membership and no Outstanding Balance (frozen blocks
+ * per the human-ruled ARC-3 clarification — a frozen membership is resumable) — enforced by the
+ * Member policy layer composing the memberships + payments public reads. Time is supplied
  * by an injected fake clock so derived membership status is deterministic. Each test uses its own
  * member so the guard evaluates a clean membership set (the shared test DB is not reset).
  */
@@ -198,6 +200,43 @@ describe("archive denied — outstanding balance (ARC-3 / INV-24)", () => {
 
     const eligibility = await evaluateMemberArchive(owner, memberId, clockAt("2026-06-01"));
     expect(eligibility.blocks).toEqual(["OUTSTANDING_BALANCE"]);
+  });
+});
+
+describe("archive denied — frozen membership (ARC-3 clarification, FRZ-4)", () => {
+  it("rejects archive while a Frozen (paused, resumable) membership exists, even when fully paid", async () => {
+    const memberId = await makeMember(ownerGymId, ownerBranchId);
+    const planId = await makePlan(5000n);
+    const created = await createMembership(
+      owner,
+      { memberId, planId, startDate: "2026-03-01" },
+      clockAt("2026-03-01"),
+    );
+    // Pay in full first (so the outstanding check can't be what blocks), then freeze the active period.
+    await recordPayment(
+      owner,
+      created.membershipId ?? "",
+      { amount: "50.00", method: "CASH", receivedOn: "2026-03-05" },
+      clockAt("2026-03-05"),
+    );
+    const frozen = await freezeMembership(
+      owner,
+      created.membershipId ?? "",
+      { frozenDays: 30 },
+      clockAt("2026-03-06"),
+    );
+    expect(frozen.status).toBe("success");
+
+    const result = await archiveMember(owner, memberId, clockAt("2026-03-10"));
+    expect(result.status).toBe("error");
+    if (result.status === "error") expect(result.message).toMatch(/frozen/i);
+    expect((await prisma.member.findUniqueOrThrow({ where: { id: memberId } })).status).toBe(
+      "ACTIVE",
+    );
+
+    // Isolation: only FROZEN blocks (no active, no scheduled, no balance) at this instant.
+    const eligibility = await evaluateMemberArchive(owner, memberId, clockAt("2026-03-10"));
+    expect(eligibility.blocks).toEqual(["FROZEN_MEMBERSHIP"]);
   });
 });
 
