@@ -133,7 +133,7 @@ All formerly-open decisions are decided and binding. No open architectural decis
 |---|---|---|---|
 | ADR-018 (was P1) | Upgrade policy | **Deferred upgrade:** current membership runs to expiry; upgrade creates a **Scheduled** next membership effective after expiry; **no proration/refund/adjustment** (UPG-1…3). | ✅ Accepted |
 | ADR-019 (was P2) | Payment vs access; standing | **Membership status controls access; payment standing never does.** Payment standing is derived **Pending → Partially Paid → Paid**; new memberships start Pending (MSH-6, PAY-3). | ✅ Accepted |
-| ADR-020 (was P3) | Archive policy | **Archive only when no Active/Scheduled membership AND no Outstanding Balance**; else rejected (ARC-3). | ✅ Accepted |
+| ADR-020 (was P3) | Archive policy | **Archive only when no Active/Scheduled/Frozen membership AND no Outstanding Balance**; else rejected (ARC-3; Frozen clarified 2026-07-01 — a frozen membership is resumable so it must be closed first). | ✅ Accepted |
 | ADR-021 (was P4) | Scheduled memberships | **Scheduled** memberships exist, but **only** as the queued upgrade/early-renewal next period (one Active + one Scheduled max — MSH-7). Arbitrary future-dating remains out of scope. | ✅ Accepted |
 | ADR-022 (was P5) | Freeze caps & authority | **No hard cap** (duration recorded); freezing requires permission **`memberships.freeze`** (never a role). | ✅ Accepted |
 | ADR-023 (was P6) | Payment attribution | **Every payment belongs to exactly one membership; no orphan payments** (PAY-6; permanent invariant). | ✅ Accepted |

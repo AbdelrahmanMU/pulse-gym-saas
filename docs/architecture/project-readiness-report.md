@@ -20,7 +20,7 @@
 | **O-1: seven Proposed decisions unconfirmed** | **All resolved** as ADR-018…024. | `decision-log.md` (Upgrade deferred; payment standing/access; archive policy; Scheduled; freeze; attribution; gym-custom roles). |
 | **Upgrade policy ambiguity** | **Deferred upgrade** (current runs to expiry; Scheduled next period; no proration/refund). | business-rules UPG-1…3; state-machines; time-rules §7; INV-16. |
 | **Payment/access coupling** | **Membership status controls access; payment standing (Pending/Partially Paid/Paid) never does.** | MSH-6; money-rules; state-machines §2; INV-15. |
-| **Archive ambiguity** | **Archive only when no Active/Scheduled membership AND no Outstanding Balance.** | ARC-3; workflows §8; state-machines Member; INV-11. |
+| **Archive ambiguity** | **Archive only when no Active/Scheduled/Frozen membership AND no Outstanding Balance.** | ARC-3; workflows §8; state-machines Member; INV-11. |
 | **Payment attribution undefined** | **Every payment belongs to exactly one membership** (permanent invariant). | PAY-6; INV-20; data-ownership. |
 | **Missing financial/temporal/ownership governance** | **Six new authoritative docs created.** | `immutable-history.md`, `money-rules.md`, `time-rules.md`, `data-ownership.md`, `business-invariants.md`, `module-communication.md`. |
 | **Capability ownership undefined** | **Added** (each capability → one owning context, consumers, forbidden consumers). | `authorization-architecture.md` §13. |

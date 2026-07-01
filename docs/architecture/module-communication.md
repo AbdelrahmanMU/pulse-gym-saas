@@ -42,7 +42,7 @@
 - **Ownership** — sole owner of Plan data; never touches existing memberships (PLN-3).
 
 ### Member Management
-- **Allowed Dependencies** — IAM; **reads** Membership and Billing for the archive check (no Active/Scheduled + zero balance — ARC-3).
+- **Allowed Dependencies** — IAM; **reads** Membership and Billing for the archive check (no Active/Scheduled/Frozen + zero balance — ARC-3).
 - **Forbidden Dependencies** — Notifications, Reporting.
 - **Read Access (by others)** — Membership/Billing/Notifications/Reporting read member summaries.
 - **Write Access** — writes Member, MemberNote, Trainer Assignment only.

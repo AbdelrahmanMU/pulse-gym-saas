@@ -195,7 +195,7 @@ The migration deliberately does **not** attempt these; they are application logi
 | **INV-12** ≤1 ACTIVE + ≤1 SCHEDULED per member | Status is time-relative (gym clock); a `cached_status` partial-unique would lag and reject valid inserts. Enforced by re-checking immutable facts in a serializable tx. |
 | **INV-13** freeze-extended/clock-relative overlap | The GiST backstop (§6) covers only immutable dates; effective-end shifts with freezes. |
 | **INV-36** no dangling trainer | Trainers are **soft-revoked** → the FK never fires; the revoke write-path must reassign/close open assignments. |
-| **INV-11** archive guard | Cross-aggregate check (no Active/Scheduled membership + zero balance) before `status=ARCHIVED`. |
+| **INV-11** archive guard | Cross-aggregate check (no Active/Scheduled/Frozen membership + zero balance) before `status=ARCHIVED`. |
 | **Payment.currency = snapshot currency** | Cross-table comparison. |
 
 > Optional defense-in-depth (DDS §16): DB triggers/role grants denying `UPDATE`/`DELETE` on `payments` and `audit_logs` to enforce append-only at the engine. Recommended for production; can be a follow-up migration.

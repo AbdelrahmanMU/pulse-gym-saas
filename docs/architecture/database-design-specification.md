@@ -211,7 +211,7 @@ Stored as constrained string enums (readable in DB & code). Defined once here; n
 - **Business Constraints** — **Unique identifying contact among *non-archived* members within a gym** — partial-unique `(gym_id, phone) WHERE phone IS NOT NULL AND archived_at IS NULL` and `(gym_id, email) WHERE email IS NOT NULL AND archived_at IS NULL` (MBR-3, INV-3). **Decision (resolves the MBR-3 ↔ MBR-5 tension):** uniqueness is scoped to **active** members only, so a recycled phone/email can be reused for a genuinely new member after the prior holder is archived; the **"reactivate, don't recreate"** guard is a **write-path** behavior (registration searches archived members by contact and offers reactivation — workflow 1), **not** a permanent hard constraint that would forever block a recycled number. At least one contact present (CHECK: `phone IS NOT NULL OR email IS NOT NULL`).
 - **Business Invariants** — INV-3/9/10/11.
 - **Lifecycle** — Registered → Active ⇄ Archived (ARC). 
-- **Soft Delete / Archive** — **Archived, never erased** (MBR-5/INV-10) via `status=ARCHIVED`+`archived_at`; archive allowed **only** when no Active/Scheduled membership and zero outstanding balance (ARC-3/INV-11 — enforced in the Member-Management write path, which *asks* Membership/Billing).
+- **Soft Delete / Archive** — **Archived, never erased** (MBR-5/INV-10) via `status=ARCHIVED`+`archived_at`; archive allowed **only** when no Active/Scheduled/Frozen membership and zero outstanding balance (ARC-3/INV-11 — Frozen clarified 2026-07-01; enforced in the Member-Management write path, which *asks* Membership/Billing).
 - **Audit / History** — Create/update/archive/reactivate audited; profile fields are present-state (mutable).
 - **Future Expansion** — Self-service portal account link, photo, household/family links, marketing consent, custom fields.
 
@@ -585,7 +585,7 @@ Each invariant (`business-invariants.md`) is preserved by a specific mechanism:
 | INV-1/2 tenancy | `gym_id` on every business table + `gym_id`-scoped queries/indexes |
 | INV-3 unique contact/gym | partial-unique `(gym_id, phone)`/`(gym_id, email)` **scoped to non-archived** (`AND archived_at IS NULL`); reactivation-dedup is a write-path behavior |
 | INV-5/6/7 permission-based, immutable keys | Permission/Role/RolePermission tables; `Permission.key` immutable; no role column used in logic |
-| INV-11 archive guard | write-path check (no Active/Scheduled membership + zero balance) before setting `status=ARCHIVED` |
+| INV-11 archive guard | write-path check (no Active/Scheduled/Frozen membership + zero balance) before setting `status=ARCHIVED` |
 | INV-12 one active/one scheduled | **write-path check in a serializable transaction** (authoritative — time-relative, cannot be a static index); `cached_status` index is a query accelerator only |
 | INV-13 no overlap | **GiST range exclusion constraint** on non-cancelled `(member_id, [start,end])` as DB backstop **+** write-path check for freeze-extended/clock-relative cases; `scheduled_effective_from = predecessor end + 1` |
 | INV-14/19/21/39 immutability | write-once columns; append-only ledger; no UPDATE/DELETE on Payment/AuditLog; restrict deletes |

@@ -92,11 +92,11 @@
 - **Failure:** Member row deleted while referenced.
 - **Recovery:** Restore from backup; replace delete paths with archive.
 
-### INV-11 — archive only when no Active/Scheduled membership AND zero balance
+### INV-11 — archive only when no Active/Scheduled/Frozen membership AND zero balance
 - **Purpose:** Safe archive guard (write-path).
-- **Scenario:** Attempt to archive a member with (a) an Active membership, (b) a Scheduled membership, (c) outstanding balance > 0; then with none of these.
-- **Expected:** (a)(b)(c) blocked by the write-path guard; clean case succeeds. (DB does not itself block — the test asserts the guard's outcome.)
-- **Failure:** Archive succeeds despite Active/Scheduled membership or non-zero balance.
+- **Scenario:** Attempt to archive a member with (a) an Active membership, (b) a Scheduled membership, (c) a Frozen membership, (d) outstanding balance > 0; then with none of these.
+- **Expected:** (a)(b)(c)(d) blocked by the write-path guard; clean case succeeds. (DB does not itself block — the test asserts the guard's outcome.)
+- **Failure:** Archive succeeds despite an Active/Scheduled/Frozen membership or non-zero balance.
 - **Recovery:** Re-open/repair wrongly-archived member; fix the guard; add regression test.
 
 ---
