@@ -2,6 +2,7 @@ import {
   prisma,
   Prisma,
   PaymentEntryType,
+  MembershipStatus,
   type PaymentMethod,
   type PaymentStanding,
 } from "@pulse/db";
@@ -13,6 +14,7 @@ import { NotFoundError } from "@/lib/errors";
 import { systemClock } from "@/lib/platform/clock";
 import { parseAmountToMinor } from "@/lib/money";
 import { summarizeLedger, type LedgerEntry } from "./ledger";
+import { sumRevenueInRange, type DatedLedgerEntry } from "./revenue";
 import { RecordPaymentSchema, VoidPaymentSchema } from "./validation";
 
 /**
@@ -65,6 +67,30 @@ export interface MembershipBilling {
   standing: PaymentStanding;
   /** Chronological ledger (oldest first) with a running total. */
   history: PaymentHistoryEntry[];
+}
+
+export interface RevenueSummary {
+  currency: string;
+  /** Net revenue recognised today (gym tz), minor units string. */
+  todayMinor: string;
+  /** Net revenue recognised this month-to-date (gym tz), minor units string. */
+  monthMinor: string;
+}
+
+export interface OutstandingBalanceRow {
+  membershipId: string;
+  memberId: string;
+  memberName: string;
+  planName: string;
+  /** `snapshotPrice − totalPaid`, always `> 0` here (minor units string). */
+  remainingMinor: string;
+  currency: string;
+}
+
+export interface OutstandingBalances {
+  rows: OutstandingBalanceRow[];
+  /** Total count of memberships with a remaining balance (rows may be truncated). */
+  count: number;
 }
 
 type Tx = Prisma.TransactionClient;
@@ -125,6 +151,96 @@ export async function getMembershipBilling(
     remainingMinor: summary.remainingMinor.toString(),
     standing: summary.standing,
     history,
+  };
+}
+
+/**
+ * Net revenue for the dashboard (Epic-6) — Today + Month-to-date, judged in the **gym time zone**
+ * and derived from the immutable ledger (`Σ(PAYMENT) − Σ(VOID)` via the shared sign authority).
+ * Never stored. Gated by `payments.read`.
+ */
+export async function getRevenueSummary(
+  principal: AuthenticatedPrincipal,
+  clock: IClock = systemClock,
+): Promise<RevenueSummary> {
+  authorize(principal, PERMISSION_KEYS.PAYMENTS_READ);
+  const gym = await prisma.gym.findUnique({
+    where: { id: principal.gymId },
+    select: { timeZone: true, defaultCurrency: true },
+  });
+  if (!gym) throw new NotFoundError();
+
+  const today = clock.today(gym.timeZone);
+  const monthStart = `${today.slice(0, 7)}-01`;
+  const payments = await prisma.payment.findMany({
+    where: { gymId: principal.gymId, receivedAt: { gte: new Date(`${monthStart}T00:00:00.000Z`) } },
+    select: { entryType: true, amount: true, receivedAt: true },
+  });
+  const entries: DatedLedgerEntry[] = payments.map((p) => ({
+    entryType: p.entryType,
+    amountMinor: p.amount,
+    receivedOn: p.receivedAt.toISOString().slice(0, 10),
+  }));
+
+  return {
+    currency: gym.defaultCurrency,
+    todayMinor: sumRevenueInRange(entries, today, today).toString(),
+    monthMinor: sumRevenueInRange(entries, monthStart, today).toString(),
+  };
+}
+
+/**
+ * Memberships with an outstanding balance (Epic-6) — `snapshotPrice − totalPaid > 0`, derived per
+ * membership via {@link summarizeLedger} (never stored). Excluded: **CANCELLED** (immutable
+ * `cancelledAt`; the balance is written off) and **SCHEDULED** (a not-yet-started future period —
+ * an upgrade/early-renewal successor whose payment isn't today's concern), filtered via the
+ * `cached_status` accelerator so an activated (now ACTIVE) renewal with a balance still shows.
+ * EXPIRED / FROZEN / ACTIVE with a balance are included (collection). Sorted by largest remaining
+ * first, truncated to `limit`. Gated by `payments.read`.
+ */
+export async function getOutstandingBalances(
+  principal: AuthenticatedPrincipal,
+  limit = 8,
+): Promise<OutstandingBalances> {
+  authorize(principal, PERMISSION_KEYS.PAYMENTS_READ);
+  const memberships = await prisma.membership.findMany({
+    where: {
+      gymId: principal.gymId,
+      cancelledAt: null,
+      cachedStatus: { not: MembershipStatus.SCHEDULED },
+    },
+    select: {
+      id: true,
+      memberId: true,
+      snapshotPrice: true,
+      snapshotCurrency: true,
+      snapshotPlanName: true,
+      member: { select: { fullName: true } },
+      payments: { select: { entryType: true, amount: true } },
+    },
+  });
+
+  const outstanding = memberships
+    .map((m) => {
+      const ledger: LedgerEntry[] = m.payments.map((p) => ({
+        entryType: p.entryType,
+        amountMinor: p.amount,
+      }));
+      return { membership: m, remaining: summarizeLedger(m.snapshotPrice, ledger).remainingMinor };
+    })
+    .filter((x) => x.remaining > 0n)
+    .sort((a, b) => (a.remaining < b.remaining ? 1 : a.remaining > b.remaining ? -1 : 0));
+
+  return {
+    count: outstanding.length,
+    rows: outstanding.slice(0, limit).map(({ membership: m, remaining }) => ({
+      membershipId: m.id,
+      memberId: m.memberId,
+      memberName: m.member.fullName,
+      planName: m.snapshotPlanName,
+      remainingMinor: remaining.toString(),
+      currency: m.snapshotCurrency,
+    })),
   };
 }
 

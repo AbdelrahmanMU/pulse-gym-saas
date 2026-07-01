@@ -29,7 +29,10 @@ export async function recordPaymentAction(
     receivedOn: str(form, "receivedOn"),
     note: str(form, "note"),
   });
-  if (result.status === "success") revalidatePath(`/memberships/${membershipId}`);
+  if (result.status === "success") {
+    revalidatePath(`/memberships/${membershipId}`);
+    revalidatePath("/dashboard"); // revenue + outstanding KPIs
+  }
   return result;
 }
 
@@ -38,6 +41,9 @@ export async function voidPaymentAction(_prev: ActionState, form: FormData): Pro
   const membershipId = str(form, "membershipId") ?? "";
   const paymentId = str(form, "paymentId") ?? "";
   const result = await voidPayment(principal, paymentId, { voidReason: str(form, "voidReason") });
-  if (result.status === "success") revalidatePath(`/memberships/${membershipId}`);
+  if (result.status === "success") {
+    revalidatePath(`/memberships/${membershipId}`);
+    revalidatePath("/dashboard"); // revenue + outstanding KPIs
+  }
   return result;
 }

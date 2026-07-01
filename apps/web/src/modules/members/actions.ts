@@ -41,6 +41,7 @@ export async function createMemberAction(_prev: ActionState, form: FormData): Pr
   const result = await createMember(principal, memberFields(form));
   if (result.status === "success" && result.memberId) {
     revalidatePath("/members");
+    revalidatePath("/dashboard"); // Recent Members list
     redirect(`/members/${result.memberId}`);
   }
   return result;
@@ -107,4 +108,5 @@ export async function unassignTrainerAction(
 function revalidateMember(memberId: string): void {
   revalidatePath("/members");
   revalidatePath(`/members/${memberId}`);
+  revalidatePath("/dashboard"); // Recent Members list (active-only)
 }

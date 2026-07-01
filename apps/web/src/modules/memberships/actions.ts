@@ -38,6 +38,7 @@ export async function createMembershipAction(
   });
   if (result.status === "success" && result.membershipId) {
     revalidatePath("/memberships");
+    revalidatePath("/dashboard"); // membership-status KPIs + outstanding
     redirect(`/memberships/${result.membershipId}`);
   }
   return result;
@@ -109,4 +110,5 @@ export async function cancelMembershipAction(
 function revalidateMembership(membershipId: string): void {
   revalidatePath("/memberships");
   revalidatePath(`/memberships/${membershipId}`);
+  revalidatePath("/dashboard"); // membership-status KPIs + expiring/expired lists
 }

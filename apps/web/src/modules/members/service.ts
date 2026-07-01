@@ -120,6 +120,28 @@ export async function listMembers(
   return { rows: rows.map(toRow), total, page, totalPages, pageSize: PAGE_SIZE };
 }
 
+/** A recently-created member for the dashboard's Recent Members list (Epic-6). */
+export interface RecentMemberRow {
+  id: string;
+  fullName: string;
+  joinedOn: Date | null;
+  createdAt: Date;
+}
+
+/** The most recently added active members (Epic-6 dashboard). Gated by `members.read`. */
+export async function listRecentMembers(
+  principal: AuthenticatedPrincipal,
+  limit = 6,
+): Promise<RecentMemberRow[]> {
+  authorize(principal, PERMISSION_KEYS.MEMBERS_READ);
+  return prisma.member.findMany({
+    where: { gymId: principal.gymId, status: "ACTIVE" },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: { id: true, fullName: true, joinedOn: true, createdAt: true },
+  });
+}
+
 export async function getMember(
   principal: AuthenticatedPrincipal,
   memberId: string,

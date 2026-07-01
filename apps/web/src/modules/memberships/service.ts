@@ -99,6 +99,29 @@ export interface MembershipListResult {
   pageSize: number;
 }
 
+/** A membership row for a dashboard operational list (expiring / expired). */
+export interface OverviewRow {
+  membershipId: string;
+  memberId: string;
+  memberName: string;
+  planName: string;
+  effectiveEndDate: IsoDate;
+  remainingDays: number;
+}
+
+/** Derived membership-status counts + the expiring/expired action lists (Epic-6 dashboard). */
+export interface MembershipOverview {
+  counts: {
+    active: number;
+    expiringSoon: number;
+    expired: number;
+    frozen: number;
+    scheduled: number;
+  };
+  expiringSoon: OverviewRow[];
+  expired: OverviewRow[];
+}
+
 /** The minimal member option list for the create form (active members). */
 export interface MemberOption {
   id: string;
@@ -218,6 +241,72 @@ export async function getMembership(
     trainerName: open?.trainer.user.displayName ?? null,
     totalFrozenDays: membership.cachedTotalFrozenDays,
     timeline: buildTimeline(membership),
+  };
+}
+
+/**
+ * Derived membership overview for the dashboard (Epic-6): status counts + the expiring/expired
+ * action lists. Status is re-derived per row via the same date-only {@link deriveRow} the list
+ * uses (Decision A) — never trusted raw from `cached_status`. Gated by `memberships.read`.
+ */
+export async function getMembershipOverview(
+  principal: AuthenticatedPrincipal,
+  clock: IClock = systemClock,
+  listLimit = 8,
+): Promise<MembershipOverview> {
+  authorize(principal, PERMISSION_KEYS.MEMBERSHIPS_READ);
+  const ctx = await gymContext(principal.gymId, clock);
+
+  const memberships = await prisma.membership.findMany({
+    where: { gymId: principal.gymId },
+    include: { member: { select: { fullName: true } } },
+  });
+
+  const counts = { active: 0, expiringSoon: 0, expired: 0, frozen: 0, scheduled: 0 };
+  const expiring: OverviewRow[] = [];
+  const expired: OverviewRow[] = [];
+
+  for (const m of memberships) {
+    const d = deriveRow(m, ctx);
+    const row: OverviewRow = {
+      membershipId: m.id,
+      memberId: m.memberId,
+      memberName: m.member.fullName,
+      planName: m.snapshotPlanName,
+      effectiveEndDate: d.effectiveEndDate,
+      remainingDays: d.remainingDays,
+    };
+    switch (d.status) {
+      case MembershipStatus.ACTIVE:
+        counts.active += 1;
+        if (d.isExpiringSoon) {
+          counts.expiringSoon += 1;
+          expiring.push(row);
+        }
+        break;
+      case MembershipStatus.EXPIRED:
+        counts.expired += 1;
+        expired.push(row);
+        break;
+      case MembershipStatus.FROZEN:
+        counts.frozen += 1;
+        break;
+      case MembershipStatus.SCHEDULED:
+        counts.scheduled += 1;
+        break;
+      default:
+        break; // CANCELLED is not an operational count
+    }
+  }
+
+  // Most urgent first for expiring (fewest days left); most recently ended first for expired.
+  expiring.sort((a, b) => a.remainingDays - b.remainingDays);
+  expired.sort((a, b) => b.effectiveEndDate.localeCompare(a.effectiveEndDate));
+
+  return {
+    counts,
+    expiringSoon: expiring.slice(0, listLimit),
+    expired: expired.slice(0, listLimit),
   };
 }
 
