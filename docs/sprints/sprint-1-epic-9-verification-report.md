@@ -40,8 +40,14 @@ catalog primitives (stated honestly below). Gate re-run after every change.
   both **idempotent** (re-running is a no-op success) — tested.
 - **Self-lockout guard (D-5):** an actor cannot suspend or change the role of their own `GymUser`
   (returns an error, state unchanged) — tested for both.
-- **Suspend blocks sign-in** — a suspended staff member's credentials resolve to `null` (the
-  existing resolver gates on `status == ACTIVE`) — tested end-to-end.
+- **Suspend blocks new sign-ins** — a suspended staff member's credentials resolve to `null` (the
+  existing resolver gates on `status == ACTIVE`) — tested end-to-end. **Caveat (inherited JWT
+  behavior):** the principal + permissions ride the sign-in JWT and are resolved only at login,
+  and `auth.config.ts` sets no `session.maxAge` (NextAuth default) with no middleware re-check — so
+  a suspend (and a role change) takes effect on the target's **next sign-in**; an already-active
+  session persists until its JWT expires. This is the documented "staleness until re-login" model;
+  tightening it (short `maxAge` for shared terminals / a session-revocation check) is **TD-10**, not
+  this Epic.
 - **Pending / distinct-Archive are NOT implemented** — not in the model; flagged as future (D-1),
   not invented.
 
@@ -91,7 +97,12 @@ other newer modules (**TD-7**). No a11y defect found in inspection.
   invented.** The `ACTIVE/REVOKED` model is followed as documented.
 - **D-2** Staff management Owner-only in MVP (dormant roles hold only `staff.read` or less).
 - **INV-36 clear is sequential**, not in one transaction with the status flip (benign — a REVOKED
-  trainer can't act; self-heals on retry). Noted, not over-engineered.
+  trainer can't act; self-heals on retry). Noted, not over-engineered. **Latent authz coupling:**
+  `unassignAllForTrainer` authorizes `assignments.manage`; today every `staff.manage` holder (Owner)
+  also holds it, so suspend never fails there — but a future role with `staff.manage` and not
+  `assignments.manage` would throw mid-suspend after the status flip committed. Flagged, not
+  refactored (the INV-36 clear is a system consequence of suspend, not a user assignment action).
+- **Suspend/role changes are not instant for active sessions** (JWT model — see §3 caveat, TD-10).
 - **Last-active-owner quorum** protection not implemented (only self-suspend/self-role-change is
   guarded) — future refinement.
 - **A11y (TD-7):** staff pages not independently e2e-axe-scanned.

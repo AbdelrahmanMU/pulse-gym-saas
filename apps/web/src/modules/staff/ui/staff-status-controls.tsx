@@ -39,8 +39,8 @@ export function StaffStatusControls({
         <input type="hidden" name="gymUserId" value={gymUserId} />
         <FormFeedback state={suspendState} />
         <p className="text-body-sm text-muted-foreground">
-          Suspending blocks sign-in and unassigns this person from any members they coach. This
-          isn't restored automatically on reactivation.
+          Suspending blocks new sign-ins and unassigns this person from any members they coach (not
+          restored automatically on reactivation). An active session may persist until it expires.
         </p>
         <SubmitButton variant="outline" pendingLabel="Suspending…">
           <Ban aria-hidden className="size-4" />
