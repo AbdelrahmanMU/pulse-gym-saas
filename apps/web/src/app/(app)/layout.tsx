@@ -10,6 +10,7 @@ import {
   MapPin,
   Tags,
   Users,
+  UserCog,
 } from "lucide-react";
 import { hasPermission, PERMISSION_KEYS } from "@pulse/auth";
 import type { AuthenticatedPrincipal } from "@pulse/types";
@@ -58,6 +59,9 @@ function buildNavGroups(principal: AuthenticatedPrincipal): NavGroupDef[] {
   }
   if (hasPermission(principal.permissions, PERMISSION_KEYS.BRANCHES_READ)) {
     settingsItems.push({ href: "/settings/branch", label: "Branch", icon: <MapPin aria-hidden /> });
+  }
+  if (hasPermission(principal.permissions, PERMISSION_KEYS.STAFF_READ)) {
+    settingsItems.push({ href: "/staff", label: "Staff", icon: <UserCog aria-hidden /> });
   }
   settingsItems.push({
     href: "/settings/profile",

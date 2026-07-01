@@ -3,6 +3,7 @@ import { derivePermissions } from "@pulse/auth";
 import { verifyPassword } from "@pulse/auth/password";
 import type { AuthenticatedPrincipal, Credentials } from "@pulse/types";
 import { log } from "@/lib/logger";
+import { systemClock } from "@/lib/platform/clock";
 
 /**
  * Resolve verified credentials into a domain-shaped {@link AuthenticatedPrincipal}
@@ -64,6 +65,20 @@ export async function resolvePrincipalFromCredentials(
   }
 
   const permissions = derivePermissions(gymUser.role.rolePermissions);
+
+  // Record the successful sign-in instant (Staff "Last Login"). This runs only in the Credentials
+  // `authorize` path — once per sign-in, never on token refresh (verified) — so it is login time,
+  // not request time. Best-effort: a write hiccup must not fail an otherwise-valid login.
+  try {
+    await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: systemClock.now() } });
+  } catch (error) {
+    log.warn("auth.login.last_login_write_failed", {
+      code: "AUTH",
+      userId: user.id,
+      module: "auth",
+    });
+    void error;
+  }
 
   return {
     userId: user.id,

@@ -340,6 +340,25 @@ export async function unassignTrainer(
   return { status: "success" };
 }
 
+/**
+ * Close **all** open responsible-trainer assignments held by one staff member (GymUser), gym-scoped
+ * (INV-36 revoke side). Called when that staff member is suspended/revoked so no member is left
+ * pointing at an inactive trainer. Idempotent (no open assignments → no-op); returns the number
+ * cleared so the caller can surface the consequence. Gated by `assignments.manage`.
+ */
+export async function unassignAllForTrainer(
+  principal: AuthenticatedPrincipal,
+  trainerGymUserId: string,
+  clock: IClock = systemClock,
+): Promise<number> {
+  authorize(principal, PERMISSION_KEYS.ASSIGNMENTS_MANAGE);
+  const result = await prisma.trainerAssignment.updateMany({
+    where: { gymId: principal.gymId, trainerGymUserId, unassignedAt: null },
+    data: { unassignedAt: clock.now() },
+  });
+  return result.count;
+}
+
 // ── helpers ────────────────────────────────────────────────────────────────
 
 /** Load a member by id and prove it belongs to the actor's gym (cross-gym → 404). */
