@@ -4,7 +4,7 @@
 | | |
 |---|---|
 | **Status** | ✅ Authoritative — governs all UI development |
-| **Design system** | Operates under **PULSE Design System v1.1** (its specs already encode the v1.1 accessibility/token fixes) |
+| **Design system** | Operates under **PULSE Design System v1.1** (its specs already encode the v1.1 accessibility/token fixes) + **v1.2 Adaptive** additions in **§12** (see [`design-system-v1.2.md`](./design-system-v1.2.md)) |
 | **Stack** | Next.js 15 · React · TypeScript · Tailwind · shadcn/ui (customized via PULSE) · Lucide |
 | **Audience** | Human maintainers **and** Claude Terminal |
 
@@ -1020,4 +1020,132 @@ A new component may be added **only** when ALL hold:
 
 ---
 
-*End of PULSE Component Catalog v1. This document is authoritative. New or changed components require updating this catalog in the same change set.*
+---
+
+# 12. v1.2 Adaptive Additions
+
+> **Status: specified, implementation pending** (docs-first slice, 2026-07-02). These entries are the
+> approved design authority for the next implementation slice; they are **additive** and
+> backward-compatible (design-system-v1.2 §2/§9). Every §0 Global Convention applies. Nothing in
+> §1–§11 changes except the single backward-compatible DataTable enhancement in §12.4.
+
+## 12.1 AdaptiveBottomSheet
+1. **Purpose** — One overlay primitive that renders as a **centered Dialog/popover on desktop (≥md)**
+   and a **bottom-anchored sheet on mobile (<md)**. The single home for AP-3/AP-4/AP-7.
+2. **Responsibilities** — Own the adaptive overlay shell (scrim, focus trap, focus-return, dismiss),
+   built on the existing `components/ui/sheet.tsx` Radix Dialog (already powering the nav drawer) — no
+   new dependency, no new overlay a11y.
+3. **Variants** — `dialog↔sheet` (default, forms/confirmations) · `menu↔sheet` (ActionMenu actions,
+   AP-7) · `filter↔sheet` (FilterBar, AP-3) · `picker↔sheet` (SelectInput/DateInput on mobile).
+4. **Anatomy** — Scrim · sheet surface (mobile: drag handle + top-rounded `--sheet-radius`, max
+   `--sheet-max-h`, safe-area bottom inset) → header (title + close) → scrollable content → optional
+   footer actions.
+5. **Props / Config** — `open`, `onOpenChange`, `title`, `variant`, `children`, `footer`.
+6. **Visual Behavior** — Mobile: slides up (`--duration-slow` + `--ease-emphasized`); desktop:
+   standard dialog/popover entrance. Reduced-motion → fade/no-transform.
+7. **Interaction Rules** — Esc closes; scrim tap closes; mobile drag-down closes **with** a tap/scrim
+   fallback (never drag-only); returns focus to trigger.
+8. **Accessibility** — Inherits v1.1 overlay gate: `role="dialog"`/`alertdialog`, `aria-modal`, focus
+   trap, labeled by title. Content DOM order preserved across desktop/mobile.
+9. **Responsive** — The `md` boundary flips dialog↔sheet; identical content and actions on both
+   (adaptive-parity, design-system-v1.2 §5.11).
+10. **Do** — Route **every** mobile overlay through this; keep desktop dialog behavior identical to today.
+11. **Don't** — Don't hand-build a bottom sheet per screen; don't make drag the only dismiss; don't
+    drop any desktop action on mobile.
+12. **Usage** — Filters (AP-3), confirmations/pickers (AP-4), row/section overflow (AP-7), mobile
+    Select/Date menus, NotificationCenter mobile.
+
+## 12.2 CreationFAB
+1. **Purpose** — Thumb-zone **create** action on mobile, scoped to list/index screens whose primary
+   job is to create a new entity (design-system-v1.2 §5.2).
+2. **Responsibilities** — Relocate the screen's single PageHeader primary "create" action into a
+   floating bottom-trailing button on `<md` only.
+3. **Variants** — `default` (icon + `aria-label`) · `extended` (icon + short label, first-run/empty).
+4. **Anatomy** — Circular `--fab-size` button, brand fill + `--primary-foreground`, Lucide plus icon,
+   bottom-trailing at `--fab-offset` above `--safe-bottom`, `--z-fab`.
+5. **Props / Config** — `label` (accessible), `icon`, `href|onClick`.
+6. **Visual Behavior** — Brand fill (an *action* color — compliant), solid focus ring, `--shadow-md`.
+7. **Interaction Rules** — Single tap starts the create flow (same target as the desktop primary).
+8. **Accessibility** — Real button/link with an accessible name ("Add member"); ≥44px; focus-visible;
+   not the only path to create (the flow is also reachable via nav/empty-state CTA).
+9. **Responsive** — **Mobile-only.** ≥md: hidden; the inline PageHeader primary is used instead.
+10. **Do** — One per eligible list screen; mirror the desktop primary exactly.
+11. **Don't** — Never on detail/form/dashboard/report/settings screens; never a second FAB; never
+    coexist with a Sticky Mobile Action Bar; never overlap the last row (list gets bottom padding).
+12. **Usage** — Members, Memberships, Plans, Staff list screens (mobile).
+
+## 12.3 StickyMobileActionBar
+1. **Purpose** — The primary **mobile** action pattern for **forms** (submit/cancel) and **detail
+   pages** (primary action), pinned in the thumb zone (design-system-v1.2 §5.3).
+2. **Responsibilities** — Keep the screen's primary (and at most one secondary) action reachable
+   without scrolling back to the header; respect the safe-area inset and the on-screen keyboard.
+3. **Variants** — `form` (Cancel + Submit; reuses SubmitButton `useFormStatus`) · `detail` (one
+   primary + overflow) · `confirm` (destructive primary uses danger button).
+4. **Anatomy** — Bottom-pinned bar, `--action-bar-h` + `--safe-bottom` padding, `--z-sticky`, top
+   hairline border, `surface` background; primary right/full-width, secondary left.
+5. **Props / Config** — `primary`, `secondary?`, `variant`, `sticky` (auto on `<md`).
+6. **Visual Behavior** — Mobile-only pin; on desktop the same actions render inline in
+   FormLayout/PageHeader (today's behavior, unchanged).
+7. **Interaction Rules** — Submit disabled while invalid/pending (`aria-busy`), preventing
+   double-submit; stays above the keyboard; never covers the focused field.
+8. **Accessibility** — Buttons labeled; ≥44px; focus order after content; destructive still requires a
+   confirm step.
+9. **Responsive** — `<md`: pinned. ≥md: static inline (no pin).
+10. **Do** — Use for every mobile create/edit form and every detail page with a primary action;
+    exactly one primary.
+11. **Don't** — Don't stack >2 actions (overflow → ActionMenu/sheet); don't coexist with a FAB;
+    don't let it hide content (page reserves bottom padding = bar height + safe inset).
+12. **Usage** — Member/Plan/Membership/Payment/Staff forms; membership & member detail primaries.
+
+## 12.4 DataTable — Adaptive Card Mode (backward-compatible enhancement)
+
+Per **Rule E (modifying an existing component)**, this is an **additive, backward-compatible** change
+to the single canonical DataTable (§4 DataTable) — existing tables keep working unchanged.
+
+- **New behavior:** below `md`, DataTable may render each row as a **stacked card** (AP-1) instead of
+  the horizontal-scroll table. Cards surface the **operational-first** fields (design-system-v1.2 §6)
+  using column `priority` (priority-1 fields lead) and an **optional** `renderCard?(row)` for a
+  tailored card; when `renderCard` is absent, the card is derived from the visible columns as
+  label/value pairs. The desktop table (priority columns + scroll backstop) is **unchanged**.
+- **One data path:** the same `columns[]`/`rows[]` drive both forms; no second query, no divergent
+  logic (money/date/status still render via MetricValue/Timestamp/StatusBadge inside cells/cards).
+- **Row actions** move into the card's ActionMenu (→ Adaptive Bottom Sheet on tap, AP-7) — every
+  desktop row action remains available (adaptive-parity).
+- **Opt-in & safe:** tables that don't pass `renderCard` and don't need cards keep today's responsive
+  behavior; nothing regresses. Selection/sort remain as-is (still deliberately minimal).
+- **Accessibility:** the card list is a labeled `<ul>/<li>` (or preserves table semantics via ARIA);
+  reading order matches the table's logical order; the `caption` is retained as the list's accessible
+  description.
+
+## 12.5 Adaptive presentation notes for existing components (no contract change)
+
+These are **clarifications**, not modifications — each behavior is already permitted by the component's
+§9 Responsive line; v1.2 unifies them onto the new primitives:
+
+- **FilterBar** (AP-3): the "popover under md" becomes the **AdaptiveBottomSheet `filter↔sheet`**;
+  active-filter chips stay above results.
+- **ActionMenu** (AP-7): the "bottom sheet on mobile" becomes the **AdaptiveBottomSheet `menu↔sheet`**.
+- **SelectInput / DateInput** (pickers): the "sheet on mobile" becomes **AdaptiveBottomSheet
+  `picker↔sheet`**; date entry prefers the native mobile picker where it is more ergonomic.
+- **NotificationCenter** (§9): the "full-screen sheet under sm" aligns to the same primitive.
+- **PageHeader primary** (AP-6): relocates on mobile to **CreationFAB** (create-list screens) or
+  **StickyMobileActionBar** (forms/details); still exactly one primary.
+- **ContentGrid `sidebar-split`** (AP-5): mobile stack order follows the operational-first doctrine
+  (design-system-v1.2 §6), not source order.
+- **CurrencyInput / TextInput / etc.** (§5.10): render at `--control-font-mobile` (≥16px) on `<md` to
+  prevent iOS focus-zoom — a token-level tweak, no API change.
+
+## 12.6 Deferred patterns (considered, not adopted)
+
+Recorded so a future session does not re-invent or re-litigate them (design-system-v1.2 §7):
+- **BottomTabBar** — deferred in favor of drawer + StickyMobileActionBar (task-flow product, not
+  browse-heavy). Not catalogued.
+- **SwipeActions** — deferred (gesture discoverability/a11y cost; ActionMenu-in-sheet already covers
+  row actions accessibly). Not catalogued.
+
+A future adoption of either requires a new human-approved catalog entry per **Rule D**.
+
+---
+
+*End of PULSE Component Catalog. v1.1 core (§1–§11) + v1.2 Adaptive additions (§12). This document is
+authoritative. New or changed components require updating this catalog in the same change set.*
