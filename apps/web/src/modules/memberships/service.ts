@@ -22,7 +22,13 @@ import {
   toDbDate,
   type IsoDate,
 } from "./dates";
-import { deriveMemberLifecycle, type DerivedMembership, type MembershipFacts } from "./lifecycle";
+import {
+  deriveMemberLifecycle,
+  pickExpiryEvent,
+  type DerivedMembership,
+  type ExpiryEvent,
+  type MembershipFacts,
+} from "./lifecycle";
 import {
   CreateMembershipSchema,
   FreezeMembershipSchema,
@@ -120,6 +126,21 @@ export interface MembershipOverview {
   };
   expiringSoon: OverviewRow[];
   expired: OverviewRow[];
+}
+
+/**
+ * A membership in an expiry-relevant state that warrants a staff notification (Epic-7). Neutral to
+ * the notifications module (it maps `event` → `NotificationType`). Frozen/scheduled/cancelled and
+ * renewed (has-successor) memberships are already excluded.
+ */
+export interface ExpiryCandidate {
+  membershipId: string;
+  memberId: string;
+  memberName: string;
+  planName: string;
+  effectiveEndDate: IsoDate;
+  remainingDays: number;
+  event: ExpiryEvent;
 }
 
 /** The minimal member option list for the create form (active members). */
@@ -308,6 +329,70 @@ export async function getMembershipOverview(
     expiringSoon: expiring.slice(0, listLimit),
     expired: expired.slice(0, listLimit),
   };
+}
+
+/**
+ * The memberships that currently warrant an expiry notification (Epic-7) — Expiring-Soon or Expired,
+ * with frozen (FRZ-3), scheduled, cancelled, and renewed (has-successor) periods excluded. Reuses the
+ * **full** {@link deriveMemberLifecycle} per member (not the light list derivation) so freeze-extended
+ * end dates and SCHEDULED→ACTIVE resolution are correct, then applies the pure {@link pickExpiryEvent}
+ * rule. Gated by `memberships.read`; consumed by the notifications generation service through the
+ * module's public index. Read-only — never writes (no auto-activation on this path).
+ */
+export async function getExpiryCandidates(
+  principal: AuthenticatedPrincipal,
+  clock: IClock = systemClock,
+): Promise<ExpiryCandidate[]> {
+  authorize(principal, PERMISSION_KEYS.MEMBERSHIPS_READ);
+  const ctx = await gymContext(principal.gymId, clock);
+
+  const rows = await prisma.membership.findMany({
+    where: { gymId: principal.gymId },
+    select: {
+      ...factsSelect,
+      memberId: true,
+      snapshotPlanName: true,
+      member: { select: { fullName: true } },
+    },
+  });
+
+  // A membership that is some other period's predecessor has been renewed/upgraded → suppressed.
+  const hasSuccessor = new Set(
+    rows.map((r) => r.predecessorMembershipId).filter((id): id is string => id !== null),
+  );
+
+  const byMember = new Map<string, typeof rows>();
+  for (const row of rows) {
+    const bucket = byMember.get(row.memberId);
+    if (bucket) bucket.push(row);
+    else byMember.set(row.memberId, [row]);
+  }
+
+  const freezeIds = await loadActiveFreezeIds(
+    prisma,
+    rows.map((r) => r.id),
+  );
+
+  const candidates: ExpiryCandidate[] = [];
+  for (const [, group] of byMember) {
+    const derived = deriveMemberLifecycle(group.map(toFacts), freezeIds, ctx.today, ctx.windowDays);
+    for (const row of group) {
+      const d = derived.get(row.id);
+      if (!d) continue;
+      const event = pickExpiryEvent(d, hasSuccessor.has(row.id));
+      if (!event) continue;
+      candidates.push({
+        membershipId: row.id,
+        memberId: row.memberId,
+        memberName: row.member.fullName,
+        planName: row.snapshotPlanName,
+        effectiveEndDate: d.effectiveEndDate,
+        remainingDays: d.remainingDays,
+        event,
+      });
+    }
+  }
+  return candidates;
 }
 
 /** Active members eligible to be sold a membership (for the create form). */

@@ -21,12 +21,14 @@ import type { NavGroupDef } from "./nav";
 export interface AppShellProps {
   user: TopBarUser;
   navGroups: readonly NavGroupDef[];
+  /** Unread notification count for the TopBar bell; `null` hides the bell (no read access). */
+  notificationCount?: number | null;
   /** Sign-out server action, threaded from the server layout. */
   signOut: () => void;
   children: ReactNode;
 }
 
-export function AppShell({ user, navGroups, signOut, children }: AppShellProps) {
+export function AppShell({ user, navGroups, notificationCount, signOut, children }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
@@ -68,6 +70,7 @@ export function AppShell({ user, navGroups, signOut, children }: AppShellProps) 
           menuButtonRef={menuButtonRef}
           onMenuClick={() => setDrawerOpen(true)}
           user={user}
+          notificationCount={notificationCount}
           signOut={signOut}
         />
         <main id="main-content" className="flex-1">

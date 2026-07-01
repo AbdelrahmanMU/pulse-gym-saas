@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { MembershipStatus } from "@pulse/db";
-import { deriveMemberLifecycle, type MembershipFacts } from "./lifecycle";
+import {
+  deriveMemberLifecycle,
+  pickExpiryEvent,
+  type DerivedMembership,
+  type MembershipFacts,
+} from "./lifecycle";
 
 /**
  * Membership status derivation (state-machines.md; INV-12/13/29). The crux these tests pin
@@ -113,5 +118,56 @@ describe("scheduled successor (deferred upgrade / early renewal)", () => {
     expect(before.get("m2")?.status).toBe(MembershipStatus.SCHEDULED); // own start (Feb 1) not reached
     const after = deriveMemberLifecycle([cancelledCurrent, next], NONE, "2026-02-02", 7);
     expect(after.get("m2")?.status).toBe(MembershipStatus.ACTIVE);
+  });
+});
+
+describe("pickExpiryEvent — notification candidates (Epic-7)", () => {
+  const derived = (over: Partial<DerivedMembership>): DerivedMembership => ({
+    status: MembershipStatus.ACTIVE,
+    effectiveEndDate: "2026-01-31",
+    remainingDays: 5,
+    isExpiringSoon: false,
+    isDueForActivation: false,
+    ...over,
+  });
+
+  it("flags EXPIRING_SOON for an active, expiring, tail membership", () => {
+    expect(pickExpiryEvent(derived({ isExpiringSoon: true }), false)).toBe("EXPIRING_SOON");
+  });
+
+  it("flags EXPIRED for an expired tail membership", () => {
+    expect(pickExpiryEvent(derived({ status: MembershipStatus.EXPIRED }), false)).toBe("EXPIRED");
+  });
+
+  it("suppresses an active-expiring membership that has been renewed (has a successor)", () => {
+    expect(pickExpiryEvent(derived({ isExpiringSoon: true }), true)).toBeNull();
+  });
+
+  it("suppresses an expired predecessor that has a successor (renewed → no longer qualifies)", () => {
+    expect(pickExpiryEvent(derived({ status: MembershipStatus.EXPIRED }), true)).toBeNull();
+  });
+
+  it("does not flag an active membership that is not expiring soon", () => {
+    expect(pickExpiryEvent(derived({ isExpiringSoon: false }), false)).toBeNull();
+  });
+
+  it("excludes a frozen membership (FRZ-3)", () => {
+    expect(pickExpiryEvent(derived({ status: MembershipStatus.FROZEN }), false)).toBeNull();
+  });
+
+  it("excludes scheduled and cancelled memberships", () => {
+    expect(pickExpiryEvent(derived({ status: MembershipStatus.SCHEDULED }), false)).toBeNull();
+    expect(pickExpiryEvent(derived({ status: MembershipStatus.CANCELLED }), false)).toBeNull();
+  });
+
+  it("uses the freeze-EXTENDED end date when deciding expiring-soon (composed with derivation)", () => {
+    // Original end Jan 31; 10 frozen days push the effective end to Feb 10. On Feb 5, with a 7-day
+    // window, it is expiring soon against the EXTENDED date — the case that breaks under deriveRow.
+    const extended = fact({ id: "m1", originalEndDate: "2026-01-31", cachedTotalFrozenDays: 10 });
+    const d = deriveMemberLifecycle([extended], NONE, "2026-02-05", 7).get("m1");
+    if (!d) throw new Error("expected a derived membership");
+    expect(d.effectiveEndDate).toBe("2026-02-10");
+    expect(d.isExpiringSoon).toBe(true);
+    expect(pickExpiryEvent(d, false)).toBe("EXPIRING_SOON");
   });
 });

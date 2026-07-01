@@ -112,6 +112,26 @@ export function deriveMemberLifecycle(
   return out;
 }
 
+/** The expiry situations that warrant a staff notification (NTF-2). Neutral to the caller. */
+export type ExpiryEvent = "EXPIRING_SOON" | "EXPIRED";
+
+/**
+ * Decide whether a single membership warrants an expiry notification (NTF-2/NTF-3/FRZ-3) — the pure
+ * crux of generation. Only a **tail** membership (no successor) can alert: a renewed/upgraded period
+ * has a successor and "no longer qualifies" (workflows.md §10), which also collapses a chain to one
+ * alert. FROZEN/SCHEDULED/CANCELLED derived states never alert (FRZ-3). Judged on the *derived*
+ * status/`isExpiringSoon`, so a freeze-extended end date is respected.
+ */
+export function pickExpiryEvent(
+  derived: DerivedMembership,
+  hasSuccessor: boolean,
+): ExpiryEvent | null {
+  if (hasSuccessor) return null;
+  if (derived.status === MembershipStatus.ACTIVE && derived.isExpiringSoon) return "EXPIRING_SOON";
+  if (derived.status === MembershipStatus.EXPIRED) return "EXPIRED";
+  return null;
+}
+
 function makeDerived(
   status: MembershipStatus,
   effectiveEndDate: IsoDate,

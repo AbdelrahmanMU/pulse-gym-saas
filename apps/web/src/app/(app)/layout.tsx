@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import {
+  Bell,
   Building2,
   CircleUser,
   ClipboardList,
@@ -12,6 +13,7 @@ import {
 import { hasPermission, PERMISSION_KEYS } from "@pulse/auth";
 import type { AuthenticatedPrincipal } from "@pulse/types";
 import { requireSession } from "@/lib/auth/guard";
+import { loadUnreadCount } from "@/modules/notifications/queries";
 import { AppShell } from "@/components/pulse/app-shell";
 import type { NavGroupDef, NavItemDef } from "@/components/pulse/nav";
 import { signOutAction } from "./actions";
@@ -22,10 +24,10 @@ import { signOutAction } from "./actions";
  * `/sign-in`) and passes the domain principal + the sign-out server action as props into
  * the client {@link AppShell}. Session enforcement never moves client-side.
  *
- * Nav: Dashboard + the real, permission-gated **Members** (Epic-2), **Plans** (Epic-3), and
- * **Memberships** (Epic-4) entries and the **Settings** group (Epic-1 — Gym / Branch / My
- * Profile). Payments remains a placeholder until its feature slice exists. Items are shown
- * **by permission** (never by role).
+ * Nav: Dashboard + a permission-gated **Notifications** (Epic-7) entry, the real **Members**
+ * (Epic-2), **Plans** (Epic-3), and **Memberships** (Epic-4) entries, and the **Settings** group
+ * (Epic-1 — Gym / Branch / My Profile). Payments remains a placeholder until its feature slice
+ * exists. The TopBar bell shows the unread count. Items are shown **by permission** (never by role).
  */
 function buildNavGroups(principal: AuthenticatedPrincipal): NavGroupDef[] {
   const manageItems: NavItemDef[] = [];
@@ -62,8 +64,15 @@ function buildNavGroups(principal: AuthenticatedPrincipal): NavGroupDef[] {
     icon: <CircleUser aria-hidden />,
   });
 
+  const topItems: NavItemDef[] = [
+    { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard aria-hidden /> },
+  ];
+  if (hasPermission(principal.permissions, PERMISSION_KEYS.NOTIFICATIONS_READ)) {
+    topItems.push({ href: "/notifications", label: "Notifications", icon: <Bell aria-hidden /> });
+  }
+
   return [
-    { items: [{ href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard aria-hidden /> }] },
+    { items: topItems },
     { label: "Manage", items: manageItems },
     { label: "Settings", items: settingsItems },
   ];
@@ -71,11 +80,13 @@ function buildNavGroups(principal: AuthenticatedPrincipal): NavGroupDef[] {
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const principal = await requireSession();
+  const notificationCount = await loadUnreadCount(principal);
 
   return (
     <AppShell
       user={{ displayName: principal.displayName, email: principal.email }}
       navGroups={buildNavGroups(principal)}
+      notificationCount={notificationCount}
       signOut={signOutAction}
     >
       {children}
