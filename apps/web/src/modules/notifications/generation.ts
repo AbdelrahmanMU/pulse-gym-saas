@@ -52,6 +52,29 @@ function buildMessage(candidate: ExpiryCandidate): string {
 }
 
 /**
+ * The system-default recent window (in days) for **Expired** notifications (NTF-5). An expiry alert
+ * is operational only while the membership expired within this many days of its effective end date;
+ * older lapses are historical records, not alerts. A fixed default (single source of truth) — a
+ * per-gym override (`Gym.expiredNotificationWindowDays`, mirroring `expiringSoonWindowDays`) is a
+ * documented future promotion, not built here.
+ */
+export const EXPIRED_NOTIFICATION_WINDOW_DAYS = 7;
+
+/**
+ * NTF-5 generation policy: EXPIRING_SOON candidates are always notifiable; EXPIRED candidates only
+ * while within the recent window (`remainingDays >= -window`, i.e. at most `window` days past the
+ * effective end date). This bounds **generation only** — the lifecycle read stays unbounded, so
+ * dashboards/reports/history are unaffected.
+ */
+export function isWithinNotificationWindow(
+  candidate: ExpiryCandidate,
+  expiredWindowDays: number = EXPIRED_NOTIFICATION_WINDOW_DAYS,
+): boolean {
+  if (candidate.event !== "EXPIRED") return true;
+  return candidate.remainingDays >= -expiredWindowDays;
+}
+
+/**
  * The legal notification state progression (state-machines §3 / NTF-4): UNREAD → READ → DISMISSED,
  * plus the UNREAD → DISMISSED shortcut. A DISMISSED alert is terminal (INV-34); READ never reverts
  * to UNREAD. A transition to the *current* state is handled as an idempotent no-op by the caller.

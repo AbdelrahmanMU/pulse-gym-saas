@@ -338,6 +338,10 @@ export async function getMembershipOverview(
  * end dates and SCHEDULED→ACTIVE resolution are correct, then applies the pure {@link pickExpiryEvent}
  * rule. Gated by `memberships.read`; consumed by the notifications generation service through the
  * module's public index. Read-only — never writes (no auto-activation on this path).
+ *
+ * This read is **unbounded** by time: it returns every expiring/expired tail. The NTF-5 recent-window
+ * bound on EXPIRED *alerts* is a notification-generation policy applied by the consumer, so this read
+ * stays reusable and dashboards/reports (which need the full expired set) are unaffected.
  */
 export async function getExpiryCandidates(
   principal: AuthenticatedPrincipal,

@@ -48,14 +48,11 @@ for cron/worker/queue without touching business logic. (Human chose this option.
    the **Epic-5 precedent** (which likewise added no service DB integration). Non-duplication rests on
    the stable dedupeKey (unit-tested) + the DB unique constraint (DB-integrity plan INV-33). A future
    integration pass would close this consciously-deferred slice.
-6. **EXPIRED generation has no recency bound (open question for the human).** `getExpiryCandidates`
-   scans all memberships with no date filter, so every historical expired **tail** membership is a
-   candidate indefinitely, and a member who lapsed on two *unchained* memberships gets two EXPIRED
-   alerts. Impact is ~zero today (fresh single-gym MVP, no history; dedupe makes each a one-time
-   event; consistent with the Epic-6 dashboard), but for an established gym it is a backlog of ancient
-   lapses that cuts against NTF-3's trust rationale. **Should EXPIRED generation be bounded (recent
-   expirations only, and/or latest-per-member)?** A window is a new business rule → the human's call;
-   not invented here.
+6. **EXPIRED recency bound — RESOLVED (refinement applied).** The open question is closed: EXPIRED
+   notification generation is now bounded to a recent window (default **7 days**, fixed constant) per
+   **NTF-5** — see `sprint-1-epic-7-refinement-expired-window.md`. Applied in the notifications
+   consumer (`isWithinNotificationWindow`); the lifecycle read stays unbounded so dashboards/reports
+   are unaffected. Future: per-gym `Gym.expiredNotificationWindowDays` (human's call).
 2. **Suppression-on-renewal** interpreted as "only the tail membership alerts" — grounded in
    workflows §10 / DDS index, beyond the literal scope block. Early-renewal *gap* (predecessor expired,
    successor SCHEDULED not yet started) raises **no** expired alert (member has already renewed).

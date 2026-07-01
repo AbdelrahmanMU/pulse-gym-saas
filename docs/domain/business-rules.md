@@ -95,6 +95,7 @@
 | NTF-2 | The system generates notifications for memberships **Expiring Soon** and **Expired**, evaluated regularly (at least daily). | These are the moments that drive renewals and retention. | A gym's window affects "expiring." | New-member onboarding, payment-due, birthday reminders. |
 | NTF-3 | Notification generation is **non-duplicating**: the same expiry event for the same membership does not create repeated unread alerts. | Staff must trust the alert list; spam destroys trust. | None. | Re-notify cadence if unactioned. |
 | NTF-4 | Notifications are **gym-scoped and visible to that gym's staff**; they progress **Unread → Read → Dismissed**. | Shared awareness within the team; a manageable queue. | None. | Per-user assignment of notifications. |
+| NTF-5 | **Expired**-membership notification generation is bounded to a **recent window** (system default **7 days** after the effective end date). Once a membership has been expired **longer than the window**, it is a **historical record**, not an operational alert, and generates **no new expiry notification**. **Scope: notification generation only** — this rule does **not** affect reports, dashboards, membership status/access, or history (those still see every expired membership). | Expiry alerts exist to drive *timely* renewal outreach; stale lapses are noise that erodes trust in the queue (NTF-3). Reporting/history need the full record, so the bound is confined to generation. | None. | Per-gym configurable window; re-notify cadence. |
 
 ## 10. Renewal
 

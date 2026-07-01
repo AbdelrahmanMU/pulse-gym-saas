@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { NotificationState, NotificationType } from "@pulse/db";
 import type { ExpiryCandidate } from "@/modules/memberships";
-import { buildNotificationInput, canTransition } from "./generation";
+import {
+  buildNotificationInput,
+  canTransition,
+  isWithinNotificationWindow,
+  EXPIRED_NOTIFICATION_WINDOW_DAYS,
+} from "./generation";
 
 /**
  * Notification generation + transition rules (Epic-7) — P0 business invariants: the dedupeKey is the
@@ -48,6 +53,46 @@ describe("buildNotificationInput", () => {
     const before = buildNotificationInput(candidate({ effectiveEndDate: "2026-02-10" }), "gym-1");
     const after = buildNotificationInput(candidate({ effectiveEndDate: "2026-02-20" }), "gym-1");
     expect(after.dedupeKey).not.toBe(before.dedupeKey);
+  });
+});
+
+describe("isWithinNotificationWindow — NTF-5 recent-window bound on EXPIRED", () => {
+  it("always notifies EXPIRING_SOON regardless of remaining days", () => {
+    expect(
+      isWithinNotificationWindow(candidate({ event: "EXPIRING_SOON", remainingDays: 0 })),
+    ).toBe(true);
+    expect(
+      isWithinNotificationWindow(candidate({ event: "EXPIRING_SOON", remainingDays: -99 })),
+    ).toBe(true);
+  });
+
+  it("notifies an EXPIRED membership inside the window (default 7 days)", () => {
+    expect(isWithinNotificationWindow(candidate({ event: "EXPIRED", remainingDays: -1 }))).toBe(
+      true,
+    );
+    // Boundary: exactly 7 days past the effective end date is still in-window.
+    expect(isWithinNotificationWindow(candidate({ event: "EXPIRED", remainingDays: -7 }))).toBe(
+      true,
+    );
+  });
+
+  it("suppresses an EXPIRED membership past the window (historical record)", () => {
+    expect(isWithinNotificationWindow(candidate({ event: "EXPIRED", remainingDays: -8 }))).toBe(
+      false,
+    );
+    expect(isWithinNotificationWindow(candidate({ event: "EXPIRED", remainingDays: -30 }))).toBe(
+      false,
+    );
+  });
+
+  it("respects a caller-supplied window and exposes a default of 7", () => {
+    expect(EXPIRED_NOTIFICATION_WINDOW_DAYS).toBe(7);
+    expect(
+      isWithinNotificationWindow(candidate({ event: "EXPIRED", remainingDays: -10 }), 14),
+    ).toBe(true);
+    expect(isWithinNotificationWindow(candidate({ event: "EXPIRED", remainingDays: -3 }), 2)).toBe(
+      false,
+    );
   });
 });
 

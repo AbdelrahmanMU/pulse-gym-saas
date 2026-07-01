@@ -51,6 +51,7 @@
 
 ## 10. Notification Window
 - A membership is **"Expiring Soon"** when, in the gym time zone, its end date is within the gym's configured **warning window** (default **7 days**) — MSH-4.
+- An **"Expired" alert** is generated only while, in the gym time zone, the membership expired **within the recent window** (system default **7 days** after the effective end date — i.e., the first 7 days it is Expired, the day after the inclusive end through the 7th day after it). From the 8th day onward the lapse is **historical** and raises **no new alert** (NTF-5). This bounds **generation only** — status, dashboards, reports, and history still count every expired membership.
 - Expiry/expiring evaluation runs on a **regular sweep (at least daily)** against "today" in the gym time zone (NTF-2), and is **non-duplicating** (NTF-3).
 - **Dashboard "expiring within 7/30 days"** buckets are computed the same way but are **range counts**, distinct from the per-membership Expiring-Soon indicator (RPT-2).
 

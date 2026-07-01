@@ -6,7 +6,7 @@ import { assertSameGym } from "@/lib/tenancy";
 import { NotFoundError } from "@/lib/errors";
 import { systemClock } from "@/lib/platform/clock";
 import { getExpiryCandidates } from "@/modules/memberships";
-import { buildNotificationInput, canTransition } from "./generation";
+import { buildNotificationInput, canTransition, isWithinNotificationWindow } from "./generation";
 
 /**
  * Notifications domain service (Sprint-1 Epic-7) — the testable core of the mutation pipeline:
@@ -51,14 +51,18 @@ export interface NotificationView {
 /**
  * Materialize Expiring-Soon / Expired notifications for the gym from the current membership
  * lifecycle (NTF-2). Idempotent: the unique `(gymId, dedupeKey)` + `skipDuplicates` means an already-
- * raised event — even one later read or dismissed — is not recreated (NTF-3/INV-33/INV-34).
+ * raised event — even one later read or dismissed — is not recreated (NTF-3/INV-33/INV-34). EXPIRED
+ * candidates are bounded to the recent window here (NTF-5) — older lapses are historical, not alerts;
+ * the lifecycle read stays unbounded, so dashboards/reports are unaffected.
  */
 export async function generateExpiryNotifications(
   principal: AuthenticatedPrincipal,
   clock: IClock = systemClock,
 ): Promise<GenerateResult> {
   authorize(principal, PERMISSION_KEYS.NOTIFICATIONS_READ);
-  const candidates = await getExpiryCandidates(principal, clock);
+  const candidates = (await getExpiryCandidates(principal, clock)).filter((c) =>
+    isWithinNotificationWindow(c),
+  );
   if (candidates.length === 0) return { created: 0 };
 
   const data = candidates.map((c) => buildNotificationInput(c, principal.gymId));
