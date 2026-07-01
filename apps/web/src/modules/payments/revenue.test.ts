@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PaymentEntryType } from "@pulse/db";
-import { sumRevenueInRange, type DatedLedgerEntry } from "./revenue";
+import { startOfIsoWeek, sumRevenueInRange, type DatedLedgerEntry } from "./revenue";
 
 /**
  * Revenue bucketing (Epic-6). Net = Σ(PAYMENT) − Σ(VOID) over the inclusive gym-tz day range;
@@ -51,5 +51,23 @@ describe("sumRevenueInRange", () => {
   it("can net negative when a void lands in a period with no matching payment", () => {
     const entries = [voidOf("2026-07-02", 1000n)];
     expect(sumRevenueInRange(entries, "2026-07-01", "2026-07-31")).toBe(-1000n);
+  });
+});
+
+describe("startOfIsoWeek — Monday-start ISO week (Epic-8 revenue report)", () => {
+  it("returns the same day when it is already a Monday", () => {
+    expect(startOfIsoWeek("2026-01-05")).toBe("2026-01-05"); // 2026-01-05 is a Monday
+  });
+
+  it("returns the week's Monday for a midweek day", () => {
+    expect(startOfIsoWeek("2026-01-07")).toBe("2026-01-05"); // Wednesday → Monday
+  });
+
+  it("treats Sunday as the last day of its ISO week (not the first)", () => {
+    expect(startOfIsoWeek("2026-01-11")).toBe("2026-01-05"); // Sunday → the preceding Monday
+  });
+
+  it("crosses the month/year boundary correctly", () => {
+    expect(startOfIsoWeek("2026-01-01")).toBe("2025-12-29"); // Thursday → Monday in the prior year
   });
 });

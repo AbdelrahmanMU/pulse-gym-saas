@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import {
+  BarChart3,
   Bell,
   Building2,
   CircleUser,
@@ -69,6 +70,9 @@ function buildNavGroups(principal: AuthenticatedPrincipal): NavGroupDef[] {
   ];
   if (hasPermission(principal.permissions, PERMISSION_KEYS.NOTIFICATIONS_READ)) {
     topItems.push({ href: "/notifications", label: "Notifications", icon: <Bell aria-hidden /> });
+  }
+  if (hasPermission(principal.permissions, PERMISSION_KEYS.REPORTS_VIEW)) {
+    topItems.push({ href: "/reports", label: "Reports", icon: <BarChart3 aria-hidden /> });
   }
 
   return [

@@ -14,7 +14,7 @@ import { NotFoundError } from "@/lib/errors";
 import { systemClock } from "@/lib/platform/clock";
 import { parseAmountToMinor } from "@/lib/money";
 import { summarizeLedger, type LedgerEntry } from "./ledger";
-import { sumRevenueInRange, type DatedLedgerEntry } from "./revenue";
+import { startOfIsoWeek, sumRevenueInRange, type DatedLedgerEntry } from "./revenue";
 import { RecordPaymentSchema, VoidPaymentSchema } from "./validation";
 
 /**
@@ -91,6 +91,49 @@ export interface OutstandingBalances {
   rows: OutstandingBalanceRow[];
   /** Total count of memberships with a remaining balance (rows may be truncated). */
   count: number;
+}
+
+/** Net revenue for the standard period-to-date buckets + an optional custom range (Epic-8 report). */
+export interface RevenueReport {
+  currency: string;
+  todayMinor: string;
+  /** Week-to-date (Monday-start ISO week through today, gym tz). */
+  weekMinor: string;
+  /** Month-to-date (1st through today, gym tz). */
+  monthMinor: string;
+  custom: { fromIso: string; toIso: string; totalMinor: string } | null;
+}
+
+/** One membership's balance breakdown for the outstanding report (Member / price / paid / balance). */
+export interface OutstandingReportRow {
+  membershipId: string;
+  memberId: string;
+  memberName: string;
+  planName: string;
+  priceMinor: string;
+  paidMinor: string;
+  remainingMinor: string;
+  currency: string;
+}
+
+export interface OutstandingReport {
+  rows: OutstandingReportRow[];
+  count: number;
+  /** Sum of remaining balances (minor units). Single-currency in MVP (plan currency = gym default). */
+  totalOutstandingMinor: string;
+  currency: string;
+}
+
+/** The full derived balance for one outstanding membership (bigint minor units, before serialising). */
+interface OutstandingRow {
+  membershipId: string;
+  memberId: string;
+  memberName: string;
+  planName: string;
+  priceMinor: bigint;
+  paidMinor: bigint;
+  remainingMinor: bigint;
+  currency: string;
 }
 
 type Tx = Prisma.TransactionClient;
@@ -203,12 +246,108 @@ export async function getOutstandingBalances(
   limit = 8,
 ): Promise<OutstandingBalances> {
   authorize(principal, PERMISSION_KEYS.PAYMENTS_READ);
+  const rows = await loadOutstandingRows(principal.gymId);
+  return {
+    count: rows.length,
+    rows: rows.slice(0, limit).map((r) => ({
+      membershipId: r.membershipId,
+      memberId: r.memberId,
+      memberName: r.memberName,
+      planName: r.planName,
+      remainingMinor: r.remainingMinor.toString(),
+      currency: r.currency,
+    })),
+  };
+}
+
+/**
+ * The full Outstanding Balance report (Epic-8): **every** membership with a balance due, each with
+ * price / paid / remaining. Reuses the exact same derivation and exclusions as
+ * {@link getOutstandingBalances} (cancelled written-off + not-yet-started SCHEDULED excluded;
+ * ACTIVE/FROZEN/EXPIRED with a balance included) via the shared {@link loadOutstandingRows} — the
+ * balance is the single `summarizeLedger` calculation, never duplicated. Gated by `payments.read`.
+ */
+export async function getOutstandingBalanceReport(
+  principal: AuthenticatedPrincipal,
+): Promise<OutstandingReport> {
+  authorize(principal, PERMISSION_KEYS.PAYMENTS_READ);
+  const rows = await loadOutstandingRows(principal.gymId);
+  const gym = await prisma.gym.findUnique({
+    where: { id: principal.gymId },
+    select: { defaultCurrency: true },
+  });
+  if (!gym) throw new NotFoundError();
+
+  const total = rows.reduce((sum, r) => sum + r.remainingMinor, 0n);
+  return {
+    count: rows.length,
+    totalOutstandingMinor: total.toString(),
+    currency: gym.defaultCurrency,
+    rows: rows.map((r) => ({
+      membershipId: r.membershipId,
+      memberId: r.memberId,
+      memberName: r.memberName,
+      planName: r.planName,
+      priceMinor: r.priceMinor.toString(),
+      paidMinor: r.paidMinor.toString(),
+      remainingMinor: r.remainingMinor.toString(),
+      currency: r.currency,
+    })),
+  };
+}
+
+/**
+ * The Revenue report (Epic-8): net revenue Today / Week-to-date / Month-to-date, plus an optional
+ * custom range — all derived from the immutable ledger via the shared {@link sumRevenueInRange}
+ * (Σ(PAYMENT) − Σ(VOID)), judged in the **gym time zone**, never stored. The standard buckets share
+ * one load from the earliest of week/month start; a custom range (arbitrary `from`) is loaded
+ * separately so it never bloats the standard query. Gated by `payments.read`.
+ */
+export async function getRevenueReport(
+  principal: AuthenticatedPrincipal,
+  custom: { fromIso: string; toIso: string } | null = null,
+  clock: IClock = systemClock,
+): Promise<RevenueReport> {
+  authorize(principal, PERMISSION_KEYS.PAYMENTS_READ);
+  const gym = await prisma.gym.findUnique({
+    where: { id: principal.gymId },
+    select: { timeZone: true, defaultCurrency: true },
+  });
+  if (!gym) throw new NotFoundError();
+
+  const today = clock.today(gym.timeZone);
+  const weekStart = startOfIsoWeek(today);
+  const monthStart = `${today.slice(0, 7)}-01`;
+  const standardStart = weekStart < monthStart ? weekStart : monthStart;
+
+  const standard = await loadDatedEntries(principal.gymId, standardStart);
+  const report: RevenueReport = {
+    currency: gym.defaultCurrency,
+    todayMinor: sumRevenueInRange(standard, today, today).toString(),
+    weekMinor: sumRevenueInRange(standard, weekStart, today).toString(),
+    monthMinor: sumRevenueInRange(standard, monthStart, today).toString(),
+    custom: null,
+  };
+
+  if (custom) {
+    const entries = await loadDatedEntries(principal.gymId, custom.fromIso, custom.toIso);
+    report.custom = {
+      fromIso: custom.fromIso,
+      toIso: custom.toIso,
+      totalMinor: sumRevenueInRange(entries, custom.fromIso, custom.toIso).toString(),
+    };
+  }
+  return report;
+}
+
+/**
+ * Load the gym's memberships that carry an outstanding balance, fully derived (price/paid/remaining)
+ * and sorted largest-remaining first. The single home for the "outstanding" definition + calculation
+ * shared by the dashboard widget and the report.
+ */
+async function loadOutstandingRows(gymId: string): Promise<OutstandingRow[]> {
   const memberships = await prisma.membership.findMany({
-    where: {
-      gymId: principal.gymId,
-      cancelledAt: null,
-      cachedStatus: { not: MembershipStatus.SCHEDULED },
-    },
+    where: { gymId, cancelledAt: null, cachedStatus: { not: MembershipStatus.SCHEDULED } },
     select: {
       id: true,
       memberId: true,
@@ -220,28 +359,47 @@ export async function getOutstandingBalances(
     },
   });
 
-  const outstanding = memberships
+  return memberships
     .map((m) => {
       const ledger: LedgerEntry[] = m.payments.map((p) => ({
         entryType: p.entryType,
         amountMinor: p.amount,
       }));
-      return { membership: m, remaining: summarizeLedger(m.snapshotPrice, ledger).remainingMinor };
+      const s = summarizeLedger(m.snapshotPrice, ledger);
+      return {
+        membershipId: m.id,
+        memberId: m.memberId,
+        memberName: m.member.fullName,
+        planName: m.snapshotPlanName,
+        priceMinor: s.priceMinor,
+        paidMinor: s.totalPaidMinor,
+        remainingMinor: s.remainingMinor,
+        currency: m.snapshotCurrency,
+      };
     })
-    .filter((x) => x.remaining > 0n)
-    .sort((a, b) => (a.remaining < b.remaining ? 1 : a.remaining > b.remaining ? -1 : 0));
+    .filter((r) => r.remainingMinor > 0n)
+    .sort((a, b) =>
+      a.remainingMinor < b.remainingMinor ? 1 : a.remainingMinor > b.remainingMinor ? -1 : 0,
+    );
+}
 
-  return {
-    count: outstanding.length,
-    rows: outstanding.slice(0, limit).map(({ membership: m, remaining }) => ({
-      membershipId: m.id,
-      memberId: m.memberId,
-      memberName: m.member.fullName,
-      planName: m.snapshotPlanName,
-      remainingMinor: remaining.toString(),
-      currency: m.snapshotCurrency,
-    })),
-  };
+/** Load payments (as dated ledger entries) with `receivedAt` from `fromIso` day (optionally to `toIso`). */
+async function loadDatedEntries(
+  gymId: string,
+  fromIso: string,
+  toIso?: string,
+): Promise<DatedLedgerEntry[]> {
+  const receivedAt: Prisma.DateTimeFilter = { gte: new Date(`${fromIso}T00:00:00.000Z`) };
+  if (toIso) receivedAt.lte = new Date(`${toIso}T23:59:59.999Z`);
+  const payments = await prisma.payment.findMany({
+    where: { gymId, receivedAt },
+    select: { entryType: true, amount: true, receivedAt: true },
+  });
+  return payments.map((p) => ({
+    entryType: p.entryType,
+    amountMinor: p.amount,
+    receivedOn: p.receivedAt.toISOString().slice(0, 10),
+  }));
 }
 
 // ── Commands ─────────────────────────────────────────────────────────────────

@@ -123,9 +123,23 @@ export interface MembershipOverview {
     expired: number;
     frozen: number;
     scheduled: number;
+    /** Terminal, written-off memberships (Epic-8 membership report; not an operational count). */
+    cancelled: number;
   };
   expiringSoon: OverviewRow[];
   expired: OverviewRow[];
+}
+
+/**
+ * Fixed expiring-report buckets (Epic-8, RPT-2) — **cumulative** ranges (`within30` includes
+ * `within7`), judged on derived remaining days. Distinct from the gym-configurable
+ * `expiringSoonWindowDays` indicator (time-rules §10). `expired` lists every EXPIRED membership.
+ */
+export interface ExpiringReport {
+  within7: OverviewRow[];
+  within30: OverviewRow[];
+  expired: OverviewRow[];
+  counts: { within7: number; within30: number; expired: number };
 }
 
 /**
@@ -283,7 +297,7 @@ export async function getMembershipOverview(
     include: { member: { select: { fullName: true } } },
   });
 
-  const counts = { active: 0, expiringSoon: 0, expired: 0, frozen: 0, scheduled: 0 };
+  const counts = { active: 0, expiringSoon: 0, expired: 0, frozen: 0, scheduled: 0, cancelled: 0 };
   const expiring: OverviewRow[] = [];
   const expired: OverviewRow[] = [];
 
@@ -315,8 +329,11 @@ export async function getMembershipOverview(
       case MembershipStatus.SCHEDULED:
         counts.scheduled += 1;
         break;
+      case MembershipStatus.CANCELLED:
+        counts.cancelled += 1;
+        break;
       default:
-        break; // CANCELLED is not an operational count
+        break;
     }
   }
 
@@ -328,6 +345,60 @@ export async function getMembershipOverview(
     counts,
     expiringSoon: expiring.slice(0, listLimit),
     expired: expired.slice(0, listLimit),
+  };
+}
+
+/**
+ * Fixed 7-/30-day expiring buckets + all expired memberships (Epic-8 report, RPT-2). Reuses the same
+ * date-only {@link deriveRow} as the dashboard/list — status is never trusted raw from `cached_status`
+ * (which drifts). Buckets are **cumulative** (`within30` includes `within7`) and use **fixed** windows,
+ * distinct from the gym-configurable expiring-soon indicator. `expired` lists every EXPIRED membership
+ * (dashboard-consistent — includes renewed-then-expired predecessors). Gated by `memberships.read`.
+ */
+export async function getExpiringReport(
+  principal: AuthenticatedPrincipal,
+  clock: IClock = systemClock,
+): Promise<ExpiringReport> {
+  authorize(principal, PERMISSION_KEYS.MEMBERSHIPS_READ);
+  const ctx = await gymContext(principal.gymId, clock);
+
+  const memberships = await prisma.membership.findMany({
+    where: { gymId: principal.gymId },
+    include: { member: { select: { fullName: true } } },
+  });
+
+  const within7: OverviewRow[] = [];
+  const within30: OverviewRow[] = [];
+  const expired: OverviewRow[] = [];
+
+  for (const m of memberships) {
+    const d = deriveRow(m, ctx);
+    const row: OverviewRow = {
+      membershipId: m.id,
+      memberId: m.memberId,
+      memberName: m.member.fullName,
+      planName: m.snapshotPlanName,
+      effectiveEndDate: d.effectiveEndDate,
+      remainingDays: d.remainingDays,
+    };
+    if (d.status === MembershipStatus.ACTIVE && d.remainingDays >= 0 && d.remainingDays <= 30) {
+      within30.push(row); // cumulative ≤30
+      if (d.remainingDays <= 7) within7.push(row); // ≤7 ⊆ ≤30 (RPT-2)
+    } else if (d.status === MembershipStatus.EXPIRED) {
+      expired.push(row);
+    }
+  }
+
+  // Soonest first for the upcoming buckets; most recently ended first for expired.
+  within7.sort((a, b) => a.remainingDays - b.remainingDays);
+  within30.sort((a, b) => a.remainingDays - b.remainingDays);
+  expired.sort((a, b) => b.effectiveEndDate.localeCompare(a.effectiveEndDate));
+
+  return {
+    within7,
+    within30,
+    expired,
+    counts: { within7: within7.length, within30: within30.length, expired: expired.length },
   };
 }
 
