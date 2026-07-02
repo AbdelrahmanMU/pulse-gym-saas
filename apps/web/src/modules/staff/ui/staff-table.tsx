@@ -54,8 +54,49 @@ const columns: DataTableColumn<StaffRow>[] = [
   },
 ];
 
+/**
+ * AP-1 mobile card — operational-first order (v1.2 §6 / adaptive-design-report §9):
+ * P0 Active/Revoked status · role → P1 name (link) → P2 email · last login.
+ */
+function StaffCard(s: StaffRow) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <StaffStatusBadge status={s.status} size="sm" />
+        <span className="text-body-sm text-foreground">{s.roleName}</span>
+      </div>
+      <Link
+        href={`/staff/${s.id}`}
+        className="font-medium text-body-lg text-foreground hover:underline"
+      >
+        {s.displayName}
+      </Link>
+      <div className="flex flex-col text-body-sm text-muted-foreground">
+        <span>{s.email}</span>
+        <span>
+          Last login:{" "}
+          {s.lastLoginAt ? (
+            <time dateTime={s.lastLoginAt.toISOString()} className="tabular">
+              {isoDate(s.lastLoginAt)}
+            </time>
+          ) : (
+            "Never"
+          )}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function StaffTable({ rows, empty }: { rows: StaffRow[]; empty?: ReactNode }) {
   return (
-    <DataTable columns={columns} rows={rows} rowKey={(s) => s.id} caption="Staff" empty={empty} />
+    <DataTable
+      columns={columns}
+      rows={rows}
+      rowKey={(s) => s.id}
+      caption="Staff"
+      empty={empty}
+      renderCard={StaffCard}
+    />
   );
 }

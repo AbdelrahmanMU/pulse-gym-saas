@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **Version** | **v1.2** (Minor — additive, backward-compatible per v1.1 §9) |
-| **Status** | ✅ Specified — **design authority approved; implementation pending** (docs-first slice) |
+| **Status** | ✅ Specified **and implemented** (implementation slice landed 2026-07-02 — §8 tokens in `globals.css` + `design-tokens.md` §25, catalog §12 patterns built, module UIs adapted; verification per §9) |
 | **Extends** | [`design-system-v1.1.md`](./design-system-v1.1.md) — **not** a replacement. v1.1 remains in full force; v1.2 layers the adaptive dimension on top. |
 | **Companion files** | [`design-tokens.md`](./design-tokens.md) (registry — v1.2 proposes additive tokens in §8 here) · [`pulse-component-catalog.md`](./pulse-component-catalog.md) (§12 = v1.2 additions) · `globals.css` (implementation — updated in the approved implementation slice) |
 | **Date** | 2026-07-02 |

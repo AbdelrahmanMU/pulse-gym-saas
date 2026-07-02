@@ -65,8 +65,54 @@ const columns: DataTableColumn<MemberRow>[] = [
   },
 ];
 
+/**
+ * AP-1 mobile card — operational-first order (v1.2 §6 / adaptive-design-report §2):
+ * P0 member status → P1 name (link) · trainer → P2 contact · joined.
+ */
+function MemberCard(m: MemberRow) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <MemberStatusBadge status={m.status} size="sm" />
+        {m.joinedOn ? (
+          <time
+            dateTime={isoDate(m.joinedOn)}
+            className="tabular text-body-sm text-muted-foreground"
+          >
+            {isoDate(m.joinedOn)}
+          </time>
+        ) : null}
+      </div>
+      <Link
+        href={`/members/${m.id}`}
+        className="font-medium text-body-lg text-foreground hover:underline"
+      >
+        {m.fullName}
+      </Link>
+      {m.trainerName ? (
+        <span className="text-body-sm text-muted-foreground">
+          Trainer: <span className="text-foreground">{m.trainerName}</span>
+        </span>
+      ) : null}
+      {m.phone || m.email ? (
+        <div className="flex flex-col text-body-sm text-muted-foreground">
+          {m.phone ? <span>{m.phone}</span> : null}
+          {m.email ? <span>{m.email}</span> : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function MembersTable({ rows, empty }: { rows: MemberRow[]; empty?: ReactNode }) {
   return (
-    <DataTable columns={columns} rows={rows} rowKey={(m) => m.id} caption="Members" empty={empty} />
+    <DataTable
+      columns={columns}
+      rows={rows}
+      rowKey={(m) => m.id}
+      caption="Members"
+      empty={empty}
+      renderCard={MemberCard}
+    />
   );
 }

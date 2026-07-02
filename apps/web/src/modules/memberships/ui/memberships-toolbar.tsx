@@ -7,6 +7,7 @@ import { Plus, Search } from "lucide-react";
 import { TextInput } from "@/components/pulse/text-input";
 import { SelectInput, type SelectOption } from "@/components/pulse/select-input";
 import { Button } from "@/components/pulse/button";
+import { FilterSheet } from "@/components/pulse/filter-sheet";
 
 /**
  * Memberships list toolbar (Catalog §DataTableToolbar, minimal). Search by member name + a
@@ -61,33 +62,46 @@ export function MembershipsToolbar({
     navigate(next);
   }
 
+  // The same catalogued control serves both presentations (AP-3 adaptive-parity):
+  // inline in the toolbar ≥md, inside the FilterSheet <md.
+  const statusFilter = (
+    <SelectInput
+      aria-label="Filter by status"
+      options={STATUS_OPTIONS}
+      value={status}
+      onChange={(e) => onStatus(e.target.value)}
+      className="md:w-44"
+    />
+  );
+
   return (
-    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
-        <form onSubmit={onSearch} className="flex items-center gap-2" role="search">
+    <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-1 items-center gap-2 md:gap-3">
+        <form
+          onSubmit={onSearch}
+          className="flex flex-1 items-center gap-2 md:flex-none"
+          role="search"
+        >
           <TextInput
             type="search"
             aria-label="Search memberships by member name"
             placeholder="Search by member…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            className="sm:w-64"
+            className="md:w-64"
           />
           <Button type="submit" variant="secondary" aria-label="Search">
             <Search aria-hidden className="size-4" />
           </Button>
         </form>
-        <SelectInput
-          aria-label="Filter by status"
-          options={STATUS_OPTIONS}
-          value={status}
-          onChange={(e) => onStatus(e.target.value)}
-          className="sm:w-44"
-        />
+        {/* <md: filters live in the bottom sheet (AP-3); ≥md: inline, unchanged. */}
+        <FilterSheet activeCount={status !== "LIVE" ? 1 : 0}>{statusFilter}</FilterSheet>
+        <div className="hidden md:block">{statusFilter}</div>
       </div>
 
       {canCreate ? (
-        <Button asChild>
+        // ≥md only — on mobile the CreationFAB relocates this single primary (AP-6).
+        <Button asChild className="max-md:hidden">
           <Link href="/memberships/new">
             <Plus aria-hidden className="size-4" />
             Sell membership

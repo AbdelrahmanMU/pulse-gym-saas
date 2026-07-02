@@ -1,9 +1,11 @@
 import { requireSession } from "@/lib/auth/guard";
 import {
   getMembership,
+  getMemberMembershipStanding,
   listMemberships,
   listSellableMembers,
   listSellablePlans,
+  type MemberMembershipStanding,
   type MemberOption,
   type MembershipDetail,
   type MembershipListResult,
@@ -37,4 +39,16 @@ export async function loadSellableMembers(): Promise<MemberOption[]> {
 export async function loadSellablePlans(): Promise<PlanOption[]> {
   const principal = await requireSession();
   return listSellablePlans(principal);
+}
+
+/**
+ * Live/paused/pending membership standing for one member — the member profile's P0
+ * operational strip (v1.2 §6, DD-9). Same public derived read the archive policy composes;
+ * gated by `memberships.read` in the service.
+ */
+export async function loadMemberMembershipStanding(
+  memberId: string,
+): Promise<MemberMembershipStanding> {
+  const principal = await requireSession();
+  return getMemberMembershipStanding(principal, memberId);
 }

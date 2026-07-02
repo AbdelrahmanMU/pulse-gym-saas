@@ -72,6 +72,7 @@ function Section({
         columns={columns}
         rows={rows}
         rowKey={(r) => r.membershipId}
+        cardMode
         caption={title}
         empty={<EmptyState title={emptyTitle} />}
       />

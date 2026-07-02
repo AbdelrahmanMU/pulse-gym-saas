@@ -4,6 +4,7 @@ import { type ComponentProps, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { StickyMobileActionBar } from "./sticky-mobile-action-bar";
 
 /**
  * PULSE FormLayout / FormSection / SubmitButton (Catalog §9). FormLayout owns the
@@ -31,11 +32,9 @@ export function FormLayout({
   return (
     <form className={cn("flex flex-col gap-8", className)} data-variant={variant} {...formProps}>
       <div className="flex flex-col gap-8">{children}</div>
-      {actions ? (
-        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border pt-6">
-          {actions}
-        </div>
-      ) : null}
+      {/* Action row = StickyMobileActionBar (Catalog §12.3): inline ≥md exactly as before;
+          pinned to the thumb zone <md so long forms never scroll-hunt for Submit (v1.2 §5.3). */}
+      {actions ? <StickyMobileActionBar>{actions}</StickyMobileActionBar> : null}
     </form>
   );
 }

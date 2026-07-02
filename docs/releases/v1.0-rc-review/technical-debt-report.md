@@ -34,8 +34,8 @@ closed or changed. This report keeps the original TD-N ids for traceability and 
 | TD-14 | No route-level loading feedback | — | ✅ **CLOSED** | Sprint 1.5 `(app)/loading.tsx`. |
 | **TD-10a** | **JWT session has no `maxAge`/re-check → suspended staff keep access ≈30 days** | **High** | **Fix before RC** | The Epic-9 security-control gap. Set a short `session.maxAge`; a middleware/layout re-check of account status is the fuller fix. |
 | **TD-6** | Thin live-DB integration on E5/E7/E8 **command** allow-paths (record/void/report) | **High** | **Fix before RC** | Partially closed by Slice 1 (per-member reads). Add live-DB allow-path + 404 + idempotency for the commands. |
-| **TD-7** | Members/plans/memberships/payments/notifications/**staff**/reports pages not independently e2e-axe-scanned | **High (cheap)** | **Fix before RC** | Extend the existing e2e axe harness to the module routes. Closes the a11y honesty gap. |
-| **TD-15** | "Payments" nav placeholder misrepresents shipped payments | **High (cheap)** | **Fix before RC** | IA decision (§11): remove or repoint. Trivial, high trust value. |
+| TD-7 | Module pages not independently e2e-axe-scanned | — | ✅ **CLOSED** | v1.2 Adaptive slice (`e2e/adaptive.spec.ts`): axe on members/memberships/plans/staff/notifications/reports/settings at 375px **and** 1280px + dark-mode mobile, plus the adaptive-behavior assertions. |
+| TD-15 | "Payments" nav placeholder misrepresents shipped payments | — | ✅ **CLOSED** | v1.2 Adaptive slice (DD-11): placeholder removed — payments live on membership detail (Billing); a standalone payments route stays a future feature decision. |
 | TD-3 | Notifications & Reports are Owner-only in MVP (Manager/Accountant dormant) | Medium | After Beta | Intentional; unblocks when dormant roles activate. |
 | TD-2 | Count-vs-cached-list drift (report/dashboard) | Medium | After Beta | Reconcile at a single derive source; touches cache-sweep. |
 | TD-8 | Notification generation = on-open server action (no cron) | Medium | After Beta | Replaceable trigger by design; swap for worker/cron. Shares infra with TD-18. |
@@ -64,8 +64,8 @@ who suspends staff also holds it) — revisit if suspension is ever delegated to
 1. **TD-10a** — set a short `session.maxAge` (and, ideally, a layout/middleware account-status
    re-check) so suspension takes effect promptly.
 2. **TD-6** — live-DB allow-path/404/idempotency tests for payment record/void + the report commands.
-3. **TD-7** — extend e2e axe to the module pages (incl. staff).
-4. **TD-15** — resolve the Payments nav placeholder.
+3. ~~TD-7~~ — ✅ closed by the v1.2 Adaptive slice (module-page + adaptive e2e-axe).
+4. ~~TD-15~~ — ✅ closed by the v1.2 Adaptive slice (placeholder removed).
 
 Everything else is genuinely **after-Beta** (TD-2/3/4/8/9/12/16) or **pre-prod** (TD-10b/11/17).
 The GO/NO-GO that rests on this list is in [rc-readiness-report](./rc-readiness-report.md); the

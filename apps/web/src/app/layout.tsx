@@ -37,6 +37,14 @@ export const metadata = {
   description: "PULSE Gym Membership Management",
 };
 
+// `viewport-fit=cover` lets bottom-anchored v1.2 patterns (FAB, sticky action bar, bottom
+// sheet) extend under device notches/home indicators and pad by the `--safe-*` tokens (§5.8).
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${fontDisplay.variable} ${fontSans.variable} ${fontMono.variable}`}>

@@ -57,7 +57,8 @@ export function CurrencyInput({ name, currency, defaultMinor, className }: Curre
         onChange={(e) => setValue(sanitize(e.target.value))}
         placeholder="0.00"
         className={cn(
-          "tabular h-11 w-full rounded-sm border bg-surface pl-9 pr-3 text-right text-foreground placeholder:text-muted-foreground",
+          // ≥16px below md so iOS Safari never focus-zooms (v1.2 §5.10); text-body ≥md.
+          "tabular h-11 w-full rounded-sm border bg-surface pl-9 pr-3 text-right text-(length:--control-font-mobile) text-foreground placeholder:text-muted-foreground md:text-body",
           "disabled:pointer-events-none disabled:opacity-(--opacity-disabled)",
           field?.hasError ? "border-danger" : "border-border",
           className,

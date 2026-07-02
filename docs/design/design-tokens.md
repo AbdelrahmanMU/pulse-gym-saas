@@ -243,7 +243,8 @@ Sidebar is persistent ≥`lg`, drawer below. Tables switch to scroll/stacked bel
 |---|---|---|
 | `--z-base` | 0 | Content |
 | `--z-dropdown` | 1000 | Menus |
-| `--z-sticky` | 1100 | Sticky headers |
+| `--z-sticky` | 1100 | Sticky headers, Sticky Mobile Action Bar |
+| `--z-fab` | 1150 | Creation FAB (v1.2 — above sticky, below drawer) |
 | `--z-drawer` | 1200 | Mobile nav drawer |
 | `--z-scrim` | 1300 | Overlay scrim |
 | `--z-modal` | 1400 | Dialogs |
@@ -275,6 +276,25 @@ Sidebar is persistent ≥`lg`, drawer below. Tables switch to scroll/stacked bel
 | `--avatar-xl` | 5rem (80) | Large profile/hero |
 
 - **Do** — Use a token size; always provide initials fallback. **Don't** — use off-scale avatar sizes.
+
+## 25. v1.2 Adaptive Tokens
+Additive tokens for the mobile thumb-zone patterns (design-system-v1.2 §8; implemented with the
+v1.2 implementation slice). Safe-area values are applied **inside component base styles** in
+`globals.css` (`.fab-anchor`, `.actionbar-mobile`) — never as arbitrary utility values (§5.8).
+
+| Token | Value | Use |
+|---|---|---|
+| `--safe-top/right/bottom/left` | `env(safe-area-inset-*, 0px)` | Device safe-area insets (notch/home indicator) |
+| `--fab-size` | 3.5rem (56) | Creation FAB diameter |
+| `--fab-offset` | 1rem | FAB inset from screen edges (above `--safe-bottom`) |
+| `--action-bar-h` | 4rem (64) | Sticky Mobile Action Bar height |
+| `--sheet-max-h` | 90dvh | Adaptive Bottom Sheet max height |
+| `--sheet-radius` | = `--radius-lg` | Bottom-sheet top-corner rounding |
+| `--control-font-mobile` | 1rem (16) | Input font on `<md` — prevents iOS focus-zoom (§5.10) |
+| `--z-fab` | 1150 | See §22 |
+
+Requires `viewport-fit=cover` in the app viewport meta (set in the root layout).
+- **Do** — Anchor bottom patterns with these tokens/base styles. **Don't** — hand-position floating elements or read `env()` in components.
 
 ---
 

@@ -40,8 +40,39 @@ const columns: DataTableColumn<PlanRow>[] = [
   },
 ];
 
+/**
+ * AP-1 mobile card — operational-first order (v1.2 §6 / adaptive-design-report §4):
+ * P0 price · active/archived status → P1 name (link) · duration.
+ */
+function PlanCard(p: PlanRow) {
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <PlanStatusBadge isActive={p.isActive} size="sm" />
+        <MetricValue value={p.priceMinor} format="currency" currency={p.currency} size="sm" />
+      </div>
+      <Link
+        href={`/plans/${p.id}`}
+        className="font-medium text-body-lg text-foreground hover:underline"
+      >
+        {p.name}
+      </Link>
+      <span className="text-body-sm text-muted-foreground">
+        {formatDuration(p.durationValue, p.durationUnit)}
+      </span>
+    </div>
+  );
+}
+
 export function PlansTable({ rows, empty }: { rows: PlanRow[]; empty?: ReactNode }) {
   return (
-    <DataTable columns={columns} rows={rows} rowKey={(p) => p.id} caption="Plans" empty={empty} />
+    <DataTable
+      columns={columns}
+      rows={rows}
+      rowKey={(p) => p.id}
+      caption="Plans"
+      empty={empty}
+      renderCard={PlanCard}
+    />
   );
 }

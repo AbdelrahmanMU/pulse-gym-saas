@@ -5,7 +5,6 @@ import {
   Building2,
   CircleUser,
   ClipboardList,
-  CreditCard,
   LayoutDashboard,
   MapPin,
   Tags,
@@ -28,8 +27,8 @@ import { signOutAction } from "./actions";
  *
  * Nav: Dashboard + a permission-gated **Notifications** (Epic-7) entry, the real **Members**
  * (Epic-2), **Plans** (Epic-3), and **Memberships** (Epic-4) entries, and the **Settings** group
- * (Epic-1 — Gym / Branch / My Profile). Payments remains a placeholder until its feature slice
- * exists. The TopBar bell shows the unread count. Items are shown **by permission** (never by role).
+ * (Epic-1 — Gym / Branch / My Profile). The TopBar bell shows the unread count. Items are shown
+ * **by permission** (never by role).
  */
 function buildNavGroups(principal: AuthenticatedPrincipal): NavGroupDef[] {
   const manageItems: NavItemDef[] = [];
@@ -46,12 +45,9 @@ function buildNavGroups(principal: AuthenticatedPrincipal): NavGroupDef[] {
       icon: <ClipboardList aria-hidden />,
     });
   }
-  manageItems.push({
-    href: "/payments",
-    label: "Payments",
-    icon: <CreditCard aria-hidden />,
-    placeholder: true,
-  });
+  // No "Payments" nav item: payments shipped as the membership detail's Billing sections
+  // (Epic-5); a standalone payments route is a future feature. The old placeholder
+  // misrepresented shipped work (RC TD-15 / design-debt DD-11) and was removed.
 
   const settingsItems: NavItemDef[] = [];
   if (hasPermission(principal.permissions, PERMISSION_KEYS.GYM_VIEW)) {

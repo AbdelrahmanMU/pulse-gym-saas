@@ -74,6 +74,7 @@ export function OutstandingReportView({ report }: { report: OutstandingReport })
         columns={columns}
         rows={report.rows}
         rowKey={(r) => r.membershipId}
+        cardMode
         caption="Memberships with an outstanding balance"
         empty={
           <EmptyState

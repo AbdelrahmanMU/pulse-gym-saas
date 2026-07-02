@@ -9,6 +9,7 @@ import { ErrorState } from "@/components/pulse/error-state";
 import { EmptyState } from "@/components/pulse/empty-state";
 import { Button } from "@/components/pulse/button";
 import { Pagination } from "@/components/pulse/pagination";
+import { CreationFab } from "@/components/pulse/creation-fab";
 import { loadMemberships } from "@/modules/memberships/queries";
 import { MembershipsToolbar } from "@/modules/memberships/ui/memberships-toolbar";
 import { MembershipsTable } from "@/modules/memberships/ui/memberships-table";
@@ -102,6 +103,9 @@ export default async function MembershipsPage({
           className="mt-4"
         />
       ) : null}
+
+      {/* Mobile relocation of the single "Sell membership" primary (AP-6 / Catalog §12.2). */}
+      {canCreate ? <CreationFab label="Sell membership" href="/memberships/new" /> : null}
     </PageContainer>
   );
 }

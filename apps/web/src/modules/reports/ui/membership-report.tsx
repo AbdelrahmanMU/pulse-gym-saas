@@ -119,6 +119,7 @@ export function MembershipReportView({
         columns={columns}
         rows={list.rows}
         rowKey={(r) => r.id}
+        cardMode
         caption="Memberships by status"
         empty={
           <EmptyState

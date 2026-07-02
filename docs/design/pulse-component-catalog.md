@@ -1024,10 +1024,13 @@ A new component may be added **only** when ALL hold:
 
 # 12. v1.2 Adaptive Additions
 
-> **Status: specified, implementation pending** (docs-first slice, 2026-07-02). These entries are the
-> approved design authority for the next implementation slice; they are **additive** and
-> backward-compatible (design-system-v1.2 §2/§9). Every §0 Global Convention applies. Nothing in
-> §1–§11 changes except the single backward-compatible DataTable enhancement in §12.4.
+> **Status: implemented** (v1.2 implementation slice, 2026-07-02 — `AdaptiveBottomSheet`
+> `components/pulse/adaptive-bottom-sheet.tsx` + `FilterSheet` wrapper, `CreationFAB`
+> `creation-fab.tsx`, `StickyMobileActionBar` `sticky-mobile-action-bar.tsx` (auto-applied by
+> FormLayout's action row), DataTable card mode in `data-table.tsx`). These entries are the
+> approved design authority; they are **additive** and backward-compatible (design-system-v1.2
+> §2/§9). Every §0 Global Convention applies. Nothing in §1–§11 changes except the single
+> backward-compatible DataTable enhancement in §12.4.
 
 ## 12.1 AdaptiveBottomSheet
 1. **Purpose** — One overlay primitive that renders as a **centered Dialog/popover on desktop (≥md)**

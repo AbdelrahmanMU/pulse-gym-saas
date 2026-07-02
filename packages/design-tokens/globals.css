@@ -93,6 +93,7 @@
   --z-base: 0;
   --z-dropdown: 1000;
   --z-sticky: 1100;
+  --z-fab: 1150;   /* v1.2 Creation FAB — above sticky bars, below the drawer */
   --z-drawer: 1200;
   --z-scrim: 1300;
   --z-modal: 1400;
@@ -115,6 +116,18 @@
   --control-h-lg: 3.25rem;   /* 52px */
   --gutter: 2rem;            /* desktop page gutter */
   --gutter-mobile: 1rem;
+
+  /* --- v1.2 Adaptive (design-system-v1.2 §8 — additive; mobile thumb-zone patterns) */
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-right:  env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left, 0px);
+  --fab-size: 3.5rem;              /* 56px Creation FAB diameter (≥ touch target) */
+  --fab-offset: 1rem;              /* FAB inset from screen edges (above --safe-bottom) */
+  --action-bar-h: 4rem;            /* Sticky Mobile Action Bar height (+ --safe-bottom) */
+  --sheet-max-h: 90dvh;            /* Adaptive Bottom Sheet max height */
+  --sheet-radius: var(--radius-lg);/* bottom-sheet top-corner rounding */
+  --control-font-mobile: 1rem;     /* ≥16px input font on <md — no iOS focus-zoom (§5.10) */
 
   /* ==========================================================================
      2. SEMANTIC ROLES — LIGHT (consume THESE, plus Tailwind utilities)
@@ -325,6 +338,25 @@
   /* High-contrast / forced-colors: keep focus + borders meaningful */
   @media (forced-colors: active) {
     :where(button, a, input, select, textarea):focus-visible { outline: 2px solid CanvasText; }
+  }
+
+  /* v1.2 bottom-anchored anchors — safe-area insets are applied INSIDE component base
+     styles (design-system-v1.2 §5.8), never as arbitrary utility values. */
+  .fab-anchor {
+    position: fixed;
+    right: var(--fab-offset);
+    bottom: calc(var(--fab-offset) + var(--safe-bottom));
+    z-index: var(--z-fab);
+  }
+  @media (max-width: 47.9375rem) {
+    /* Sticky Mobile Action Bar (<md): pins the in-flow action row to the thumb zone. */
+    .actionbar-mobile {
+      position: sticky;
+      bottom: 0;
+      z-index: var(--z-sticky);
+      background: var(--surface);
+      padding-bottom: calc(0.75rem + var(--safe-bottom));
+    }
   }
 
   /* Skip link (AppShell renders the anchor) */

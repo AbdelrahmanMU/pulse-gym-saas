@@ -32,7 +32,8 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
       aria-invalid={ariaInvalid ?? field?.hasError}
       required={props.required ?? field?.required}
       className={cn(
-        "h-11 w-full rounded-sm border bg-surface px-3 text-body text-foreground placeholder:text-muted-foreground",
+        // ≥16px below md so iOS Safari never focus-zooms (v1.2 §5.10); text-body ≥md.
+        "h-11 w-full rounded-sm border bg-surface px-3 text-(length:--control-font-mobile) text-foreground placeholder:text-muted-foreground md:text-body",
         "disabled:pointer-events-none disabled:opacity-(--opacity-disabled)",
         field?.hasError ? "border-danger" : "border-border",
         className,

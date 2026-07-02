@@ -102,20 +102,44 @@ export default async function MembershipDetailPage({
         </span>
       </div>
 
+      {/* Section order is operational-first (v1.2 §6 / AP-5, DD-9): P0 money (Billing) →
+          next action (lifecycle Actions) → P1 period/plan facts → P2 history/audit. One DOM
+          order serves both presentations — mobile stacks it top-to-bottom; the desktop
+          2-column grid leads with Billing + Actions (reading order = DOM order, §5.11). */}
       <div className="grid gap-6 md:grid-cols-2">
-        <Section title="Plan (snapshot)">
-          <Detail label="Plan">{membership.planName}</Detail>
-          <Detail label="Price">
-            <MetricValue
-              value={membership.priceMinor}
-              format="currency"
-              currency={membership.currency}
+        {billing ? (
+          <Section title="Billing">
+            <PaymentSummary billing={billing} />
+            {canRecordPayment ? (
+              // Payment is always *permitted* server-side (recordPayment is status-independent);
+              // once nothing is owed (standing PAID — covers exact and overpaid/credit) we retire
+              // the action to a passive confirmation so full-paid memberships don't invite a
+              // needless payment. Purely presentational: a later void re-derives standing away
+              // from PAID and the form returns on the next render.
+              billing.standing === PaymentStanding.PAID ? (
+                <div className="mt-2 flex items-center gap-2 border-t border-border pt-4 text-body-sm text-muted-foreground">
+                  <CircleCheck aria-hidden className="size-4 text-success-text" />
+                  <span>Paid in full — no balance due.</span>
+                </div>
+              ) : (
+                <div className="mt-2 border-t border-border pt-4">
+                  <RecordPaymentForm membershipId={membership.id} currency={billing.currency} />
+                </div>
+              )
+            ) : null}
+          </Section>
+        ) : null}
+
+        {showControls ? (
+          <Section title="Actions">
+            <MembershipLifecycleControls
+              membershipId={membership.id}
+              status={membership.status}
+              plans={plans}
+              perms={perms}
             />
-          </Detail>
-          <Detail label="Duration">
-            {formatDuration(membership.durationValue, membership.durationUnit)}
-          </Detail>
-        </Section>
+          </Section>
+        ) : null}
 
         <Section title="Period">
           <Detail label="Start">
@@ -150,53 +174,33 @@ export default async function MembershipDetailPage({
           />
         </Section>
 
-        <Section title="Lifecycle timeline">
-          <MembershipTimeline entries={membership.timeline} />
+        <Section title="Plan (snapshot)">
+          <Detail label="Plan">{membership.planName}</Detail>
+          <Detail label="Price">
+            <MetricValue
+              value={membership.priceMinor}
+              format="currency"
+              currency={membership.currency}
+            />
+          </Detail>
+          <Detail label="Duration">
+            {formatDuration(membership.durationValue, membership.durationUnit)}
+          </Detail>
         </Section>
 
-        {showControls ? (
-          <Section title="Actions">
-            <MembershipLifecycleControls
+        {billing ? (
+          <Section title="Payment history">
+            <PaymentHistory
               membershipId={membership.id}
-              status={membership.status}
-              plans={plans}
-              perms={perms}
+              entries={billing.history}
+              canVoid={canVoidPayment}
             />
           </Section>
         ) : null}
 
-        {billing ? (
-          <>
-            <Section title="Billing">
-              <PaymentSummary billing={billing} />
-              {canRecordPayment ? (
-                // Payment is always *permitted* server-side (recordPayment is status-independent);
-                // once nothing is owed (standing PAID — covers exact and overpaid/credit) we retire
-                // the action to a passive confirmation so full-paid memberships don't invite a
-                // needless payment. Purely presentational: a later void re-derives standing away
-                // from PAID and the form returns on the next render.
-                billing.standing === PaymentStanding.PAID ? (
-                  <div className="mt-2 flex items-center gap-2 border-t border-border pt-4 text-body-sm text-muted-foreground">
-                    <CircleCheck aria-hidden className="size-4 text-success-text" />
-                    <span>Paid in full — no balance due.</span>
-                  </div>
-                ) : (
-                  <div className="mt-2 border-t border-border pt-4">
-                    <RecordPaymentForm membershipId={membership.id} currency={billing.currency} />
-                  </div>
-                )
-              ) : null}
-            </Section>
-
-            <Section title="Payment history">
-              <PaymentHistory
-                membershipId={membership.id}
-                entries={billing.history}
-                canVoid={canVoidPayment}
-              />
-            </Section>
-          </>
-        ) : null}
+        <Section title="Lifecycle timeline">
+          <MembershipTimeline entries={membership.timeline} />
+        </Section>
       </div>
     </PageContainer>
   );

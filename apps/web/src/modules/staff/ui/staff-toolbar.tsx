@@ -7,6 +7,7 @@ import { Plus, Search } from "lucide-react";
 import { TextInput } from "@/components/pulse/text-input";
 import { SelectInput, type SelectOption } from "@/components/pulse/select-input";
 import { Button } from "@/components/pulse/button";
+import { FilterSheet } from "@/components/pulse/filter-sheet";
 
 /**
  * Staff list toolbar (Catalog §FilterBar, minimal). Search + status filter, driven through the URL
@@ -51,34 +52,47 @@ export function StaffToolbar({
     setParam("q", q.trim(), "");
   }
 
+  // The same catalogued control serves both presentations (AP-3 adaptive-parity):
+  // inline in the toolbar ≥md, inside the FilterSheet <md.
+  const statusFilter = (
+    <SelectInput
+      aria-label="Filter by status"
+      options={STATUS_OPTIONS}
+      value={status}
+      onChange={(e) => setParam("status", e.target.value, "ACTIVE")}
+      className="md:w-40"
+    />
+  );
+
   return (
-    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
-        <form onSubmit={onSearch} className="flex items-center gap-2" role="search">
+    <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-1 items-center gap-2 md:gap-3">
+        <form
+          onSubmit={onSearch}
+          className="flex flex-1 items-center gap-2 md:flex-none"
+          role="search"
+        >
           <TextInput
             type="search"
             aria-label="Search staff by name or email"
             placeholder="Search staff…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            className="sm:w-64"
+            className="md:w-64"
           />
           <Button type="submit" variant="secondary" size="md" aria-label="Search">
             <Search aria-hidden className="size-4" />
           </Button>
         </form>
 
-        <SelectInput
-          aria-label="Filter by status"
-          options={STATUS_OPTIONS}
-          value={status}
-          onChange={(e) => setParam("status", e.target.value, "ACTIVE")}
-          className="sm:w-40"
-        />
+        {/* <md: filters live in the bottom sheet (AP-3); ≥md: inline, unchanged. */}
+        <FilterSheet activeCount={status !== "ACTIVE" ? 1 : 0}>{statusFilter}</FilterSheet>
+        <div className="hidden md:block">{statusFilter}</div>
       </div>
 
       {canCreate ? (
-        <Button asChild>
+        // ≥md only — on mobile the CreationFAB relocates this single primary (AP-6).
+        <Button asChild className="max-md:hidden">
           <Link href="/staff/new">
             <Plus aria-hidden className="size-4" />
             Add staff

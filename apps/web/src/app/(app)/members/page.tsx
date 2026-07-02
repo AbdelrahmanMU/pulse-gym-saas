@@ -9,6 +9,7 @@ import { ErrorState } from "@/components/pulse/error-state";
 import { EmptyState } from "@/components/pulse/empty-state";
 import { Button } from "@/components/pulse/button";
 import { Pagination } from "@/components/pulse/pagination";
+import { CreationFab } from "@/components/pulse/creation-fab";
 import { loadMembers, loadTrainerFilterOptions } from "@/modules/members/queries";
 import { MembersToolbar } from "@/modules/members/ui/members-toolbar";
 import { MembersTable } from "@/modules/members/ui/members-table";
@@ -114,6 +115,9 @@ export default async function MembersPage({
           className="mt-4"
         />
       ) : null}
+
+      {/* Mobile relocation of the single "Add member" primary (AP-6 / Catalog §12.2). */}
+      {canCreate ? <CreationFab label="Add member" href="/members/new" /> : null}
     </PageContainer>
   );
 }

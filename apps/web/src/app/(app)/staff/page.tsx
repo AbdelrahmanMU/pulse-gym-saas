@@ -9,6 +9,7 @@ import { ErrorState } from "@/components/pulse/error-state";
 import { EmptyState } from "@/components/pulse/empty-state";
 import { Button } from "@/components/pulse/button";
 import { Pagination } from "@/components/pulse/pagination";
+import { CreationFab } from "@/components/pulse/creation-fab";
 import { loadStaff } from "@/modules/staff/queries";
 import { StaffToolbar } from "@/modules/staff/ui/staff-toolbar";
 import { StaffTable } from "@/modules/staff/ui/staff-table";
@@ -100,6 +101,9 @@ export default async function StaffPage({
           className="mt-4"
         />
       ) : null}
+
+      {/* Mobile relocation of the single "Add staff" primary (AP-6 / Catalog §12.2). */}
+      {canCreate ? <CreationFab label="Add staff" href="/staff/new" /> : null}
     </PageContainer>
   );
 }

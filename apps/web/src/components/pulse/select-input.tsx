@@ -43,7 +43,8 @@ export const SelectInput = forwardRef<HTMLSelectElement, SelectInputProps>(funct
         aria-invalid={ariaInvalid ?? field?.hasError}
         required={props.required ?? field?.required}
         className={cn(
-          "h-11 w-full appearance-none rounded-sm border bg-surface pl-3 pr-10 text-body text-foreground",
+          // ≥16px below md so iOS Safari never focus-zooms (v1.2 §5.10); text-body ≥md.
+          "h-11 w-full appearance-none rounded-sm border bg-surface pl-3 pr-10 text-(length:--control-font-mobile) text-foreground md:text-body",
           "disabled:pointer-events-none disabled:opacity-(--opacity-disabled)",
           field?.hasError ? "border-danger" : "border-border",
           className,

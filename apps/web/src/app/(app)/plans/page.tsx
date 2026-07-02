@@ -9,6 +9,7 @@ import { ErrorState } from "@/components/pulse/error-state";
 import { EmptyState } from "@/components/pulse/empty-state";
 import { Button } from "@/components/pulse/button";
 import { Pagination } from "@/components/pulse/pagination";
+import { CreationFab } from "@/components/pulse/creation-fab";
 import { loadPlans } from "@/modules/plans/queries";
 import { PlansToolbar } from "@/modules/plans/ui/plans-toolbar";
 import { PlansTable } from "@/modules/plans/ui/plans-table";
@@ -96,6 +97,9 @@ export default async function PlansPage({
           className="mt-4"
         />
       ) : null}
+
+      {/* Mobile relocation of the single "Add plan" primary (AP-6 / Catalog §12.2). */}
+      {canCreate ? <CreationFab label="Add plan" href="/plans/new" /> : null}
     </PageContainer>
   );
 }

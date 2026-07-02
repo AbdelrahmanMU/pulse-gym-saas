@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Pencil, Plus } from "lucide-react";
+import { CalendarClock, CircleCheck, CircleOff, Pencil, Plus, Snowflake } from "lucide-react";
 import { hasPermission, PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError, NotFoundError } from "@/lib/errors";
@@ -9,7 +9,11 @@ import { PageContainer } from "@/components/pulse/page-container";
 import { PageHeader } from "@/components/pulse/page-header";
 import { ErrorState } from "@/components/pulse/error-state";
 import { Button } from "@/components/pulse/button";
+import { StatusBadge } from "@/components/pulse/status-badge";
+import { StickyMobileActionBar } from "@/components/pulse/sticky-mobile-action-bar";
 import { loadAssignableTrainers, loadMember } from "@/modules/members/queries";
+import { loadMemberMembershipStanding } from "@/modules/memberships/queries";
+import type { MemberMembershipStanding } from "@/modules/memberships";
 import type { MemberDetail } from "@/modules/members/service";
 import { MemberStatusBadge } from "@/modules/members/ui/member-status-badge";
 import { AssignTrainerForm } from "@/modules/members/ui/assign-trainer-form";
@@ -59,15 +63,24 @@ export default async function MemberProfilePage({
     member.status === "ACTIVE" &&
     hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERSHIPS_CREATE);
 
+  // P0 operational strip (v1.2 §6, DD-9): the member's membership standing, composed from the
+  // memberships module's public derived read (the same one the archive policy uses). Shown only
+  // with `memberships.read` — the page itself needs only `members.read`, exactly as before.
+  const canReadMemberships = hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERSHIPS_READ);
+  const standing: MemberMembershipStanding | null = canReadMemberships
+    ? await loadMemberMembershipStanding(member.id)
+    : null;
+
   return (
     <PageContainer>
       <PageHeader
         title={member.fullName}
         actions={
           canUpdate || canSellMembership ? (
+            // ≥md only — on mobile these relocate to the Sticky Action Bar (AP-6 / §12.3).
             <>
               {canSellMembership ? (
-                <Button asChild>
+                <Button asChild className="max-md:hidden">
                   <Link href={`/memberships/new?memberId=${member.id}`}>
                     <Plus aria-hidden className="size-4" />
                     Sell membership
@@ -75,7 +88,7 @@ export default async function MemberProfilePage({
                 </Button>
               ) : null}
               {canUpdate ? (
-                <Button asChild variant="secondary">
+                <Button asChild variant="secondary" className="max-md:hidden">
                   <Link href={`/members/${member.id}/edit`}>
                     <Pencil aria-hidden className="size-4" />
                     Edit
@@ -87,27 +100,27 @@ export default async function MemberProfilePage({
         }
       />
 
-      <div className="mb-6 flex items-center gap-3">
+      <div className="mb-6 flex flex-wrap items-center gap-3">
         <MemberStatusBadge status={member.status} />
+        {standing ? <MembershipStandingChips standing={standing} /> : null}
         {member.trainerName ? (
           <span className="text-body-sm text-muted-foreground">
             Trainer: <span className="text-foreground">{member.trainerName}</span>
           </span>
         ) : null}
+        {standing ? (
+          <Link
+            href={`/memberships?q=${encodeURIComponent(member.fullName)}`}
+            className="text-body-sm text-accent-text hover:underline"
+          >
+            View memberships
+          </Link>
+        ) : null}
       </div>
 
+      {/* Section order is operational-first (v1.2 §6 / AP-5, DD-9): P1 relationships and
+          lifecycle actions before P2 contact/metadata. One DOM order, both presentations. */}
       <div className="grid gap-6 md:grid-cols-2">
-        <Section title="Contact">
-          <Detail label="Phone" value={member.phone} />
-          <Detail label="Email" value={member.email} />
-        </Section>
-
-        <Section title="Details">
-          <Detail label="Date of birth" date={member.dateOfBirth} />
-          <Detail label="Gender" value={member.gender} />
-          <Detail label="Joined on" date={member.joinedOn} />
-        </Section>
-
         {canReadAssignments ? (
           <Section title="Responsible trainer">
             {canManageAssignments ? (
@@ -137,8 +150,69 @@ export default async function MemberProfilePage({
             />
           </Section>
         ) : null}
+
+        <Section title="Contact">
+          <Detail label="Phone" value={member.phone} />
+          <Detail label="Email" value={member.email} />
+        </Section>
+
+        <Section title="Details">
+          <Detail label="Date of birth" date={member.dateOfBirth} />
+          <Detail label="Gender" value={member.gender} />
+          <Detail label="Joined on" date={member.joinedOn} />
+        </Section>
       </div>
+
+      {canSellMembership || canUpdate ? (
+        // Thumb-zone relocation of the header actions (<md only — §5.3 detail variant).
+        <StickyMobileActionBar className="mt-6 md:hidden">
+          {canUpdate ? (
+            <Button asChild variant="secondary">
+              <Link href={`/members/${member.id}/edit`}>
+                <Pencil aria-hidden className="size-4" />
+                Edit
+              </Link>
+            </Button>
+          ) : null}
+          {canSellMembership ? (
+            <Button asChild>
+              <Link href={`/memberships/new?memberId=${member.id}`}>
+                <Plus aria-hidden className="size-4" />
+                Sell membership
+              </Link>
+            </Button>
+          ) : null}
+        </StickyMobileActionBar>
+      ) : null}
     </PageContainer>
+  );
+}
+
+/**
+ * The membership-standing cues (P0): icon + label + `*-text` token — never color alone.
+ * Booleans only (no dates/amounts) — that fuller member workspace is a pending product
+ * decision; these chips are its composition-only forerunner.
+ */
+function MembershipStandingChips({ standing }: { standing: MemberMembershipStanding }) {
+  const none =
+    !standing.hasActiveMembership &&
+    !standing.hasScheduledMembership &&
+    !standing.hasFrozenMembership;
+  return (
+    <>
+      {standing.hasActiveMembership ? (
+        <StatusBadge tone="success" icon={<CircleCheck />} label="Active membership" size="sm" />
+      ) : null}
+      {standing.hasFrozenMembership ? (
+        <StatusBadge tone="info" icon={<Snowflake />} label="Frozen membership" size="sm" />
+      ) : null}
+      {standing.hasScheduledMembership ? (
+        <StatusBadge tone="info" icon={<CalendarClock />} label="Scheduled membership" size="sm" />
+      ) : null}
+      {none ? (
+        <StatusBadge tone="warning" icon={<CircleOff />} label="No live membership" size="sm" />
+      ) : null}
+    </>
   );
 }
 
