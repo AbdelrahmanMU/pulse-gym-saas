@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { MembershipStatus } from "@pulse/db";
 import { DataTable, type DataTableColumn } from "@/components/pulse/data-table";
 import { MetricValue } from "@/components/pulse/metric-value";
 import type { MembershipRow } from "../service";
@@ -33,9 +34,16 @@ const columns: DataTableColumn<MembershipRow>[] = [
     header: "Ends",
     priority: 2,
     render: (m) => (
-      <time dateTime={m.effectiveEndDate} className="tabular">
-        {m.effectiveEndDate}
-      </time>
+      <div className="flex flex-col">
+        <time dateTime={m.effectiveEndDate} className="tabular">
+          {m.effectiveEndDate}
+        </time>
+        {m.status === MembershipStatus.FROZEN ? (
+          // The stored end holds while frozen; it extends on resume (FRZ-2). Flag it so the
+          // un-moved date next to a Frozen badge doesn't read as "the freeze did nothing".
+          <span className="text-caption text-muted-foreground">Extends on resume</span>
+        ) : null}
+      </div>
     ),
   },
   {

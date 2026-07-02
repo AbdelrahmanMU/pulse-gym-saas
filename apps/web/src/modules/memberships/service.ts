@@ -94,6 +94,13 @@ export interface MembershipDetail extends MembershipRow {
   /** The member's current responsible trainer (read-only; owned by the members module). */
   trainerName: string | null;
   totalFrozenDays: number;
+  /**
+   * Display-only projection while FROZEN: the informational end date the membership would reach
+   * if resumed as planned. **Never authoritative** — status is always judged against
+   * {@link MembershipRow.effectiveEndDate}; the real extension is finalised to the actual paused
+   * days on resume (FRZ-2/INV-18). `null` unless the membership is currently frozen.
+   */
+  activeFreeze: { plannedDays: number; projectedEndDate: IsoDate } | null;
   timeline: TimelineEntry[];
 }
 
@@ -206,7 +213,21 @@ export async function listMemberships(
   const where: Prisma.MembershipWhereInput = { gymId: principal.gymId };
   // cached_status is an accelerator for the filter; each returned row's badge is re-derived
   // live (cheap, date-only) so the common ACTIVE→EXPIRED drift shows correctly (Decision A).
-  if (params.status !== "ALL") where.cachedStatus = params.status;
+  if (params.status === "LIVE") {
+    // Default operational projection: current periods only — Active (not yet ended), plus any
+    // Frozen/Scheduled regardless of date; terminal history (Expired/Cancelled) is hidden until
+    // explicitly filtered. Purely a read projection: no membership is mutated, and the badge is
+    // still derived per row. `cachedEffectiveEndDate` (@db.Date) is time-independent — it only
+    // moves on freeze-resume (a write) — so `>= today` is a reliable not-yet-expired test even
+    // when `cached_status` has drifted; backed by the [gymId, cachedStatus, end] index.
+    where.cancelledAt = null;
+    where.OR = [
+      { cachedStatus: { in: [MembershipStatus.FROZEN, MembershipStatus.SCHEDULED] } },
+      { cachedEffectiveEndDate: { gte: toDbDate(ctx.today) } },
+    ];
+  } else if (params.status !== "ALL") {
+    where.cachedStatus = params.status;
+  }
   if (params.q) where.member = { fullName: { contains: params.q, mode: "insensitive" } };
 
   const total = await prisma.membership.count({ where });
@@ -275,7 +296,28 @@ export async function getMembership(
     predecessorMembershipId: membership.predecessorMembershipId,
     trainerName: open?.trainer.user.displayName ?? null,
     totalFrozenDays: membership.cachedTotalFrozenDays,
+    activeFreeze: deriveFreezeProjection(membership.freezes, derived),
     timeline: buildTimeline(membership),
+  };
+}
+
+/**
+ * Display-only projection for a currently-frozen membership: the end date it would reach if
+ * resumed on the requested freeze end. **Never authoritative** — status is judged against the
+ * live `effectiveEndDate`, and the real extension is finalised to the *actual* paused days on
+ * resume (FRZ-2/INV-18). Pure read-model derivation over the already-loaded freeze rows; it
+ * changes no stored value and no lifecycle decision.
+ */
+function deriveFreezeProjection(
+  freezes: { status: FreezeStatus; frozenDays: number }[],
+  derived: DerivedMembership,
+): { plannedDays: number; projectedEndDate: IsoDate } | null {
+  if (derived.status !== MembershipStatus.FROZEN) return null;
+  const open = freezes.find((f) => f.status === FreezeStatus.ACTIVE);
+  if (!open) return null;
+  return {
+    plannedDays: open.frozenDays,
+    projectedEndDate: addDays(derived.effectiveEndDate, open.frozenDays),
   };
 }
 

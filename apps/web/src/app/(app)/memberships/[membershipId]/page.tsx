@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MembershipStatus } from "@pulse/db";
+import { CircleCheck } from "lucide-react";
+import { MembershipStatus, PaymentStanding } from "@pulse/db";
 import { hasPermission, PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError, NotFoundError } from "@/lib/errors";
@@ -15,6 +16,7 @@ import type { MembershipDetail } from "@/modules/memberships/service";
 import { formatDuration } from "@/modules/plans/format";
 import { remainingDaysLabel } from "@/modules/memberships/format";
 import { MembershipStatusBadge } from "@/modules/memberships/ui/membership-status-badge";
+import { MembershipPeriodNote } from "@/modules/memberships/ui/membership-period-note";
 import { MembershipTimeline } from "@/modules/memberships/ui/membership-timeline";
 import {
   MembershipLifecycleControls,
@@ -122,6 +124,14 @@ export default async function MembershipDetailPage({
           <Detail label="Ends (inclusive)">
             <DateValue value={membership.effectiveEndDate} />
           </Detail>
+          {membership.activeFreeze ? (
+            <Detail label="Projected end on resume">
+              <span className="text-muted-foreground">
+                <DateValue value={membership.activeFreeze.projectedEndDate} />
+                {" · estimate"}
+              </span>
+            </Detail>
+          ) : null}
           {membership.scheduledEffectiveFrom ? (
             <Detail label="Scheduled to start">
               <DateValue value={membership.scheduledEffectiveFrom} />
@@ -133,6 +143,11 @@ export default async function MembershipDetailPage({
           <Detail label="Responsible trainer">
             {membership.trainerName ?? <span className="text-muted-foreground">None</span>}
           </Detail>
+          <MembershipPeriodNote
+            status={membership.status}
+            isRenewal={membership.predecessorMembershipId !== null}
+            activeFreeze={membership.activeFreeze}
+          />
         </Section>
 
         <Section title="Lifecycle timeline">
@@ -155,9 +170,21 @@ export default async function MembershipDetailPage({
             <Section title="Billing">
               <PaymentSummary billing={billing} />
               {canRecordPayment ? (
-                <div className="mt-2 border-t border-border pt-4">
-                  <RecordPaymentForm membershipId={membership.id} currency={billing.currency} />
-                </div>
+                // Payment is always *permitted* server-side (recordPayment is status-independent);
+                // once nothing is owed (standing PAID — covers exact and overpaid/credit) we retire
+                // the action to a passive confirmation so full-paid memberships don't invite a
+                // needless payment. Purely presentational: a later void re-derives standing away
+                // from PAID and the form returns on the next render.
+                billing.standing === PaymentStanding.PAID ? (
+                  <div className="mt-2 flex items-center gap-2 border-t border-border pt-4 text-body-sm text-muted-foreground">
+                    <CircleCheck aria-hidden className="size-4 text-success-text" />
+                    <span>Paid in full — no balance due.</span>
+                  </div>
+                ) : (
+                  <div className="mt-2 border-t border-border pt-4">
+                    <RecordPaymentForm membershipId={membership.id} currency={billing.currency} />
+                  </div>
+                )
               ) : null}
             </Section>
 

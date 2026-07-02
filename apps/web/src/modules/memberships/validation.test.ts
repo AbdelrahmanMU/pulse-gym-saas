@@ -59,7 +59,8 @@ describe("FreezeMembershipSchema", () => {
 describe("MembershipListParamsSchema", () => {
   it("falls back to safe defaults for bad status/page (never throws)", () => {
     const parsed = MembershipListParamsSchema.parse({ status: "bogus", page: "-3" });
-    expect(parsed.status).toBe("ALL");
+    // LIVE (current-periods projection) is the default operational view; ALL reveals history.
+    expect(parsed.status).toBe("LIVE");
     expect(parsed.page).toBe(1);
   });
 });

@@ -38,7 +38,8 @@ closed or changed. This report keeps the original TD-N ids for traceability and 
 | **TD-15** | "Payments" nav placeholder misrepresents shipped payments | **High (cheap)** | **Fix before RC** | IA decision (§11): remove or repoint. Trivial, high trust value. |
 | TD-3 | Notifications & Reports are Owner-only in MVP (Manager/Accountant dormant) | Medium | After Beta | Intentional; unblocks when dormant roles activate. |
 | TD-2 | Count-vs-cached-list drift (report/dashboard) | Medium | After Beta | Reconcile at a single derive source; touches cache-sweep. |
-| TD-8 | Notification generation = on-open server action (no cron) | Medium | After Beta | Replaceable trigger by design; swap for worker/cron. |
+| TD-8 | Notification generation = on-open server action (no cron) | Medium | After Beta | Replaceable trigger by design; swap for worker/cron. Shares infra with TD-18. |
+| TD-18 | Frozen membership never auto-resumes → a forgotten freeze silently over-extends the end date | Medium | After Beta | Product/lifecycle decision. Owning report: [decision-note-freeze-auto-resume](../../sprints/decision-note-freeze-auto-resume.md). Recommend Beta = "resume due" cue (no new infra); true auto-resume = scheduled job, decide with TD-8. |
 | TD-4 | `assignTrainer` race not serialized | Low | After Beta | Low-frequency; wrap in a serializable tx like INV-12. |
 | TD-9 | Membership-level trainer / freeze-reason / cancel-reason / notes not persisted | Low | After Beta | Needs a reviewed schema migration (frozen foundation → ADR). |
 | TD-12 | `authorization-architecture.md §4/§6` `gym.view` + `DDS §16` seed reconciliations | Low | After Beta | Governance-doc edits; human's call. |
@@ -51,7 +52,9 @@ closed or changed. This report keeps the original TD-N ids for traceability and 
 
 The review surfaced **no new defect** beyond the register above. The only substantive delta is the
 **re-scoping of TD-10a up to fix-before-RC** — a re-classification of documented behaviour under the
-new Epic-9 meaning, not a newly discovered bug. One latent, currently-harmless coupling is noted for
+new Epic-9 meaning, not a newly discovered bug. *(Added 2026-07-02 out of band: **TD-18** — freezes
+never auto-resume; a product/lifecycle decision, not a defect, raised during the member-centric
+workspace review. See its owning [decision note](../../sprints/decision-note-freeze-auto-resume.md).)* One latent, currently-harmless coupling is noted for
 the record: `unassignAllForTrainer` authorizes `assignments.manage` (correct today because the Owner
 who suspends staff also holds it) — revisit if suspension is ever delegated to a role that lacks
 `assignments.manage`.

@@ -13,13 +13,16 @@ import { Button } from "@/components/pulse/button";
  * status filter, driven through the URL query (shareable, back-button correct) — the RSC list
  * page reads them. Any change resets to page 1. Catalogued components + tokens only.
  */
+// `LIVE` (the default) is the current-periods projection; `ALL` reveals terminal history. Both
+// map to read-model projections in the list query — never to a stored value (see validation.ts).
 const STATUS_OPTIONS: SelectOption[] = [
-  { value: "ALL", label: "All statuses" },
+  { value: "LIVE", label: "Current" },
   { value: "ACTIVE", label: "Active" },
   { value: "SCHEDULED", label: "Scheduled" },
   { value: "FROZEN", label: "Frozen" },
   { value: "EXPIRED", label: "Expired" },
   { value: "CANCELLED", label: "Cancelled" },
+  { value: "ALL", label: "All (incl. history)" },
 ];
 
 export function MembershipsToolbar({
@@ -52,7 +55,8 @@ export function MembershipsToolbar({
 
   function onStatus(value: string): void {
     const next = new URLSearchParams(params.toString());
-    if (value === "ALL") next.delete("status");
+    // LIVE is the default projection → represented by the absence of a status param (clean URL).
+    if (value === "LIVE") next.delete("status");
     else next.set("status", value);
     navigate(next);
   }

@@ -51,7 +51,13 @@ export const FreezeMembershipSchema = z.object({
 });
 export type FreezeMembershipInput = z.infer<typeof FreezeMembershipSchema>;
 
-/** The memberships-list filter/search/pagination params (read from the URL query). */
+/**
+ * The memberships-list filter/search/pagination params (read from the URL query). `status`
+ * accepts each concrete Membership Status, plus two projections: `LIVE` (the **default** operational
+ * view — current periods only: Active/Scheduled/Frozen, hiding terminal Expired/Cancelled history)
+ * and `ALL` (every period, history included). Both are read-model projections only — they change
+ * what the list *shows*, never any stored value or lifecycle rule.
+ */
 export const MembershipListParamsSchema = z.object({
   q: z
     .string()
@@ -59,7 +65,9 @@ export const MembershipListParamsSchema = z.object({
     .max(120)
     .optional()
     .transform((v) => (v && v.length > 0 ? v : undefined)),
-  status: z.enum(["ACTIVE", "SCHEDULED", "FROZEN", "EXPIRED", "CANCELLED", "ALL"]).catch("ALL"),
+  status: z
+    .enum(["LIVE", "ACTIVE", "SCHEDULED", "FROZEN", "EXPIRED", "CANCELLED", "ALL"])
+    .catch("LIVE"),
   page: z.coerce.number().int().min(1).catch(1),
 });
 export type MembershipListParams = z.infer<typeof MembershipListParamsSchema>;

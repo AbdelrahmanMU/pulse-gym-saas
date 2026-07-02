@@ -42,8 +42,10 @@ export default async function MembershipsPage({
   const result = await loadMemberships(raw);
   const canCreate = hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERSHIPS_CREATE);
 
-  const statusValue = raw.status ?? "ALL";
-  const hasFilters = Boolean(raw.q) || statusValue !== "ALL";
+  // LIVE (current periods) is the default projection; a set status other than LIVE, or a search,
+  // counts as an active filter (drives the "no match" vs "nothing here yet" empty state).
+  const statusValue = raw.status ?? "LIVE";
+  const hasFilters = Boolean(raw.q) || statusValue !== "LIVE";
 
   const hrefForPage = (page: number): string => {
     const params = new URLSearchParams();
@@ -58,7 +60,10 @@ export default async function MembershipsPage({
 
   return (
     <PageContainer>
-      <PageHeader title="Memberships" subtitle="Every membership period your gym has sold." />
+      <PageHeader
+        title="Memberships"
+        subtitle="Your gym's current memberships. Switch the status filter to view past periods."
+      />
 
       <MembershipsToolbar query={raw.q ?? ""} status={statusValue} canCreate={canCreate} />
 
@@ -74,8 +79,8 @@ export default async function MembershipsPage({
           ) : (
             <EmptyState
               icon={<ClipboardList aria-hidden />}
-              title="No memberships yet"
-              description="Sell a plan to a member to create their first membership."
+              title="No current memberships"
+              description="Active, scheduled, and frozen memberships appear here. Switch to “All (incl. history)” to see past periods, or sell a plan to a member."
               action={
                 canCreate ? (
                   <Button asChild>
