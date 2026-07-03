@@ -546,6 +546,158 @@ export async function getMemberMembershipStanding(
   return { hasActiveMembership, hasScheduledMembership, hasFrozenMembership };
 }
 
+/** One freeze episode inside a membership on the member rail (A-1). */
+export interface MemberTimelineFreeze {
+  freezeStart: IsoDate;
+  /** Set on resume; `null` while the freeze is still open. */
+  actualEnd: IsoDate | null;
+  /** Finalized actual paused days on resume (INV-18); the *requested* days while open. */
+  frozenDays: number;
+  status: FreezeStatus;
+}
+
+/** One immutable membership on the member's rail (A-1), fully derived for presentation. */
+export interface MemberTimelineMembership {
+  id: string;
+  planName: string;
+  status: MembershipStatus;
+  origin: MembershipOrigin;
+  predecessorMembershipId: string | null;
+  startDate: IsoDate;
+  effectiveEndDate: IsoDate;
+  remainingDays: number;
+  isExpiringSoon: boolean;
+  /** Snapshot price as exact minor units (BigInt never crosses to the client). */
+  priceMinor: string;
+  currency: string;
+  durationValue: number;
+  durationUnit: DurationUnit;
+  scheduledEffectiveFrom: IsoDate | null;
+  /** The gym-tz calendar day the record was created ("sold") — connector copy (§D2.4). */
+  soldOn: IsoDate;
+  soldByName: string;
+  cancelledOn: IsoDate | null;
+  cancelledByName: string | null;
+  totalFrozenDays: number;
+  /** Display-only projection while FROZEN — same non-authoritative rule as {@link MembershipDetail}. */
+  activeFreeze: { plannedDays: number; projectedEndDate: IsoDate } | null;
+  /** Freeze episodes, oldest first. */
+  freezes: MemberTimelineFreeze[];
+}
+
+/** The member's whole membership story for the workspace rail (A-1), newest first. */
+export interface MemberMembershipTimeline {
+  memberId: string;
+  joinedOn: IsoDate | null;
+  /** Today in the gym time zone — lets presentation compute gap-to-now without a clock. */
+  today: IsoDate;
+  memberships: MemberTimelineMembership[];
+}
+
+/**
+ * A-1 (member workspace, phase W2): every membership of one member as immutable rail entries,
+ * derived through the same {@link deriveMemberLifecycle} engine every read uses — composed, never
+ * recomputed. Read-only; zero new derivation logic; the output exists only for presentation.
+ * Gated by `memberships.read`; a cross-gym or unknown member surfaces as 404 (never confirms a
+ * foreign record). Newest first (the rail reads top → bottom = now → history).
+ */
+export async function getMemberMembershipTimeline(
+  principal: AuthenticatedPrincipal,
+  memberId: string,
+  clock: IClock = systemClock,
+): Promise<MemberMembershipTimeline> {
+  authorize(principal, PERMISSION_KEYS.MEMBERSHIPS_READ);
+  const ctx = await gymContext(principal.gymId, clock);
+
+  const member = await prisma.member.findUnique({
+    where: { id: memberId },
+    select: { id: true, gymId: true, joinedOn: true },
+  });
+  if (!member) throw new NotFoundError();
+  assertSameGym(principal.gymId, member.gymId);
+
+  const memberships = await prisma.membership.findMany({
+    where: { gymId: principal.gymId, memberId },
+    include: {
+      freezes: { orderBy: { freezeStart: "asc" } },
+      createdBy: { select: { displayName: true } },
+      cancelledBy: { select: { displayName: true } },
+    },
+  });
+  const activeFreezeIds = new Set(
+    memberships
+      .filter((m) => m.freezes.some((f) => f.status === FreezeStatus.ACTIVE))
+      .map((m) => m.id),
+  );
+  const derivedById = deriveMemberLifecycle(
+    memberships.map(toFacts),
+    activeFreezeIds,
+    ctx.today,
+    ctx.windowDays,
+  );
+
+  // Newest first: coverage start descending; creation time breaks same-day ties (a successor
+  // sold the same day its predecessor starts still sits above it on the rail).
+  const ordered = [...memberships].sort((a, b) => {
+    if (a.startDate.getTime() !== b.startDate.getTime()) {
+      return b.startDate.getTime() - a.startDate.getTime();
+    }
+    return b.createdAt.getTime() - a.createdAt.getTime();
+  });
+
+  const entries = ordered.map((m) => {
+    const derived = derivedById.get(m.id);
+    if (!derived) throw new NotFoundError();
+    return {
+      id: m.id,
+      planName: m.snapshotPlanName,
+      status: derived.status,
+      origin: m.origin,
+      predecessorMembershipId: m.predecessorMembershipId,
+      startDate: fromDbDate(m.startDate),
+      effectiveEndDate: derived.effectiveEndDate,
+      remainingDays: derived.remainingDays,
+      isExpiringSoon: derived.isExpiringSoon,
+      priceMinor: m.snapshotPrice.toString(),
+      currency: m.snapshotCurrency,
+      durationValue: m.snapshotDurationValue,
+      durationUnit: m.snapshotDurationUnit,
+      scheduledEffectiveFrom: m.scheduledEffectiveFrom
+        ? fromDbDate(m.scheduledEffectiveFrom)
+        : null,
+      soldOn: calendarDay(m.createdAt, ctx.timeZone),
+      soldByName: m.createdBy.displayName,
+      cancelledOn: m.cancelledAt ? calendarDay(m.cancelledAt, ctx.timeZone) : null,
+      cancelledByName: m.cancelledBy?.displayName ?? null,
+      totalFrozenDays: m.cachedTotalFrozenDays,
+      activeFreeze: deriveFreezeProjection(m.freezes, derived),
+      freezes: m.freezes.map((f) => ({
+        freezeStart: fromDbDate(f.freezeStart),
+        actualEnd: f.actualEnd ? fromDbDate(f.actualEnd) : null,
+        frozenDays: f.frozenDays,
+        status: f.status,
+      })),
+    };
+  });
+
+  return {
+    memberId: member.id,
+    joinedOn: member.joinedOn ? fromDbDate(member.joinedOn) : null,
+    today: ctx.today,
+    memberships: entries,
+  };
+}
+
+/** The gym-tz calendar day of a stored instant (display formatting only, no business meaning). */
+function calendarDay(at: Date, timeZone: string): IsoDate {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(at);
+}
+
 /** Active members eligible to be sold a membership (for the create form). */
 export async function listSellableMembers(
   principal: AuthenticatedPrincipal,

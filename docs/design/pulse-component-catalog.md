@@ -1157,7 +1157,10 @@ A future adoption of either requires a new human-approved catalog entry per **Ru
 > these components; this catalog defines the component contracts, the authority owns the frozen
 > copy/vocabulary §D14 — cite, don't restate). **13.1/13.2 implemented** (W1 slice, 2026-07-03 —
 > `components/pulse/answer-strip.tsx`, `components/pulse/disclosure.tsx`; the PageHeader additive
-> props in `page-header.tsx`); **13.3/13.4 specified, impl-pending** — they land with the W2 rail.
+> props in `page-header.tsx`). **13.3/13.4 implemented** (W2 rail slice, 2026-07-03 —
+> `modules/memberships/ui/membership-rail-card.tsx` + `membership-rail-client.tsx` (13.3),
+> `modules/memberships/ui/membership-rail.tsx` over the pure `modules/memberships/rail-model.ts`
+> (13.4); actions/ledger panels arrive with the W3 phase).
 > Every §0 Global Convention applies. §12's adaptive doctrine (one DOM order, reflow-only
 > breakpoint changes, 44-pt targets under md) applies unchanged.
 

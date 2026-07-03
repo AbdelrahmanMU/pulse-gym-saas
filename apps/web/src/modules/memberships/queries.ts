@@ -2,10 +2,12 @@ import { requireSession } from "@/lib/auth/guard";
 import {
   getMembership,
   getMemberMembershipStanding,
+  getMemberMembershipTimeline,
   listMemberships,
   listSellableMembers,
   listSellablePlans,
   type MemberMembershipStanding,
+  type MemberMembershipTimeline,
   type MemberOption,
   type MembershipDetail,
   type MembershipListResult,
@@ -51,4 +53,15 @@ export async function loadMemberMembershipStanding(
 ): Promise<MemberMembershipStanding> {
   const principal = await requireSession();
   return getMemberMembershipStanding(principal, memberId);
+}
+
+/**
+ * A-1 — the member's whole membership story for the workspace rail (phase W2). Read-only
+ * composition of the lifecycle derivation; `memberships.read`-gated in the service.
+ */
+export async function loadMemberMembershipTimeline(
+  memberId: string,
+): Promise<MemberMembershipTimeline> {
+  const principal = await requireSession();
+  return getMemberMembershipTimeline(principal, memberId);
 }

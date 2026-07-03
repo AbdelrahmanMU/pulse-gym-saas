@@ -14,10 +14,12 @@ const TONE: Record<PaymentStanding, StatusTone> = {
   PENDING: "neutral",
 };
 
+// D14 frozen vocabulary (design authority, human-ruled 2026-07-03): desk register —
+// labels only, the PaymentStanding enum is untouched.
 const LABEL: Record<PaymentStanding, string> = {
   PAID: "Paid",
-  PARTIALLY_PAID: "Partially paid",
-  PENDING: "Pending",
+  PARTIALLY_PAID: "Partly paid",
+  PENDING: "Unpaid",
 };
 
 function icon(standing: PaymentStanding) {

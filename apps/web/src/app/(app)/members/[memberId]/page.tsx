@@ -18,16 +18,25 @@ import { PageHeader } from "@/components/pulse/page-header";
 import { AnswerStrip } from "@/components/pulse/answer-strip";
 import { Disclosure } from "@/components/pulse/disclosure";
 import { ErrorState } from "@/components/pulse/error-state";
-import { EmptyState } from "@/components/pulse/empty-state";
 import { Button } from "@/components/pulse/button";
 import { StatusBadge } from "@/components/pulse/status-badge";
 import { MetricValue } from "@/components/pulse/metric-value";
 import { StickyMobileActionBar } from "@/components/pulse/sticky-mobile-action-bar";
 import { loadAssignableTrainers, loadMember } from "@/modules/members/queries";
-import { loadMemberMembershipStanding } from "@/modules/memberships/queries";
-import type { MemberMembershipStanding } from "@/modules/memberships";
-import { loadMemberOutstandingBalance } from "@/modules/payments/queries";
-import type { MemberOutstandingBalance } from "@/modules/payments/service";
+import {
+  loadMemberMembershipStanding,
+  loadMemberMembershipTimeline,
+} from "@/modules/memberships/queries";
+import type { MemberMembershipStanding, MemberMembershipTimeline } from "@/modules/memberships";
+import { MembershipRail } from "@/modules/memberships/ui/membership-rail";
+import {
+  loadMemberOutstandingBalance,
+  loadMemberPaymentSummaries,
+} from "@/modules/payments/queries";
+import type {
+  MemberOutstandingBalance,
+  MembershipPaymentSummary,
+} from "@/modules/payments/service";
 import type { MemberDetail, TrainerOption } from "@/modules/members/service";
 import { MemberStatusBadge } from "@/modules/members/ui/member-status-badge";
 import { MemberOverflowMenu } from "@/modules/members/ui/member-overflow-menu";
@@ -35,18 +44,17 @@ import { AssignTrainerForm } from "@/modules/members/ui/assign-trainer-form";
 import { MemberArchiveControls } from "@/modules/members/ui/member-archive-controls";
 
 /**
- * Member Workspace (design authority 2026-07-03, phase W1 — Answer Strip + zone shell over
- * existing reads only). Zone 1: the AnswerStrip (identity · coverage · money · one computed
- * action). Zone 2: the Membership section (the W2 rail's home; interim standing-grain body).
- * Zone 3: Member info as a folded Disclosure (phone + trainer promoted into the fold header).
- * Gated by `members.read`; every other zone/line by its owning module's permission, composed
- * through public reads only. A cross-gym or unknown id surfaces as 404. Routing only —
- * data + mutations live in the modules (constitution §2).
+ * Member Workspace (design authority 2026-07-03; W1 shell + W2 rail). Zone 1: the AnswerStrip
+ * (identity · coverage · money · one computed action). Zone 2: the Membership rail — every
+ * immutable membership as an expandable card over the A-1 timeline read + the per-membership
+ * payments summaries. Zone 3: Member info as a folded Disclosure (phone + trainer promoted
+ * into the fold header). Gated by `members.read`; every other zone/line by its owning module's
+ * permission, composed through public reads only. A cross-gym or unknown id surfaces as 404.
+ * Routing only — data + mutations live in the modules (constitution §2).
  *
- * W1 grain note (per the review's phasing): the coverage line and the strip primary compute
- * from the boolean standing read. Precedence rules 1/3/4 (§D6.2 Record payment / Resume /
- * Renew) and the full L2 grammar (plan · status · boundary) need the member-scoped timeline
- * read (A-1) and land in W2 — the only W1-computable primary is Sell membership (rule 2).
+ * Strip grain note: the coverage line and the strip primary still compute from the boolean
+ * standing read (W1 shape); the full L2 grammar and precedence rules 1/3/4 (§D6.2) are the
+ * actions phase — the only computable primary here remains Sell membership (rule 2).
  */
 const isoDate = (d: Date): string => d.toISOString().slice(0, 10);
 
@@ -103,13 +111,19 @@ export default async function MemberWorkspacePage({
   }
 
   const perms = workspacePermissions(principal.permissions);
-  const [standing, owed, trainerOptions] = await Promise.all([
+  const [standing, owed, timeline, paymentSummaries, trainerOptions] = await Promise.all([
     perms.canReadMemberships
       ? loadMemberMembershipStanding(member.id)
       : Promise.resolve<MemberMembershipStanding | null>(null),
     perms.canReadPayments
       ? loadMemberOutstandingBalance(member.id)
       : Promise.resolve<MemberOutstandingBalance | null>(null),
+    perms.canReadMemberships
+      ? loadMemberMembershipTimeline(member.id)
+      : Promise.resolve<MemberMembershipTimeline | null>(null),
+    perms.canReadPayments
+      ? loadMemberPaymentSummaries(member.id)
+      : Promise.resolve<MembershipPaymentSummary[] | null>(null),
     perms.canManageAssignments ? loadAssignableTrainers() : Promise.resolve<TrainerOption[]>([]),
   ]);
 
@@ -149,12 +163,15 @@ export default async function MemberWorkspacePage({
           places the folded card beside the rail zone (authority §D12). */}
       {/* grid-cols-1 = minmax(0,1fr): nowrap fold-header content must never widen the track. */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start">
-        {standing ? (
-          <MembershipSection
-            memberName={member.fullName}
-            hasLiveOrQueued={hasLiveOrQueued}
-            sellAction={showSell ? sellButton : undefined}
-          />
+        {timeline ? (
+          <section className="flex flex-col gap-3 rounded-md border border-border bg-surface p-6 lg:col-span-7">
+            <h2 className="text-h3 text-foreground">Membership</h2>
+            <MembershipRail
+              timeline={timeline}
+              summaries={paymentSummaries}
+              sellAction={showSell ? sellButton : undefined}
+            />
+          </section>
         ) : null}
         <MemberInfoCard member={member} perms={perms} trainerOptions={trainerOptions} />
       </div>
@@ -255,40 +272,6 @@ function MoneyLine({ owed }: { owed: MemberOutstandingBalance }) {
       <CircleCheck aria-hidden className="size-4 shrink-0" />
       <span>Paid up</span>
     </span>
-  );
-}
-
-/** Zone 2 — the Membership section: the W2 rail's home; interim standing-grain body. */
-function MembershipSection({
-  memberName,
-  hasLiveOrQueued,
-  sellAction,
-}: {
-  memberName: string;
-  hasLiveOrQueued: boolean;
-  sellAction?: ReactNode;
-}) {
-  return (
-    <section className="flex flex-col gap-3 rounded-md border border-border bg-surface p-6 lg:col-span-7">
-      <h2 className="text-h3 text-foreground">Membership</h2>
-      {!hasLiveOrQueued ? (
-        <EmptyState
-          icon={<CircleOff aria-hidden />}
-          title="No live membership"
-          description="Sell a plan to start a membership for this member."
-          action={sellAction}
-        />
-      ) : null}
-      {/* Interim W1 body — the W2 rail replaces this link with the in-place story. */}
-      <p className="text-body-sm text-muted-foreground">
-        <Link
-          href={`/memberships?q=${encodeURIComponent(memberName)}`}
-          className="text-accent-text hover:underline"
-        >
-          View memberships
-        </Link>
-      </p>
-    </section>
   );
 }
 

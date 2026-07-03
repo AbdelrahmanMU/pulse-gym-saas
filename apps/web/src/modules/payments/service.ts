@@ -293,6 +293,56 @@ export async function getMemberOutstandingBalance(
   };
 }
 
+/** One membership's derived money facts for the member rail's headers/panels (workspace W2). */
+export interface MembershipPaymentSummary {
+  membershipId: string;
+  priceMinor: string;
+  totalPaidMinor: string;
+  /** `price − totalPaid`; negative when overpaid (informational). */
+  remainingMinor: string;
+  standing: PaymentStanding;
+  currency: string;
+}
+
+/**
+ * Per-membership derived money facts for **every** membership of one member — the rail's card
+ * headers ("Paid ✓ / Owes …") and Payments panels. One query; the single {@link summarizeLedger}
+ * calculation per membership. Deliberately **not** the "outstanding" definition: a card states its
+ * own ledger truth, so cancelled (written-off in aggregates) and not-yet-started scheduled
+ * memberships are included here. Gated by `payments.read`; gym-scoped — a cross-gym or unknown
+ * member yields an empty list (nothing is confirmed about foreign records).
+ */
+export async function getMemberPaymentSummaries(
+  principal: AuthenticatedPrincipal,
+  memberId: string,
+): Promise<MembershipPaymentSummary[]> {
+  authorize(principal, PERMISSION_KEYS.PAYMENTS_READ);
+  const memberships = await prisma.membership.findMany({
+    where: { gymId: principal.gymId, memberId },
+    select: {
+      id: true,
+      snapshotPrice: true,
+      snapshotCurrency: true,
+      payments: { select: { entryType: true, amount: true } },
+    },
+  });
+  return memberships.map((m) => {
+    const ledger: LedgerEntry[] = m.payments.map((p) => ({
+      entryType: p.entryType,
+      amountMinor: p.amount,
+    }));
+    const s = summarizeLedger(m.snapshotPrice, ledger);
+    return {
+      membershipId: m.id,
+      priceMinor: s.priceMinor.toString(),
+      totalPaidMinor: s.totalPaidMinor.toString(),
+      remainingMinor: s.remainingMinor.toString(),
+      standing: s.standing,
+      currency: m.snapshotCurrency,
+    };
+  });
+}
+
 /**
  * The full Outstanding Balance report (Epic-8): **every** membership with a balance due, each with
  * price / paid / remaining. Reuses the exact same derivation and exclusions as

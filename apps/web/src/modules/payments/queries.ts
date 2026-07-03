@@ -1,8 +1,10 @@
 import { requireSession } from "@/lib/auth/guard";
 import {
   getMemberOutstandingBalance,
+  getMemberPaymentSummaries,
   getMembershipBilling,
   type MemberOutstandingBalance,
+  type MembershipPaymentSummary,
   type MembershipBilling,
 } from "./service";
 
@@ -27,4 +29,15 @@ export async function loadMemberOutstandingBalance(
 ): Promise<MemberOutstandingBalance> {
   const principal = await requireSession();
   return getMemberOutstandingBalance(principal, memberId);
+}
+
+/**
+ * Per-membership derived money facts for the member rail (workspace W2) — one read for every
+ * card's header money fact and Payments panel; `payments.read`-gated in the service.
+ */
+export async function loadMemberPaymentSummaries(
+  memberId: string,
+): Promise<MembershipPaymentSummary[]> {
+  const principal = await requireSession();
+  return getMemberPaymentSummaries(principal, memberId);
 }

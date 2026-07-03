@@ -238,6 +238,81 @@ test.describe("adaptive behaviors (v1.2)", () => {
     await expect(headings.last()).toHaveText(/Lifecycle timeline/);
   });
 
+  test("membership rail (W2): empty → sell → current card → renew → next + connector", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    await page.setViewportSize(DESKTOP);
+    await signIn(page);
+
+    // A fresh member: the rail opens with the story-not-started empty state.
+    await page.goto("/members/new");
+    const runId = Date.now().toString().slice(-9);
+    const memberName = `Rail E2E ${runId}`;
+    await page.getByLabel(/full name/i).fill(memberName);
+    await page.getByLabel(/phone/i).fill(`03${runId}`);
+    await page.getByRole("button", { name: /add member/i }).click();
+    await expect(page.getByRole("heading", { level: 1, name: memberName })).toBeVisible();
+    const memberUrl = page.url();
+    await expect(page.getByText("No memberships yet.")).toBeVisible();
+
+    // Sell a membership (existing flow), then renew from the canonical record page — the
+    // rail composes the results; lifecycle actions on cards arrive with the actions phase.
+    await page
+      .getByRole("link", { name: /sell membership/i })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/memberships\/new/);
+    await page.getByLabel("Plan").selectOption({ index: 1 });
+    await page.getByRole("button", { name: /sell membership/i }).click();
+    // Server-action round trips can be slow on a cold dev server — wait generously.
+    await expect(page).toHaveURL(/\/memberships\/(?!new)[0-9a-f-]+$/, { timeout: 30_000 });
+    const soldUrl = page.url();
+    await page.getByRole("button", { name: /renew membership/i }).click();
+    // The renew action redirects to the SUCCESSOR's record page (a different id).
+    await expect(page).not.toHaveURL(soldUrl, { timeout: 30_000 });
+
+    // The rail reads top → bottom: Next (queued, collapsed) → renewal connector → Current
+    // (expanded by default, §D2.1). Money facts render for a payments.read principal.
+    await page.goto(memberUrl);
+    await expect(page.getByText(/Renewed · sold/)).toBeVisible();
+    const nextCard = page.getByRole("button", { name: /^Next/ });
+    await expect(nextCard).toHaveAttribute("aria-expanded", "false");
+    const currentCard = page.getByRole("button", { name: /Active/ }).first();
+    await expect(currentCard).toHaveAttribute("aria-expanded", "true");
+    // ".locator(visible=true)": the collapsed Next card holds the same copy inside its
+    // hidden panel — assert the CURRENT card's visible one.
+    await expect(page.getByText("(last day included)").locator("visible=true")).toBeVisible();
+    await expect(page.getByText(/1st membership · sold by/).locator("visible=true")).toBeVisible();
+    // The queued card tags its own unpaid balance (§D5.1); the strip's Owes stays owed-now.
+    await expect(page.getByText("unpaid").first()).toBeVisible();
+
+    // Expansion is per-card and reversible; expanding reveals only that membership's panels.
+    await nextCard.click();
+    await expect(nextCard).toHaveAttribute("aria-expanded", "true");
+    await expect(page.getByText(/^Starts /).first()).toBeVisible();
+    await nextCard.click();
+    await expect(nextCard).toHaveAttribute("aria-expanded", "false");
+
+    await expectAxeClean(page); // workspace + rail at 1280
+
+    // Mobile: vertically readable, thumb-friendly, and never wider than the viewport.
+    await page.setViewportSize(MOBILE);
+    await page.reload();
+    await expect(page.getByText(/Renewed · sold/)).toBeVisible();
+    const overflow = await page.evaluate(
+      () => (document.scrollingElement?.scrollWidth ?? 0) - window.innerWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(1);
+    const headerBox = await page.getByRole("button", { name: /^Next/ }).boundingBox();
+    expect(headerBox && headerBox.height).toBeGreaterThanOrEqual(44);
+    await expectAxeClean(page); // workspace + rail at 375
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.evaluate(() => document.documentElement.classList.add("dark"));
+    await expectAxeClean(page); // workspace + rail dark
+  });
+
   test("the nav offers no Payments placeholder (DD-11 / RC TD-15)", async ({ page }) => {
     await page.setViewportSize(MOBILE);
     await signIn(page);
