@@ -12,10 +12,13 @@ import { cn } from "@/lib/utils";
  *
  * Sides:
  * - `left` (default) — the off-canvas nav drawer: rail colors, slides from the left at
- *   `--sidebar-w`. Unchanged from v1.1.
+ *   `--sidebar-w`.
  * - `adaptive` (v1.2) — the AdaptiveBottomSheet surface: bottom-anchored, top-rounded,
  *   safe-area padded sheet below `md`; a centered dialog ≥`md` (Catalog §12.1 / AP-4).
- *   Sits at `--z-modal`, above its scrim (`--z-scrim`).
+ *
+ * Both sides sit at `--z-modal`, above the shared scrim (`--z-scrim`). The left panel
+ * must NOT use `--z-drawer` (1200): it stacks below the scrim (1300), which then dims
+ * the drawer's own surface below AA contrast (design review F1, 2026-07-02).
  */
 export const Sheet = DialogPrimitive.Root;
 export const SheetTrigger = DialogPrimitive.Trigger;
@@ -24,7 +27,7 @@ export const SheetTitle = DialogPrimitive.Title;
 export const SheetDescription = DialogPrimitive.Description;
 
 const SIDE_CLASSES = {
-  left: "fixed inset-y-0 left-0 z-(--z-drawer) flex w-(--sidebar-w) flex-col bg-rail-bg shadow-(--shadow-lg) focus:outline-none",
+  left: "fixed inset-y-0 left-0 z-(--z-modal) flex w-(--sidebar-w) flex-col bg-rail-bg shadow-(--shadow-lg) focus:outline-none",
   adaptive: cn(
     "fixed z-(--z-modal) flex flex-col bg-surface shadow-(--shadow-lg) focus:outline-none",
     // <md: bottom sheet — full-width, top-rounded, capped height, safe-area padded.

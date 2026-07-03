@@ -85,6 +85,23 @@ test.describe("a11y (R-4)", () => {
     expect(firstFocusable).toMatch(/skip to content/i);
   });
 
+  test("the open nav drawer has no axe violations at 375px, light and dark", async ({ page }) => {
+    // Guards design-review F1 (2026-07-02): the drawer panel must stack ABOVE the scrim —
+    // under it, every rail token pair composites below AA (measured 2.17:1 inactive text).
+    // Scoped to the dialog: the page behind the scrim is intentionally dimmed.
+    await page.setViewportSize({ width: 375, height: 800 });
+    await signIn(page);
+    await page.getByRole("button", { name: /open navigation/i }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+
+    const light = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();
+    expect(light.violations).toEqual([]);
+
+    await page.evaluate(() => document.documentElement.classList.add("dark"));
+    const dark = await new AxeBuilder({ page }).include('[role="dialog"]').analyze();
+    expect(dark.violations).toEqual([]);
+  });
+
   test("the user menu opens by keyboard and returns focus on Escape", async ({ page }) => {
     await signIn(page);
     const trigger = page.getByRole("button", { name: /user menu/i });

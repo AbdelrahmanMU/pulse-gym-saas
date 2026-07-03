@@ -90,13 +90,15 @@ test.describe("adaptive behaviors (v1.2)", () => {
     expect(submitBox && submitBox.y + submitBox.height).toBeLessThanOrEqual(MOBILE.height);
 
     // Complete the journey: the form submits and lands on the member profile.
-    // (A member needs at least one contact method — validation rule.)
-    await nameInput.fill("Adaptive E2E Member");
-    await page.getByLabel(/phone/i).fill("01000000000");
+    // (A member needs at least one contact method — validation rule.) The contact is
+    // unique per run: phone is partial-unique per gym (INV-3), so a fixed value would
+    // make the suite one-shot per database — the second full run used to fail on it.
+    const runId = Date.now().toString().slice(-9);
+    const memberName = `Adaptive E2E ${runId}`;
+    await nameInput.fill(memberName);
+    await page.getByLabel(/phone/i).fill(`01${runId}`);
     await submit.click();
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Adaptive E2E Member" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: memberName })).toBeVisible();
 
     // DD-9: the profile's P0 standing strip renders (composition-only membership standing).
     await expect(

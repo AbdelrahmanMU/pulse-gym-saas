@@ -31,7 +31,9 @@ function isActive(pathname: string, href: string): boolean {
 
 function NavItem({ item, active }: { item: NavItemDef; active: boolean }) {
   const className = cn(
-    "relative flex items-center gap-3 rounded-sm px-3 py-2 text-body transition-colors ease-standard",
+    // py-3 yields the 44px touch target required in the drawer (v1.2 §5.4); ≥lg the
+    // persistent rail keeps its denser 36px rows (design review F2, 2026-07-02).
+    "relative flex items-center gap-3 rounded-sm px-3 py-3 text-body transition-colors ease-standard lg:py-2",
     active ? "bg-rail-surface text-rail-fg-active" : "text-rail-fg hover:bg-rail-surface",
     item.placeholder && "opacity-(--opacity-muted)",
   );
@@ -75,8 +77,9 @@ export function NavGroups({ groups }: { groups: readonly NavGroupDef[] }) {
   const pathname = usePathname();
   return (
     <div className="flex flex-1 flex-col gap-6 overflow-y-auto px-3 py-4">
+      {/* gap-2 keeps ≥8px between adjacent touch targets in the drawer (v1.2 §5.4). */}
       {groups.map((group, i) => (
-        <div key={group.label ?? `group-${i}`} className="flex flex-col gap-1">
+        <div key={group.label ?? `group-${i}`} className="flex flex-col gap-2 lg:gap-1">
           {group.label ? <p className="eyebrow px-3 pb-1 text-rail-fg">{group.label}</p> : null}
           {group.items.map((item) => (
             <NavItem
