@@ -1,34 +1,86 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarClock, CircleCheck, CircleOff, Pencil, Plus, Snowflake } from "lucide-react";
+import {
+  CalendarClock,
+  CircleCheck,
+  CircleOff,
+  Pencil,
+  Plus,
+  Snowflake,
+  TriangleAlert,
+} from "lucide-react";
 import { hasPermission, PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError, NotFoundError } from "@/lib/errors";
 import { PageContainer } from "@/components/pulse/page-container";
 import { PageHeader } from "@/components/pulse/page-header";
+import { AnswerStrip } from "@/components/pulse/answer-strip";
+import { Disclosure } from "@/components/pulse/disclosure";
 import { ErrorState } from "@/components/pulse/error-state";
+import { EmptyState } from "@/components/pulse/empty-state";
 import { Button } from "@/components/pulse/button";
 import { StatusBadge } from "@/components/pulse/status-badge";
+import { MetricValue } from "@/components/pulse/metric-value";
 import { StickyMobileActionBar } from "@/components/pulse/sticky-mobile-action-bar";
 import { loadAssignableTrainers, loadMember } from "@/modules/members/queries";
 import { loadMemberMembershipStanding } from "@/modules/memberships/queries";
 import type { MemberMembershipStanding } from "@/modules/memberships";
-import type { MemberDetail } from "@/modules/members/service";
+import { loadMemberOutstandingBalance } from "@/modules/payments/queries";
+import type { MemberOutstandingBalance } from "@/modules/payments/service";
+import type { MemberDetail, TrainerOption } from "@/modules/members/service";
 import { MemberStatusBadge } from "@/modules/members/ui/member-status-badge";
+import { MemberOverflowMenu } from "@/modules/members/ui/member-overflow-menu";
 import { AssignTrainerForm } from "@/modules/members/ui/assign-trainer-form";
 import { MemberArchiveControls } from "@/modules/members/ui/member-archive-controls";
 
 /**
- * Member profile (Sprint-1 Epic-2). Gated by `members.read`. Hosts the per-member actions —
- * edit (`members.update`), archive/reactivate (`members.archive`/`reactivate`), and
- * responsible-trainer assignment (`assignments.manage`) — each shown **by permission**. A
- * cross-gym or unknown id surfaces as 404 (never reveals another gym's record). Routing
- * only — data + mutations live in the members module (constitution §2).
+ * Member Workspace (design authority 2026-07-03, phase W1 — Answer Strip + zone shell over
+ * existing reads only). Zone 1: the AnswerStrip (identity · coverage · money · one computed
+ * action). Zone 2: the Membership section (the W2 rail's home; interim standing-grain body).
+ * Zone 3: Member info as a folded Disclosure (phone + trainer promoted into the fold header).
+ * Gated by `members.read`; every other zone/line by its owning module's permission, composed
+ * through public reads only. A cross-gym or unknown id surfaces as 404. Routing only —
+ * data + mutations live in the modules (constitution §2).
+ *
+ * W1 grain note (per the review's phasing): the coverage line and the strip primary compute
+ * from the boolean standing read. Precedence rules 1/3/4 (§D6.2 Record payment / Resume /
+ * Renew) and the full L2 grammar (plan · status · boundary) need the member-scoped timeline
+ * read (A-1) and land in W2 — the only W1-computable primary is Sell membership (rule 2).
  */
 const isoDate = (d: Date): string => d.toISOString().slice(0, 10);
 
-export default async function MemberProfilePage({
+const monthYear = new Intl.DateTimeFormat("en", {
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+interface WorkspacePermissions {
+  canUpdate: boolean;
+  canArchive: boolean;
+  canReactivate: boolean;
+  canReadAssignments: boolean;
+  canManageAssignments: boolean;
+  canReadMemberships: boolean;
+  canReadPayments: boolean;
+  canCreateMembership: boolean;
+}
+
+function workspacePermissions(permissions: readonly string[]): WorkspacePermissions {
+  return {
+    canUpdate: hasPermission(permissions, PERMISSION_KEYS.MEMBERS_UPDATE),
+    canArchive: hasPermission(permissions, PERMISSION_KEYS.MEMBERS_ARCHIVE),
+    canReactivate: hasPermission(permissions, PERMISSION_KEYS.MEMBERS_REACTIVATE),
+    canReadAssignments: hasPermission(permissions, PERMISSION_KEYS.ASSIGNMENTS_READ),
+    canManageAssignments: hasPermission(permissions, PERMISSION_KEYS.ASSIGNMENTS_MANAGE),
+    canReadMemberships: hasPermission(permissions, PERMISSION_KEYS.MEMBERSHIPS_READ),
+    canReadPayments: hasPermission(permissions, PERMISSION_KEYS.PAYMENTS_READ),
+    canCreateMembership: hasPermission(permissions, PERMISSION_KEYS.MEMBERSHIPS_CREATE),
+  };
+}
+
+export default async function MemberWorkspacePage({
   params,
 }: {
   params: Promise<{ memberId: string }>;
@@ -50,80 +102,235 @@ export default async function MemberProfilePage({
     throw error;
   }
 
-  const canUpdate = hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERS_UPDATE);
-  const canArchive = hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERS_ARCHIVE);
-  const canReactivate = hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERS_REACTIVATE);
-  const canReadAssignments = hasPermission(principal.permissions, PERMISSION_KEYS.ASSIGNMENTS_READ);
-  const canManageAssignments = hasPermission(
-    principal.permissions,
-    PERMISSION_KEYS.ASSIGNMENTS_MANAGE,
-  );
-  const trainerOptions = canManageAssignments ? await loadAssignableTrainers() : [];
-  const canSellMembership =
-    member.status === "ACTIVE" &&
-    hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERSHIPS_CREATE);
+  const perms = workspacePermissions(principal.permissions);
+  const [standing, owed, trainerOptions] = await Promise.all([
+    perms.canReadMemberships
+      ? loadMemberMembershipStanding(member.id)
+      : Promise.resolve<MemberMembershipStanding | null>(null),
+    perms.canReadPayments
+      ? loadMemberOutstandingBalance(member.id)
+      : Promise.resolve<MemberOutstandingBalance | null>(null),
+    perms.canManageAssignments ? loadAssignableTrainers() : Promise.resolve<TrainerOption[]>([]),
+  ]);
 
-  // P0 operational strip (v1.2 §6, DD-9): the member's membership standing, composed from the
-  // memberships module's public derived read (the same one the archive policy uses). Shown only
-  // with `memberships.read` — the page itself needs only `members.read`, exactly as before.
-  const canReadMemberships = hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERSHIPS_READ);
-  const standing: MemberMembershipStanding | null = canReadMemberships
-    ? await loadMemberMembershipStanding(member.id)
-    : null;
+  const hasLiveOrQueued =
+    standing !== null &&
+    (standing.hasActiveMembership ||
+      standing.hasFrozenMembership ||
+      standing.hasScheduledMembership);
+  // §D6.2 rule 2 — the one W1-computable primary. Selling requires a provable "no live or
+  // queued membership" (standing read available), an ACTIVE member, and the permission.
+  const showSell =
+    standing !== null &&
+    !hasLiveOrQueued &&
+    member.status === "ACTIVE" &&
+    perms.canCreateMembership;
+  const sellHref = `/memberships/new?memberId=${member.id}`;
+
+  const sellButton = (
+    <Button asChild>
+      <Link href={sellHref}>
+        <Plus aria-hidden className="size-4" />
+        Sell membership
+      </Link>
+    </Button>
+  );
 
   return (
     <PageContainer>
-      <PageHeader
-        title={member.fullName}
-        actions={
-          canUpdate || canSellMembership ? (
-            // ≥md only — on mobile these relocate to the Sticky Action Bar (AP-6 / §12.3).
-            <>
-              {canSellMembership ? (
-                <Button asChild className="max-md:hidden">
-                  <Link href={`/memberships/new?memberId=${member.id}`}>
-                    <Plus aria-hidden className="size-4" />
-                    Sell membership
-                  </Link>
-                </Button>
-              ) : null}
-              {canUpdate ? (
-                <Button asChild variant="secondary" className="max-md:hidden">
-                  <Link href={`/members/${member.id}/edit`}>
-                    <Pencil aria-hidden className="size-4" />
-                    Edit
-                  </Link>
-                </Button>
-              ) : null}
-            </>
-          ) : undefined
-        }
+      <AnswerStrip
+        identity={<IdentityLine member={member} canUpdate={perms.canUpdate} />}
+        coverage={standing ? <MembershipStandingChips standing={standing} /> : undefined}
+        money={owed ? <MoneyLine owed={owed} /> : undefined}
+        action={showSell ? sellButton : undefined}
       />
 
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <MemberStatusBadge status={member.status} />
-        {standing ? <MembershipStandingChips standing={standing} /> : null}
-        {member.trainerName ? (
-          <span className="text-body-sm text-muted-foreground">
-            Trainer: <span className="text-foreground">{member.trainerName}</span>
-          </span>
-        ) : null}
+      {/* Zones 2 + 3 — one DOM order (strip → membership → member info); the ≥lg grid only
+          places the folded card beside the rail zone (authority §D12). */}
+      {/* grid-cols-1 = minmax(0,1fr): nowrap fold-header content must never widen the track. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start">
         {standing ? (
-          <Link
-            href={`/memberships?q=${encodeURIComponent(member.fullName)}`}
-            className="text-body-sm text-accent-text hover:underline"
-          >
-            View memberships
-          </Link>
+          <MembershipSection
+            memberName={member.fullName}
+            hasLiveOrQueued={hasLiveOrQueued}
+            sellAction={showSell ? sellButton : undefined}
+          />
         ) : null}
+        <MemberInfoCard member={member} perms={perms} trainerOptions={trainerOptions} />
       </div>
 
-      {/* Section order is operational-first (v1.2 §6 / AP-5, DD-9): P1 relationships and
-          lifecycle actions before P2 contact/metadata. One DOM order, both presentations. */}
+      {showSell || perms.canUpdate ? (
+        // Thumb-zone mirror of the strip primary + Edit (one-sticky rule §D3.3, <md only).
+        <StickyMobileActionBar className="mt-6 md:hidden">
+          {perms.canUpdate ? (
+            <Button asChild variant="secondary">
+              <Link href={`/members/${member.id}/edit`}>
+                <Pencil aria-hidden className="size-4" />
+                Edit
+              </Link>
+            </Button>
+          ) : null}
+          {showSell ? sellButton : null}
+        </StickyMobileActionBar>
+      ) : null}
+    </PageContainer>
+  );
+}
+
+/** Strip L1 — the page `<h1>` + member badge, trainer/tenure meta, and the Edit overflow. */
+function IdentityLine({ member, canUpdate }: { member: MemberDetail; canUpdate: boolean }) {
+  return (
+    <PageHeader
+      className="mb-0"
+      title={member.fullName}
+      titleAccessory={<MemberStatusBadge status={member.status} withNoun />}
+      subtitle={
+        <span className="text-body-sm">
+          {member.trainerName ? (
+            <>
+              Trainer <span className="text-foreground">{member.trainerName}</span>
+              {" · "}
+            </>
+          ) : null}
+          {member.joinedOn ? (
+            <>
+              since{" "}
+              <time dateTime={isoDate(member.joinedOn)}>{monthYear.format(member.joinedOn)}</time>
+            </>
+          ) : null}
+        </span>
+      }
+      actions={canUpdate ? <MemberOverflowMenu memberId={member.id} /> : undefined}
+    />
+  );
+}
+
+/**
+ * The W1 coverage line: the membership-standing cues (icon + label + `*-text` token — never
+ * color alone), booleans only. The full frozen L2 grammar (`<plan> · <STATUS> · <boundary>`,
+ * §D10) replaces these chips in W2 when the member-scoped timeline read (A-1) exists.
+ */
+function MembershipStandingChips({ standing }: { standing: MemberMembershipStanding }) {
+  const none =
+    !standing.hasActiveMembership &&
+    !standing.hasScheduledMembership &&
+    !standing.hasFrozenMembership;
+  return (
+    <span className="flex flex-wrap items-center gap-2">
+      {standing.hasActiveMembership ? (
+        <StatusBadge tone="success" icon={<CircleCheck />} label="Active membership" />
+      ) : null}
+      {standing.hasFrozenMembership ? (
+        <StatusBadge tone="info" icon={<Snowflake />} label="Frozen membership" />
+      ) : null}
+      {standing.hasScheduledMembership ? (
+        <StatusBadge tone="info" icon={<CalendarClock />} label="Scheduled membership" />
+      ) : null}
+      {none ? <StatusBadge tone="warning" icon={<CircleOff />} label="No live membership" /> : null}
+    </span>
+  );
+}
+
+/**
+ * The strip's one aggregate money fact (§D3.1 L3): what is owed **now** — the shipped
+ * outstanding definition (excludes unstarted scheduled memberships; a renewal's own balance
+ * is the Next card's fact, never conflated here — §0.3).
+ */
+function MoneyLine({ owed }: { owed: MemberOutstandingBalance }) {
+  if (owed.hasOutstanding) {
+    return (
+      <span className="flex items-center gap-2 font-semibold text-warning-text">
+        <TriangleAlert aria-hidden className="size-4 shrink-0" />
+        <span>
+          Owes{" "}
+          {owed.currency ? (
+            <MetricValue value={owed.totalMinor} format="currency" currency={owed.currency} />
+          ) : null}
+        </span>
+      </span>
+    );
+  }
+  return (
+    <span className="flex items-center gap-2 text-success-text">
+      <CircleCheck aria-hidden className="size-4 shrink-0" />
+      <span>Paid up</span>
+    </span>
+  );
+}
+
+/** Zone 2 — the Membership section: the W2 rail's home; interim standing-grain body. */
+function MembershipSection({
+  memberName,
+  hasLiveOrQueued,
+  sellAction,
+}: {
+  memberName: string;
+  hasLiveOrQueued: boolean;
+  sellAction?: ReactNode;
+}) {
+  return (
+    <section className="flex flex-col gap-3 rounded-md border border-border bg-surface p-6 lg:col-span-7">
+      <h2 className="text-h3 text-foreground">Membership</h2>
+      {!hasLiveOrQueued ? (
+        <EmptyState
+          icon={<CircleOff aria-hidden />}
+          title="No live membership"
+          description="Sell a plan to start a membership for this member."
+          action={sellAction}
+        />
+      ) : null}
+      {/* Interim W1 body — the W2 rail replaces this link with the in-place story. */}
+      <p className="text-body-sm text-muted-foreground">
+        <Link
+          href={`/memberships?q=${encodeURIComponent(memberName)}`}
+          className="text-accent-text hover:underline"
+        >
+          View memberships
+        </Link>
+      </p>
+    </section>
+  );
+}
+
+/** Zone 3 — Member info folded card; phone + trainer promoted into the fold header (§D9). */
+function MemberInfoCard({
+  member,
+  perms,
+  trainerOptions,
+}: {
+  member: MemberDetail;
+  perms: WorkspacePermissions;
+  trainerOptions: TrainerOption[];
+}) {
+  const showLifecycleControls =
+    (perms.canArchive || perms.canReactivate) &&
+    (member.status === "ACTIVE" ? perms.canArchive : perms.canReactivate);
+  return (
+    <Disclosure
+      title="Member info"
+      className="lg:col-span-5"
+      summary={
+        <>
+          {member.phone ?? member.email ?? "No contact"}
+          {" · "}
+          {member.trainerName ? `Trainer ${member.trainerName}` : "No trainer assigned"}
+        </>
+      }
+      headerAction={
+        perms.canUpdate ? (
+          <Button asChild variant="ghost" size="sm" className="shrink-0">
+            <Link href={`/members/${member.id}/edit`}>
+              <Pencil aria-hidden className="size-4" />
+              Edit member
+            </Link>
+          </Button>
+        ) : undefined
+      }
+    >
       <div className="grid gap-6 md:grid-cols-2">
-        {canReadAssignments ? (
-          <Section title="Responsible trainer">
-            {canManageAssignments ? (
+        {perms.canReadAssignments ? (
+          <InfoGroup title="Trainer">
+            {perms.canManageAssignments ? (
               <AssignTrainerForm
                 memberId={member.id}
                 currentTrainerGymUserId={member.trainerGymUserId}
@@ -136,92 +343,48 @@ export default async function MemberProfilePage({
                 )}
               </p>
             )}
-          </Section>
+          </InfoGroup>
         ) : null}
 
-        {(canArchive || canReactivate) &&
-        (member.status === "ACTIVE" ? canArchive : canReactivate) ? (
-          <Section title="Lifecycle">
-            <MemberArchiveControls
-              memberId={member.id}
-              status={member.status}
-              canArchive={canArchive}
-              canReactivate={canReactivate}
-            />
-          </Section>
-        ) : null}
+        <InfoGroup title="Contact">
+          <dl className="flex flex-col gap-3">
+            <Detail label="Phone" value={member.phone} />
+            <Detail label="Email" value={member.email} />
+          </dl>
+        </InfoGroup>
 
-        <Section title="Contact">
-          <Detail label="Phone" value={member.phone} />
-          <Detail label="Email" value={member.email} />
-        </Section>
+        <InfoGroup title="Details">
+          <dl className="flex flex-col gap-3">
+            <Detail label="Date of birth" date={member.dateOfBirth} />
+            <Detail label="Gender" value={member.gender} />
+            <Detail label="Joined on" date={member.joinedOn} />
+          </dl>
+        </InfoGroup>
 
-        <Section title="Details">
-          <Detail label="Date of birth" date={member.dateOfBirth} />
-          <Detail label="Gender" value={member.gender} />
-          <Detail label="Joined on" date={member.joinedOn} />
-        </Section>
+        <InfoGroup title="Membership of the gym">
+          <div className="flex flex-col items-start gap-3">
+            <MemberStatusBadge status={member.status} withNoun />
+            {showLifecycleControls ? (
+              <MemberArchiveControls
+                memberId={member.id}
+                status={member.status}
+                canArchive={perms.canArchive}
+                canReactivate={perms.canReactivate}
+              />
+            ) : null}
+          </div>
+        </InfoGroup>
       </div>
-
-      {canSellMembership || canUpdate ? (
-        // Thumb-zone relocation of the header actions (<md only — §5.3 detail variant).
-        <StickyMobileActionBar className="mt-6 md:hidden">
-          {canUpdate ? (
-            <Button asChild variant="secondary">
-              <Link href={`/members/${member.id}/edit`}>
-                <Pencil aria-hidden className="size-4" />
-                Edit
-              </Link>
-            </Button>
-          ) : null}
-          {canSellMembership ? (
-            <Button asChild>
-              <Link href={`/memberships/new?memberId=${member.id}`}>
-                <Plus aria-hidden className="size-4" />
-                Sell membership
-              </Link>
-            </Button>
-          ) : null}
-        </StickyMobileActionBar>
-      ) : null}
-    </PageContainer>
+    </Disclosure>
   );
 }
 
-/**
- * The membership-standing cues (P0): icon + label + `*-text` token — never color alone.
- * Booleans only (no dates/amounts) — that fuller member workspace is a pending product
- * decision; these chips are its composition-only forerunner.
- */
-function MembershipStandingChips({ standing }: { standing: MemberMembershipStanding }) {
-  const none =
-    !standing.hasActiveMembership &&
-    !standing.hasScheduledMembership &&
-    !standing.hasFrozenMembership;
+function InfoGroup({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <>
-      {standing.hasActiveMembership ? (
-        <StatusBadge tone="success" icon={<CircleCheck />} label="Active membership" size="sm" />
-      ) : null}
-      {standing.hasFrozenMembership ? (
-        <StatusBadge tone="info" icon={<Snowflake />} label="Frozen membership" size="sm" />
-      ) : null}
-      {standing.hasScheduledMembership ? (
-        <StatusBadge tone="info" icon={<CalendarClock />} label="Scheduled membership" size="sm" />
-      ) : null}
-      {none ? (
-        <StatusBadge tone="warning" icon={<CircleOff />} label="No live membership" size="sm" />
-      ) : null}
-    </>
-  );
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="flex flex-col gap-3 rounded-md border border-border bg-surface p-6">
-      <h2 className="text-h3 text-foreground">{title}</h2>
-      <dl className="flex flex-col gap-3">{children}</dl>
-    </section>
+    <div className="flex flex-col gap-3">
+      <h3 className="text-body font-semibold text-foreground">{title}</h3>
+      {children}
+    </div>
   );
 }
 
@@ -237,7 +400,7 @@ function Detail({
   return (
     <div className="flex flex-col gap-0.5">
       <dt className="text-body-sm text-muted-foreground">{label}</dt>
-      <dd className="text-body text-foreground">
+      <dd className="text-body break-words text-foreground">
         {date ? (
           <time dateTime={isoDate(date)} className="tabular">
             {isoDate(date)}

@@ -1155,8 +1155,9 @@ A future adoption of either requires a new human-approved catalog entry per **Ru
 > **Status: approved 2026-07-03** (human ruling (c) on the member-workspace design authority —
 > `docs/sprints/member-workspace-design-authority.md`, the copy + behavior source of truth for
 > these components; this catalog defines the component contracts, the authority owns the frozen
-> copy/vocabulary §D14 — cite, don't restate). Implementation lands with the W-series:
-> **13.1/13.2 in W1** (Answer Strip + zone shell), **13.3/13.4 in W2** (the membership rail).
+> copy/vocabulary §D14 — cite, don't restate). **13.1/13.2 implemented** (W1 slice, 2026-07-03 —
+> `components/pulse/answer-strip.tsx`, `components/pulse/disclosure.tsx`; the PageHeader additive
+> props in `page-header.tsx`); **13.3/13.4 specified, impl-pending** — they land with the W2 rail.
 > Every §0 Global Convention applies. §12's adaptive doctrine (one DOM order, reflow-only
 > breakpoint changes, 44-pt targets under md) applies unchanged.
 

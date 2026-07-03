@@ -12,7 +12,7 @@ import {
   freezeMembership,
   upgradeMembership,
 } from "@/modules/memberships/service";
-import { recordPayment } from "@/modules/payments/service";
+import { getMemberOutstandingBalance, recordPayment } from "@/modules/payments/service";
 
 /**
  * Integration P0 tests for **Reliability Slice 1 — Member Archive Guard** (ARC-3 / INV-11)
@@ -200,6 +200,30 @@ describe("archive denied — outstanding balance (ARC-3 / INV-24)", () => {
 
     const eligibility = await evaluateMemberArchive(owner, memberId, clockAt("2026-06-01"));
     expect(eligibility.blocks).toEqual(["OUTSTANDING_BALANCE"]);
+
+    // The member-grain read itself (the workspace AnswerStrip's money fact): the owed total
+    // carries its snapshot currency; nothing-owed carries none (W1 additive field).
+    const owed = await getMemberOutstandingBalance(owner, memberId);
+    expect(owed).toEqual({ hasOutstanding: true, totalMinor: "3000", currency: ownerCurrency });
+  });
+
+  it("reports no outstanding balance (and no currency) for a fully paid member", async () => {
+    const memberId = await makeMember(ownerGymId, ownerBranchId);
+    const planId = await makePlan(5000n);
+    const created = await createMembership(
+      owner,
+      { memberId, planId, startDate: "2026-03-01" },
+      clockAt("2026-03-01"),
+    );
+    await recordPayment(
+      owner,
+      created.membershipId ?? "",
+      { amount: "50.00", method: "CASH", receivedOn: "2026-03-05" },
+      clockAt("2026-03-05"),
+    );
+
+    const owed = await getMemberOutstandingBalance(owner, memberId);
+    expect(owed).toEqual({ hasOutstanding: false, totalMinor: "0", currency: null });
   });
 });
 

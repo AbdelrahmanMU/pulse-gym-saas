@@ -110,6 +110,42 @@ test.describe("adaptive behaviors (v1.2)", () => {
     await expect(sell).toBeVisible();
     const sellBox = await sell.boundingBox();
     expect(sellBox && sellBox.y + sellBox.height).toBeLessThanOrEqual(MOBILE.height);
+
+    // W1 Member Workspace (design authority §D3): the strip's money fact renders for a
+    // payments.read principal — a fresh member owes nothing → the quiet "Paid up" state.
+    await expect(page.getByText("Paid up")).toBeVisible();
+
+    // No horizontal scroll at 375 (DD-1) — nowrap fold-header content must reflow, not widen.
+    const workspaceOverflow = await page.evaluate(
+      () => (document.scrollingElement?.scrollWidth ?? 0) - window.innerWidth,
+    );
+    expect(workspaceOverflow).toBeLessThanOrEqual(1);
+
+    // §D9: Member info is a folded Disclosure on mobile; the two operational facts (phone,
+    // trainer) stay visible in the fold header while the detail is out of the tab order.
+    const infoToggle = page.getByRole("button", { name: /member info/i });
+    await expect(infoToggle).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByText("Date of birth")).toBeHidden();
+    await infoToggle.click();
+    await expect(infoToggle).toHaveAttribute("aria-expanded", "true");
+    await expect(page.getByText("Date of birth")).toBeVisible();
+    await expectAxeClean(page); // workspace at 375, disclosure open
+
+    // ≥md default: the fold opens on its own (reference data costs nothing on desktop).
+    await page.setViewportSize(DESKTOP);
+    await page.reload();
+    await expect(page.getByRole("button", { name: /member info/i })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await expectAxeClean(page); // workspace at 1280
+
+    // Reduced motion zeroes `transition-colors` (globals §motion) so the theme flip is
+    // instant — otherwise axe (already injected, so it samples fast) reads mid-transition
+    // blends where light text and light surfaces cross at ~1.3:1.
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.evaluate(() => document.documentElement.classList.add("dark"));
+    await expectAxeClean(page); // workspace dark
   });
 
   test("members list renders cards below md and the table above md (AP-1)", async ({ page }) => {

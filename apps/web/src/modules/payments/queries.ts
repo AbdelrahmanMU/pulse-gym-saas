@@ -1,5 +1,10 @@
 import { requireSession } from "@/lib/auth/guard";
-import { getMembershipBilling, type MembershipBilling } from "./service";
+import {
+  getMemberOutstandingBalance,
+  getMembershipBilling,
+  type MemberOutstandingBalance,
+  type MembershipBilling,
+} from "./service";
 
 /**
  * RSC read entry point for Payments (Sprint-1 Epic-5). Resolves the authenticated principal (the
@@ -11,4 +16,15 @@ import { getMembershipBilling, type MembershipBilling } from "./service";
 export async function loadMembershipBilling(membershipId: string): Promise<MembershipBilling> {
   const principal = await requireSession();
   return getMembershipBilling(principal, membershipId);
+}
+
+/**
+ * The member's aggregate owed-now total (the AnswerStrip's one money fact — workspace W1).
+ * Same service core the archive policy composes; `payments.read`-gated, gym-scoped.
+ */
+export async function loadMemberOutstandingBalance(
+  memberId: string,
+): Promise<MemberOutstandingBalance> {
+  const principal = await requireSession();
+  return getMemberOutstandingBalance(principal, memberId);
 }

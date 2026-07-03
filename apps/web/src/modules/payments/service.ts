@@ -265,6 +265,11 @@ export interface MemberOutstandingBalance {
   hasOutstanding: boolean;
   /** Net remaining in minor units (string — bigint never crosses a module boundary as-is). */
   totalMinor: string;
+  /**
+   * The owed amount's snapshot currency (single-currency MVP: plan currency = gym default);
+   * `null` when nothing is owed — there is no amount to denominate.
+   */
+  currency: string | null;
 }
 
 /**
@@ -281,7 +286,11 @@ export async function getMemberOutstandingBalance(
   authorize(principal, PERMISSION_KEYS.PAYMENTS_READ);
   const rows = await loadOutstandingRows(principal.gymId, memberId);
   const total = rows.reduce((sum, r) => sum + r.remainingMinor, 0n);
-  return { hasOutstanding: total > 0n, totalMinor: total.toString() };
+  return {
+    hasOutstanding: total > 0n,
+    totalMinor: total.toString(),
+    currency: total > 0n ? (rows[0]?.currency ?? null) : null,
+  };
 }
 
 /**
