@@ -1150,5 +1150,130 @@ A future adoption of either requires a new human-approved catalog entry per **Ru
 
 ---
 
-*End of PULSE Component Catalog. v1.1 core (§1–§11) + v1.2 Adaptive additions (§12). This document is
-authoritative. New or changed components require updating this catalog in the same change set.*
+# 13. Member Workspace Additions
+
+> **Status: approved 2026-07-03** (human ruling (c) on the member-workspace design authority —
+> `docs/sprints/member-workspace-design-authority.md`, the copy + behavior source of truth for
+> these components; this catalog defines the component contracts, the authority owns the frozen
+> copy/vocabulary §D14 — cite, don't restate). Implementation lands with the W-series:
+> **13.1/13.2 in W1** (Answer Strip + zone shell), **13.3/13.4 in W2** (the membership rail).
+> Every §0 Global Convention applies. §12's adaptive doctrine (one DOM order, reflow-only
+> breakpoint changes, 44-pt targets under md) applies unchanged.
+
+## 13.1 AnswerStrip
+1. **Purpose** — The member workspace's fixed page-top zone: identity · coverage · money · one
+   computed action, in that order, for every member, forever (authority §D3). The "3-second
+   answers" surface — read at arrival, identical scan path on every member.
+2. **Responsibilities** — Own the four-line layout and its breakpoint reflow only. Every line's
+   *content* is composed by the page from module-owned reads/badges; the strip renders slots and
+   never computes, fetches, or interprets.
+3. **Variants** — None. The strip has one shape; states are expressed by which optional slots are
+   present (money absent without `payments.read`; action absent in the calm state).
+4. **Anatomy** — L1 identity (the page's PageHeader: `<h1>` name + member badge accessory + muted
+   trainer/tenure meta + line-end overflow) → L2 coverage (the largest line) → L3 money → L4 one
+   primary Button. No other children, ever.
+5. **Props / Config** — `identity` (required node) · `coverage?` · `money?` · `action?` ·
+   `className?`. Absent slot = absent line (never a blank placeholder).
+6. **Visual Behavior** — Mobile: four stacked lines. ≥lg: two visual rows — identity+coverage
+   left, money+action right-aligned — same DOM, CSS grid reflow only (authority §D12). The strip
+   is **not sticky** at any breakpoint (one-sticky rule §D3.3); its action is mirrored in the
+   StickyMobileActionBar by the page.
+7. **Interaction Rules** — Exactly one action, computed by the page's precedence rule (§D6.2);
+   the action targets its home elsewhere on the page (anchor/expand), never a form inside the strip.
+8. **Accessibility** — L1 hosts the page's only `<h1>`; statuses via StatusBadge (icon + label +
+   `*-text`, never color alone); money via MetricValue; dates in `<time>`. DOM order = reading
+   order at every breakpoint.
+9. **Responsive** — Reflow only (see 6). L1 may wrap its trainer/tenure meta under 360-pt; L2
+   truncates the plan name first — status and boundary always survive; L3/L4 never wrap.
+10. **Do** — Keep the hard budget: 3 facts + 1 action. New facts compete for existing lines
+    (authority §D13); the budget never grows.
+11. **Don't** — No lists, ledgers, alert content/counts, secondary or destructive actions,
+    scheduled-membership detail, or anything that scrolls within the strip (§D3.2). Never sticky.
+12. **Usage** — Member workspace (`/members/[memberId]`) only. A second surface needing this shape
+    is a design-authority decision first.
+
+## 13.2 Disclosure (folded section card)
+1. **Purpose** — The folded summary-card system for workspace zones: a Section-idiom card whose
+   header is always visible (title + operational summary facts) and whose detail folds
+   (authority §D1/§D9). Nothing critical is ever invisible — only *detail* is deferred.
+2. **Responsibilities** — Own the fold state, the disclosure a11y contract, and the
+   breakpoint-dependent default (folded on mobile, open on desktop). Header summary content is
+   supplied by the page.
+3. **Variants** — Default `defaultOpen="desktop"` (folded <md, open ≥md) · `defaultOpen={false}`
+   (folded everywhere — future sensitive cards, e.g. medical notes §D13) · `defaultOpen={true}`.
+   User toggles always win over the default.
+4. **Anatomy** — Bordered `bg-surface` card → header row (chevron + `<h2>` title + muted summary
+   line + optional header action, e.g. Edit) → foldable content region.
+5. **Props / Config** — `title` · `summary?` (node — the always-visible facts) · `headerAction?`
+   (interactive, sits beside the toggle, never nested in it) · `defaultOpen?` · `children`.
+6. **Visual Behavior** — Chevron ▸/▾ states the fold; muted summary in the header; content region
+   indented to the card padding. No entrance animation (reduced-motion safe by construction).
+7. **Interaction Rules** — The whole header row (except `headerAction`) is the toggle target,
+   ≥44-pt under md with ≥8-pt separation (v1.2 §5.4). Expansion state is per-visit, never
+   persisted.
+8. **Accessibility** — WAI-ARIA disclosure pattern: the toggle is a real `<button>` inside the
+   `<h2>` with `aria-expanded` + `aria-controls`; the region is labeled by the header. Folded
+   content is removed from the tab order.
+9. **Responsive** — Same DOM both breakpoints; only the *default* open state differs (see 3).
+10. **Do** — Put the section's two most operational facts in `summary` (the fold-header design
+    rule: e.g. phone + trainer for Member info §D9). One folding system per page.
+11. **Don't** — Don't fold anything answer-critical (that belongs in the AnswerStrip); don't nest
+    Disclosures; don't render an empty summary; a card that outgrows one summary view graduates
+    to a sub-page (§D13), not a taller card.
+12. **Usage** — Member workspace Zone 3: Member info (W1), Alerts (W5), every future member-scoped
+    module card (§D13 growth contract).
+
+## 13.3 MembershipCard — `expandable` variant (Rule E amendment to §6 MembershipCard)
+Per **Rule E**, an **additive** variant; existing `current`/`historical`/`compact` usages are
+unchanged. Implementation lands with the W2 rail.
+- **New behavior:** the card renders a one-line collapsed header (chevron · snapshot plan ·
+  coverage `<time>` range · MembershipStatusBadge · the ONE money fact `Paid ✓`/`Owes …`) and
+  expands in place to fixed-order panels: Coverage → Freezes → Payments → Actions (authority
+  §D2.2–D2.3). Panels render only if they have content; Payments loads lazily on expand via the
+  payments module's existing public read; Actions render **only** on live cards (current/next) —
+  never disabled rows on historical cards.
+- **States:** current (expanded by default, 3-pt brand accent-bar) · next/queued (dashed border,
+  collapsed) · past (collapsed, `historical` muted). Multiple cards may be open at once; expanding
+  anchors the tapped header near the viewport top (authority §D11).
+- **Accessibility:** header row is the disclosure button (≥44-pt), `aria-expanded`; whole-row
+  target; panel order identical at every breakpoint.
+- **Money safety:** snapshot values only (unchanged §6 rule); ledger rows render voided entries
+  struck-through with reason — the ledger never hides corrections.
+
+## 13.4 MembershipRail primitives
+1. **Purpose** — The connective tissue that renders a member's immutable memberships as **one
+   continuous story** on a vertical rail (authority §D2): transition connectors, gap markers, the
+   terminus node, and the severed-rail treatment.
+2. **Responsibilities** — Presentation-only chronology grammar between MembershipCards; carries
+   origin/causality copy. Zero derivation — origins/dates come from the member-scoped read (A-1).
+3. **Variants** — Connector `renewed` · `upgraded` · `smaller-plan` (UpgradeIndicator semantics —
+   direction in text + icon, never color alone) · gap marker (muted, centered, no card chrome) ·
+   terminus ("Joined the gym · <date>") · severed segment (the rail visibly stops under a
+   cancelled card).
+4. **Anatomy** — The rail is a single `<ol>` (chronology is semantic), newest first; connectors
+   sit **between two real cards only** — never above the conditional Next slot.
+5. **Props / Config** — Per primitive: `origin`/labels + dates; `days` for gaps; `joinedOn` for
+   the terminus.
+6. **Visual Behavior** — Connector copy per authority §D2.4 frozen vocabulary; gaps muted; the
+   current card is the only emphasized segment.
+7. **Interaction Rules** — Display-only; cards own all interaction.
+8. **Accessibility** — Ordered-list semantics; every relationship stated in text ("Upgraded ·
+   Silver Monthly → Gold Monthly"), dates in `<time>`; never color/line-style alone.
+9. **Responsive** — Single column at every breakpoint; labels condense, never disappear.
+10. **Do** — Show gaps explicitly (a lapse is operational truth); label every transition with its
+    origin.
+11. **Don't** — Never render payments as rail events (money lives inside card panels); never
+    number cards in collapsed headers; never draw a connector to the Next slot.
+12. **Usage** — Member workspace Zone 2 rail (W2). The §6 MembershipTimeline remains the
+    **per-record** lifecycle timeline on `/memberships/[id]` — a different grain; don't conflate.
+
+### PageHeader (Rule E, additive)
+To host the AnswerStrip's L1 without forking the mandatory header: `subtitle` widens from string
+to node, and a new optional `titleAccessory` node renders inline after the `<h1>` (the member
+badge). Both are backward-compatible; no existing usage changes.
+
+---
+
+*End of PULSE Component Catalog. v1.1 core (§1–§11) + v1.2 Adaptive additions (§12) + Member
+Workspace additions (§13). This document is authoritative. New or changed components require
+updating this catalog in the same change set.*
