@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { hasPermission, PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { needsOnboarding } from "@/modules/gym/queries";
@@ -35,6 +36,7 @@ export default async function DashboardPage() {
   }
 
   const data = await loadDashboard();
+  const t = await getTranslations("dashboard");
   const perms = {
     canAddMember: hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERS_CREATE),
     canSellMembership: hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERSHIPS_CREATE),
@@ -44,8 +46,8 @@ export default async function DashboardPage() {
   return (
     <PageContainer width="wide">
       <PageHeader
-        title="Dashboard"
-        subtitle={`Signed in as ${principal.displayName}. Here’s what needs attention today.`}
+        title={t("title")}
+        subtitle={t("subtitle", { name: principal.displayName })}
         actions={<QuickActions perms={perms} />}
       />
 
@@ -61,16 +63,17 @@ export default async function DashboardPage() {
   );
 }
 
-function Forbidden() {
+async function Forbidden() {
+  const t = await getTranslations("errors");
   return (
     <PageContainer width="narrow">
       <ErrorState
         variant="inline"
-        title="Access denied"
-        description="You don't have permission to view this page. If you believe this is a mistake, contact your gym owner."
+        title={t("accessDenied")}
+        description={t("forbiddenBody")}
         action={
           <Button asChild variant="secondary">
-            <Link href="/sign-in">Switch account</Link>
+            <Link href="/sign-in">{t("switchAccount")}</Link>
           </Button>
         }
       />

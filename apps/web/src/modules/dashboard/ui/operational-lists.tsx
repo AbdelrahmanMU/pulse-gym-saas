@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { CalendarPlus, CircleOff, TriangleAlert, Wallet } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { MetricValue } from "@/components/pulse/metric-value";
 import { EmptyState } from "@/components/pulse/empty-state";
 import type { DashboardData } from "../read-model";
@@ -14,38 +15,39 @@ import type { RecentMemberRow } from "@/modules/members";
  * staff can act. Presentation only — all values are derived upstream in the read model. Dates use
  * `<time>`; money uses MetricValue. Catalogued components + tokens only; server-rendered.
  */
-export function OperationalLists({
+export async function OperationalLists({
   overview,
   outstanding,
   recentMembers,
 }: Pick<DashboardData, "overview" | "outstanding" | "recentMembers">) {
+  const t = await getTranslations("dashboard");
+  const remaining = (days: number): string =>
+    days <= 0 ? t("expiresToday") : t("remainingDays", { days, n: String(days) });
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <Panel title="Expiring soon" icon={<TriangleAlert />} count={overview.counts.expiringSoon}>
+      <Panel
+        title={t("lists.expiringSoon")}
+        icon={<TriangleAlert />}
+        count={overview.counts.expiringSoon}
+      >
         {overview.expiringSoon.length === 0 ? (
-          <EmptyState
-            title="Nothing expiring"
-            description="No memberships are inside the renewal window."
-          />
+          <EmptyState title={t("empty.expiringTitle")} description={t("empty.expiringBody")} />
         ) : (
           <ul className="flex flex-col divide-y divide-border">
             {overview.expiringSoon.map((row) => (
-              <MembershipRow
-                key={row.membershipId}
-                row={row}
-                meta={remainingLabel(row.remainingDays)}
-              />
+              <MembershipRow key={row.membershipId} row={row} meta={remaining(row.remainingDays)} />
             ))}
           </ul>
         )}
       </Panel>
 
-      <Panel title="Expired — need renewal" icon={<CircleOff />} count={overview.counts.expired}>
+      <Panel
+        title={t("lists.expiredNeedRenewal")}
+        icon={<CircleOff />}
+        count={overview.counts.expired}
+      >
         {overview.expired.length === 0 ? (
-          <EmptyState
-            title="No expired memberships"
-            description="Everyone with a membership is current."
-          />
+          <EmptyState title={t("empty.expiredTitle")} description={t("empty.expiredBody")} />
         ) : (
           <ul className="flex flex-col divide-y divide-border">
             {overview.expired.map((row) => (
@@ -59,9 +61,12 @@ export function OperationalLists({
         )}
       </Panel>
 
-      <Panel title="Outstanding balances" icon={<Wallet />} count={outstanding.count}>
+      <Panel title={t("lists.outstanding")} icon={<Wallet />} count={outstanding.count}>
         {outstanding.rows.length === 0 ? (
-          <EmptyState title="No balances due" description="Every membership is fully paid." />
+          <EmptyState
+            title={t("empty.outstandingTitle")}
+            description={t("empty.outstandingBody")}
+          />
         ) : (
           <ul className="flex flex-col divide-y divide-border">
             {outstanding.rows.map((row) => (
@@ -71,9 +76,9 @@ export function OperationalLists({
         )}
       </Panel>
 
-      <Panel title="Recent members" icon={<CalendarPlus />}>
+      <Panel title={t("lists.recentMembers")} icon={<CalendarPlus />}>
         {recentMembers.length === 0 ? (
-          <EmptyState title="No members yet" description="New members will appear here." />
+          <EmptyState title={t("empty.membersTitle")} description={t("empty.membersBody")} />
         ) : (
           <ul className="flex flex-col divide-y divide-border">
             {recentMembers.map((row) => (
@@ -174,9 +179,4 @@ function EndedOn({ iso }: { iso: string }) {
       {iso}
     </time>
   );
-}
-
-function remainingLabel(remainingDays: number): string {
-  if (remainingDays <= 0) return "Expires today";
-  return `${remainingDays} day${remainingDays === 1 ? "" : "s"} left`;
 }

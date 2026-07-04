@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CreditCard, UserPlus, Wallet } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/pulse/button";
 
 /**
@@ -13,15 +14,16 @@ export interface QuickActionPermissions {
   canRecordPayment: boolean;
 }
 
-export function QuickActions({ perms }: { perms: QuickActionPermissions }) {
+export async function QuickActions({ perms }: { perms: QuickActionPermissions }) {
   if (!perms.canAddMember && !perms.canSellMembership && !perms.canRecordPayment) return null;
+  const t = await getTranslations("actions");
   return (
     <div className="flex flex-wrap gap-3">
       {perms.canAddMember ? (
         <Button asChild>
           <Link href="/members/new">
             <UserPlus aria-hidden className="size-4" />
-            Add member
+            {t("addMember")}
           </Link>
         </Button>
       ) : null}
@@ -29,7 +31,7 @@ export function QuickActions({ perms }: { perms: QuickActionPermissions }) {
         <Button asChild variant="secondary">
           <Link href="/memberships/new">
             <CreditCard aria-hidden className="size-4" />
-            Sell membership
+            {t("sellMembership")}
           </Link>
         </Button>
       ) : null}
@@ -37,7 +39,7 @@ export function QuickActions({ perms }: { perms: QuickActionPermissions }) {
         <Button asChild variant="secondary">
           <Link href="/memberships">
             <Wallet aria-hidden className="size-4" />
-            Record payment
+            {t("recordPayment")}
           </Link>
         </Button>
       ) : null}

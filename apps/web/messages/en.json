@@ -54,5 +54,48 @@
     "errorTitle": "Something went wrong",
     "errorDescription": "An unexpected error interrupted sign-in. If it keeps happening, contact support with reference {reference}.",
     "tryAgain": "Try again"
+  },
+  "actions": {
+    "addMember": "Add member",
+    "sellMembership": "Sell membership",
+    "recordPayment": "Record payment"
+  },
+  "errors": {
+    "accessDenied": "Access denied",
+    "forbiddenBody": "You don't have permission to view this page. If you believe this is a mistake, contact your gym owner.",
+    "backToDashboard": "Back to dashboard",
+    "switchAccount": "Switch account"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Signed in as {name}. Here's what needs attention today.",
+    "kpi": {
+      "expiringSoon": "Expiring Soon",
+      "expired": "Expired",
+      "activeMemberships": "Active Members",
+      "frozen": "Frozen",
+      "scheduled": "Scheduled",
+      "revenueToday": "Revenue Today",
+      "revenueMonth": "Revenue This Month",
+      "expiringHint": "See the list below to renew"
+    },
+    "lists": {
+      "expiringSoon": "Expiring soon",
+      "expiredNeedRenewal": "Expired — need renewal",
+      "outstanding": "Outstanding balances",
+      "recentMembers": "Recent members"
+    },
+    "empty": {
+      "expiringTitle": "Nothing expiring",
+      "expiringBody": "No memberships are inside the renewal window.",
+      "expiredTitle": "No expired memberships",
+      "expiredBody": "Everyone with a membership is current.",
+      "outstandingTitle": "No balances due",
+      "outstandingBody": "Every membership is fully paid.",
+      "membersTitle": "No members yet",
+      "membersBody": "New members will appear here."
+    },
+    "expiresToday": "Expires today",
+    "remainingDays": "{days, plural, one {{n} day left} other {{n} days left}}"
   }
 }

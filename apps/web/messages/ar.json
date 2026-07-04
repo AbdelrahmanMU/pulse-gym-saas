@@ -54,5 +54,48 @@
     "errorTitle": "حدث خطأ ما",
     "errorDescription": "حدث خطأ غير متوقع أثناء تسجيل الدخول. إذا تكرر، تواصل مع الدعم بالرقم المرجعي {reference}.",
     "tryAgain": "إعادة المحاولة"
+  },
+  "actions": {
+    "addMember": "إضافة عضو",
+    "sellMembership": "تسجيل اشتراك",
+    "recordPayment": "تسجيل دفعة"
+  },
+  "errors": {
+    "accessDenied": "الوصول مرفوض",
+    "forbiddenBody": "ليس لديك صلاحية لعرض هذه الصفحة. إن كان هذا خطأً، تواصل مع مالك الجيم.",
+    "backToDashboard": "العودة إلى الرئيسية",
+    "switchAccount": "تبديل الحساب"
+  },
+  "dashboard": {
+    "title": "الرئيسية",
+    "subtitle": "مسجّل الدخول: {name}. إليك ما يحتاج انتباهك اليوم.",
+    "kpi": {
+      "expiringSoon": "تنتهي قريبًا",
+      "expired": "منتهية",
+      "activeMemberships": "اشتراكات سارية",
+      "frozen": "مجمّدة",
+      "scheduled": "قادمة",
+      "revenueToday": "إيرادات اليوم",
+      "revenueMonth": "إيرادات هذا الشهر",
+      "expiringHint": "راجع القائمة أدناه للتجديد"
+    },
+    "lists": {
+      "expiringSoon": "تنتهي قريبًا",
+      "expiredNeedRenewal": "منتهية — بحاجة لتجديد",
+      "outstanding": "مبالغ مستحقة",
+      "recentMembers": "أحدث الأعضاء"
+    },
+    "empty": {
+      "expiringTitle": "لا شيء ينتهي قريبًا",
+      "expiringBody": "لا اشتراكات داخل نافذة التجديد.",
+      "expiredTitle": "لا اشتراكات منتهية",
+      "expiredBody": "كل صاحب اشتراك ساري.",
+      "outstandingTitle": "لا مبالغ مستحقة",
+      "outstandingBody": "كل الاشتراكات مدفوعة بالكامل.",
+      "membersTitle": "لا يوجد أعضاء بعد",
+      "membersBody": "سيظهر الأعضاء الجدد هنا."
+    },
+    "expiresToday": "ينتهي اليوم",
+    "remainingDays": "{days, plural, zero {متبقي {n} يوم} one {متبقي يوم واحد} two {متبقي يومان} few {متبقي {n} أيام} many {متبقي {n} يومًا} other {متبقي {n} يوم}}"
   }
 }
