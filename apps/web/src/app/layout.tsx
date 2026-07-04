@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
-import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
+import { Space_Grotesk, Inter, JetBrains_Mono, Noto_Sans_Arabic } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 
 // Importing the env module at the root of the server tree validates the
 // environment on first render and **refuses to boot** on misconfiguration (T-15).
@@ -32,10 +34,35 @@ const fontMono = JetBrains_Mono({
   display: "swap",
 });
 
-export const metadata = {
-  title: "PULSE",
-  description: "PULSE Gym Membership Management",
-};
+/**
+ * Arabic UI face (Sprint 2.x localization). The three Latin families above carry no
+ * Arabic glyphs, so under `dir="rtl"` Arabic would fall back to a random system font —
+ * fatal to the Authority's "reads as originally-written Arabic" quality bar. This var
+ * is appended to the `body`/`h*` font stacks (tokens `globals.css`) so the browser does
+ * per-glyph fallback: Latin/digits stay in Inter/JetBrains Mono, Arabic renders here.
+ *
+ * PROVISIONAL (Authority · ruling R7 — final Arabic font is a human-gated design-token
+ * decision). Noto Sans Arabic is the placeholder; flagged in the implementation report.
+ */
+const fontArabic = Noto_Sans_Arabic({
+  subsets: ["arabic"],
+  weight: ["400", "500", "600"],
+  variable: "--font-arabic",
+  display: "swap",
+});
+
+const FONT_VARS = [
+  fontDisplay.variable,
+  fontSans.variable,
+  fontMono.variable,
+  fontArabic.variable,
+].join(" ");
+
+export async function generateMetadata() {
+  const t = await getTranslations("meta");
+  // "PULSE" is the brand and never localizes; the description does.
+  return { title: "PULSE", description: t("description") };
+}
 
 // `viewport-fit=cover` lets bottom-anchored v1.2 patterns (FAB, sticky action bar, bottom
 // sheet) extend under device notches/home indicators and pad by the `--safe-*` tokens (§5.8).
@@ -45,10 +72,20 @@ export const viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
+  // NOTE: `dir` stays "ltr" in this Phase-1 infrastructure commit; Phase 2 flips it to
+  // the locale direction once the shared catalog components are migrated to logical CSS
+  // (ms/me/ps/pe/text-start), so the app never renders mid-migration with broken RTL.
   return (
-    <html lang="en" className={`${fontDisplay.variable} ${fontSans.variable} ${fontMono.variable}`}>
-      <body>{children}</body>
+    <html lang={locale} dir="ltr" className={FONT_VARS}>
+      <body>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          {children}
+        </NextIntlClientProvider>
+      </body>
     </html>
   );
 }

@@ -293,10 +293,14 @@
 
   html { -webkit-text-size-adjust: 100%; }
 
+  /* Font stacks list the Latin face first, then `--font-arabic` (provisional Noto Sans
+     Arabic, provided by next/font in layout). The browser does per-glyph fallback:
+     Latin text + Latin digits stay in the Latin face; Arabic glyphs render in the
+     Arabic face. Latin-digit discipline (Authority · Deliverable 9) is preserved. */
   body {
     background: var(--background);
     color: var(--foreground);
-    font-family: var(--font-sans), system-ui, sans-serif;
+    font-family: var(--font-sans), var(--font-arabic), system-ui, sans-serif;
     font-size: 0.875rem;          /* body */
     line-height: 1.25rem;
     -webkit-font-smoothing: antialiased;
@@ -304,13 +308,13 @@
   }
 
   h1, h2, h3, h4 {
-    font-family: var(--font-display), system-ui, sans-serif;
+    font-family: var(--font-display), var(--font-arabic), system-ui, sans-serif;
     font-weight: 600;
     color: var(--foreground);
   }
 
-  /* SIGNATURE: tabular mono for ALL user-read numbers */
-  .tabular { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  /* SIGNATURE: tabular mono for ALL user-read numbers (always Latin digits) */
+  .tabular { font-family: var(--font-mono), var(--font-arabic); font-variant-numeric: tabular-nums; }
 
   /* SIGNATURE: uppercase tracked eyebrow (12px per audit, not 11px) */
   .eyebrow {

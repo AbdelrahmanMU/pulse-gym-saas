@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 
 // Load the monorepo-root `.env` (single source of truth, git-ignored) into
 // `process.env` before the Zod env module (src/env.ts) validates it. Node 20.12+
@@ -19,4 +20,9 @@ const nextConfig: NextConfig = {
   eslint: { ignoreDuringBuilds: true },
 };
 
-export default nextConfig;
+// next-intl (Sprint 2.x localization): "without i18n routing" mode — the request
+// config at `src/i18n/request.ts` resolves the locale + messages per request. No
+// `/ar` `/en` path segments (Authority defers a v1 switcher).
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
+
+export default withNextIntl(nextConfig);
