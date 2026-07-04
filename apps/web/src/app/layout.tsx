@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Space_Grotesk, Inter, JetBrains_Mono, Noto_Sans_Arabic } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
+import { dirForLocale, type Locale } from "@/i18n/locale";
 
 // Importing the env module at the root of the server tree validates the
 // environment on first render and **refuses to boot** on misconfiguration (T-15).
@@ -76,11 +77,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const locale = await getLocale();
   const messages = await getMessages();
 
-  // NOTE: `dir` stays "ltr" in this Phase-1 infrastructure commit; Phase 2 flips it to
-  // the locale direction once the shared catalog components are migrated to logical CSS
-  // (ms/me/ps/pe/text-start), so the app never renders mid-migration with broken RTL.
+  // Phase 2: `dir` now follows the locale (Arabic → rtl). The shared catalog components
+  // are migrated to logical CSS (ms/me/ps/pe/start/end/text-start), so the shell renders
+  // correctly RTL; per-module physical classes are finished in each Phase-3 module pass.
   return (
-    <html lang={locale} dir="ltr" className={FONT_VARS}>
+    <html lang={locale} dir={dirForLocale(locale as Locale)} className={FONT_VARS}>
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}

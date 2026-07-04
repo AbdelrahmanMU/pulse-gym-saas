@@ -41,7 +41,7 @@ export function CurrencyInput({ name, currency, defaultMinor, className }: Curre
     <div className="relative">
       <span
         aria-hidden
-        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body-sm text-muted-foreground"
+        className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-body-sm text-muted-foreground"
       >
         {symbol}
       </span>
@@ -58,7 +58,7 @@ export function CurrencyInput({ name, currency, defaultMinor, className }: Curre
         placeholder="0.00"
         className={cn(
           // ≥16px below md so iOS Safari never focus-zooms (v1.2 §5.10); text-body ≥md.
-          "tabular h-11 w-full rounded-sm border bg-surface pl-9 pr-3 text-right text-(length:--control-font-mobile) text-foreground placeholder:text-muted-foreground md:text-body",
+          "tabular h-11 w-full rounded-sm border bg-surface ps-9 pe-3 text-end text-(length:--control-font-mobile) text-foreground placeholder:text-muted-foreground md:text-body",
           "disabled:pointer-events-none disabled:opacity-(--opacity-disabled)",
           field?.hasError ? "border-danger" : "border-border",
           className,

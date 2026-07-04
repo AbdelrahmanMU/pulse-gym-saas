@@ -348,7 +348,7 @@
      styles (design-system-v1.2 §5.8), never as arbitrary utility values. */
   .fab-anchor {
     position: fixed;
-    right: var(--fab-offset);
+    inset-inline-end: var(--fab-offset);
     bottom: calc(var(--fab-offset) + var(--safe-bottom));
     z-index: var(--z-fab);
   }
@@ -365,11 +365,11 @@
 
   /* Skip link (AppShell renders the anchor) */
   .skip-link {
-    position: absolute; left: -9999px; top: 0; z-index: var(--z-tooltip);
+    position: absolute; inset-inline-start: -9999px; top: 0; z-index: var(--z-tooltip);
     background: var(--surface); color: var(--foreground);
     padding: 0.5rem 1rem; border-radius: var(--radius-sm);
   }
-  .skip-link:focus { left: 1rem; top: 1rem; }
+  .skip-link:focus { inset-inline-start: 1rem; top: 1rem; }
 }
 
 /* ----------------------------------------------------------------------------

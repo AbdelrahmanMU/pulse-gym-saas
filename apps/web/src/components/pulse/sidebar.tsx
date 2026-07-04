@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { NavGroups, type NavGroupDef } from "./nav";
 
 /**
@@ -11,10 +14,11 @@ import { NavGroups, type NavGroupDef } from "./nav";
  * yet); the user menu lives in the TopBar for the minimal shell.
  */
 export function Sidebar({ groups }: { groups: readonly NavGroupDef[] }) {
+  const t = useTranslations("common");
   return (
     // The brand block lives INSIDE the nav landmark so all rail content is contained
     // (axe `region`); the rail is the single Primary navigation.
-    <nav aria-label="Primary" className="flex h-full flex-col bg-rail-bg">
+    <nav aria-label={t("primaryNav")} className="flex h-full flex-col bg-rail-bg">
       {/* px-6 puts the brand mark on the optical left line the nav icons and eyebrows share (design review F3, 2026-07-02). */}
       <div className="flex h-(--topbar-h) shrink-0 items-center gap-2 px-6">
         <span aria-hidden className="size-6 rounded-sm bg-primary" />

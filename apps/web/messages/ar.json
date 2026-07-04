@@ -1,5 +1,39 @@
 {
   "meta": {
     "description": "إدارة اشتراكات الجيم"
+  },
+  "common": {
+    "skipToContent": "تخطَّ إلى المحتوى",
+    "navigation": "التنقل",
+    "primaryNav": "التنقل الرئيسي",
+    "openNav": "فتح التنقل",
+    "userMenu": "قائمة المستخدم",
+    "signOut": "تسجيل الخروج",
+    "notifications": "الإشعارات",
+    "notificationsUnread": "الإشعارات، {count} غير مقروء",
+    "pagination": "ترقيم الصفحات",
+    "previous": "السابق",
+    "next": "التالي",
+    "pageRange": "عرض {from}–{to} من {total}",
+    "required": "(مطلوب)",
+    "filters": "الفلاتر",
+    "filtersActive": "الفلاتر ({count} مفعّل)",
+    "done": "تم",
+    "close": "إغلاق",
+    "loading": "جارٍ التحميل…"
+  },
+  "nav": {
+    "dashboard": "الرئيسية",
+    "notifications": "الإشعارات",
+    "reports": "التقارير",
+    "members": "الأعضاء",
+    "plans": "الباقات",
+    "memberships": "الاشتراكات",
+    "gym": "الجيم",
+    "branch": "الفرع",
+    "staff": "فريق العمل",
+    "account": "حسابي",
+    "groupManage": "الإدارة",
+    "groupSettings": "الإعدادات"
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, type ReactNode, type PointerEvent } from "react";
+import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import { Sheet, SheetClose, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ export function AdaptiveBottomSheet({
   children,
   footer,
 }: AdaptiveBottomSheetProps) {
+  const t = useTranslations("common");
   const startY = useRef<number | null>(null);
 
   function onHandlePointerDown(event: PointerEvent<HTMLDivElement>): void {
@@ -69,7 +71,7 @@ export function AdaptiveBottomSheet({
         <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 md:px-6 md:py-4">
           <SheetTitle className="text-h3 text-foreground">{title}</SheetTitle>
           <SheetClose asChild>
-            <Button variant="ghost" size="icon" aria-label="Close">
+            <Button variant="ghost" size="icon" aria-label={t("close")}>
               <X aria-hidden />
             </Button>
           </SheetClose>

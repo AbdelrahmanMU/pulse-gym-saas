@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "./button";
 
@@ -23,43 +24,46 @@ export interface PaginationProps {
 
 const CONTROL = buttonVariants({ variant: "secondary", size: "sm" });
 
-export function Pagination({
+export async function Pagination({
   page,
   totalPages,
   hrefForPage,
   rangeLabel,
   className,
 }: PaginationProps) {
+  const t = await getTranslations("common");
   const hasPrev = page > 1;
   const hasNext = page < totalPages;
 
+  // Chevrons point toward their target; under RTL the icons mirror automatically
+  // (they sit in the document flow), so the logical prev/next order is preserved.
   return (
     <nav
-      aria-label="Pagination"
+      aria-label={t("pagination")}
       className={cn("flex items-center justify-between gap-4 pt-2", className)}
     >
       <p className="text-body-sm text-muted-foreground">{rangeLabel}</p>
       <div className="flex items-center gap-2">
         {hasPrev ? (
           <Link href={hrefForPage(page - 1)} className={CONTROL} rel="prev">
-            <ChevronLeft aria-hidden className="size-4" />
-            Previous
+            <ChevronLeft aria-hidden className="size-4 rtl:-scale-x-100" />
+            {t("previous")}
           </Link>
         ) : (
           <span className={cn(CONTROL, "opacity-(--opacity-disabled)")} aria-disabled>
-            <ChevronLeft aria-hidden className="size-4" />
-            Previous
+            <ChevronLeft aria-hidden className="size-4 rtl:-scale-x-100" />
+            {t("previous")}
           </span>
         )}
         {hasNext ? (
           <Link href={hrefForPage(page + 1)} className={CONTROL} rel="next">
-            Next
-            <ChevronRight aria-hidden className="size-4" />
+            {t("next")}
+            <ChevronRight aria-hidden className="size-4 rtl:-scale-x-100" />
           </Link>
         ) : (
           <span className={cn(CONTROL, "opacity-(--opacity-disabled)")} aria-disabled>
-            Next
-            <ChevronRight aria-hidden className="size-4" />
+            {t("next")}
+            <ChevronRight aria-hidden className="size-4 rtl:-scale-x-100" />
           </span>
         )}
       </div>

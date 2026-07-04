@@ -11,6 +11,7 @@ import {
   Users,
   UserCog,
 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { hasPermission, PERMISSION_KEYS } from "@pulse/auth";
 import type { AuthenticatedPrincipal } from "@pulse/types";
 import { requireSession } from "@/lib/auth/guard";
@@ -30,18 +31,34 @@ import { signOutAction } from "./actions";
  * (Epic-1 — Gym / Branch / My Profile). The TopBar bell shows the unread count. Items are shown
  * **by permission** (never by role).
  */
-function buildNavGroups(principal: AuthenticatedPrincipal): NavGroupDef[] {
+/** Translated nav labels (`nav` namespace), resolved once in the server layout. */
+interface NavLabels {
+  dashboard: string;
+  notifications: string;
+  reports: string;
+  members: string;
+  plans: string;
+  memberships: string;
+  gym: string;
+  branch: string;
+  staff: string;
+  account: string;
+  groupManage: string;
+  groupSettings: string;
+}
+
+function buildNavGroups(principal: AuthenticatedPrincipal, t: NavLabels): NavGroupDef[] {
   const manageItems: NavItemDef[] = [];
   if (hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERS_READ)) {
-    manageItems.push({ href: "/members", label: "Members", icon: <Users aria-hidden /> });
+    manageItems.push({ href: "/members", label: t.members, icon: <Users aria-hidden /> });
   }
   if (hasPermission(principal.permissions, PERMISSION_KEYS.PLANS_READ)) {
-    manageItems.push({ href: "/plans", label: "Plans", icon: <Tags aria-hidden /> });
+    manageItems.push({ href: "/plans", label: t.plans, icon: <Tags aria-hidden /> });
   }
   if (hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERSHIPS_READ)) {
     manageItems.push({
       href: "/memberships",
-      label: "Memberships",
+      label: t.memberships,
       icon: <ClipboardList aria-hidden />,
     });
   }
@@ -51,45 +68,60 @@ function buildNavGroups(principal: AuthenticatedPrincipal): NavGroupDef[] {
 
   const settingsItems: NavItemDef[] = [];
   if (hasPermission(principal.permissions, PERMISSION_KEYS.GYM_VIEW)) {
-    settingsItems.push({ href: "/settings/gym", label: "Gym", icon: <Building2 aria-hidden /> });
+    settingsItems.push({ href: "/settings/gym", label: t.gym, icon: <Building2 aria-hidden /> });
   }
   if (hasPermission(principal.permissions, PERMISSION_KEYS.BRANCHES_READ)) {
-    settingsItems.push({ href: "/settings/branch", label: "Branch", icon: <MapPin aria-hidden /> });
+    settingsItems.push({ href: "/settings/branch", label: t.branch, icon: <MapPin aria-hidden /> });
   }
   if (hasPermission(principal.permissions, PERMISSION_KEYS.STAFF_READ)) {
-    settingsItems.push({ href: "/staff", label: "Staff", icon: <UserCog aria-hidden /> });
+    settingsItems.push({ href: "/staff", label: t.staff, icon: <UserCog aria-hidden /> });
   }
   settingsItems.push({
     href: "/settings/profile",
-    label: "My Profile",
+    label: t.account,
     icon: <CircleUser aria-hidden />,
   });
 
   const topItems: NavItemDef[] = [
-    { href: "/dashboard", label: "Dashboard", icon: <LayoutDashboard aria-hidden /> },
+    { href: "/dashboard", label: t.dashboard, icon: <LayoutDashboard aria-hidden /> },
   ];
   if (hasPermission(principal.permissions, PERMISSION_KEYS.NOTIFICATIONS_READ)) {
-    topItems.push({ href: "/notifications", label: "Notifications", icon: <Bell aria-hidden /> });
+    topItems.push({ href: "/notifications", label: t.notifications, icon: <Bell aria-hidden /> });
   }
   if (hasPermission(principal.permissions, PERMISSION_KEYS.REPORTS_VIEW)) {
-    topItems.push({ href: "/reports", label: "Reports", icon: <BarChart3 aria-hidden /> });
+    topItems.push({ href: "/reports", label: t.reports, icon: <BarChart3 aria-hidden /> });
   }
 
   return [
     { items: topItems },
-    { label: "Manage", items: manageItems },
-    { label: "Settings", items: settingsItems },
+    { label: t.groupManage, items: manageItems },
+    { label: t.groupSettings, items: settingsItems },
   ];
 }
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const principal = await requireSession();
   const notificationCount = await loadUnreadCount(principal);
+  const t = await getTranslations("nav");
+  const labels: NavLabels = {
+    dashboard: t("dashboard"),
+    notifications: t("notifications"),
+    reports: t("reports"),
+    members: t("members"),
+    plans: t("plans"),
+    memberships: t("memberships"),
+    gym: t("gym"),
+    branch: t("branch"),
+    staff: t("staff"),
+    account: t("account"),
+    groupManage: t("groupManage"),
+    groupSettings: t("groupSettings"),
+  };
 
   return (
     <AppShell
       user={{ displayName: principal.displayName, email: principal.email }}
-      navGroups={buildNavGroups(principal)}
+      navGroups={buildNavGroups(principal, labels)}
       notificationCount={notificationCount}
       signOut={signOutAction}
     >

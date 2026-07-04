@@ -27,7 +27,7 @@ export const SheetTitle = DialogPrimitive.Title;
 export const SheetDescription = DialogPrimitive.Description;
 
 const SIDE_CLASSES = {
-  left: "fixed inset-y-0 left-0 z-(--z-modal) flex w-(--sidebar-w) flex-col bg-rail-bg shadow-(--shadow-lg) focus:outline-none",
+  left: "fixed inset-y-0 start-0 z-(--z-modal) flex w-(--sidebar-w) flex-col bg-rail-bg shadow-(--shadow-lg) focus:outline-none",
   adaptive: cn(
     "fixed z-(--z-modal) flex flex-col bg-surface shadow-(--shadow-lg) focus:outline-none",
     // <md: bottom sheet — full-width, top-rounded, capped height, safe-area padded.

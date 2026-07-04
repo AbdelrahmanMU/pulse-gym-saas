@@ -59,19 +59,22 @@ export function Disclosure({
 
   return (
     <section className={cn("rounded-md border border-border bg-surface", className)}>
-      <div className="flex items-center gap-3 pr-4">
+      <div className="flex items-center gap-3 pe-4">
         <h2 className="min-w-0 flex-1 text-h3 text-foreground">
           <button
             type="button"
             aria-expanded={open}
             aria-controls={regionId}
             onClick={() => setUserChoice(!open)}
-            className="flex w-full min-w-0 items-center gap-2 py-3 pl-6 text-left md:py-4"
+            className="flex w-full min-w-0 items-center gap-2 py-3 ps-6 text-start md:py-4"
           >
             {open ? (
               <ChevronDown aria-hidden className="size-4 shrink-0 text-muted-foreground" />
             ) : (
-              <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+              <ChevronRight
+                aria-hidden
+                className="size-4 shrink-0 text-muted-foreground rtl:-scale-x-100"
+              />
             )}
             <span className="shrink-0">{title}</span>
             {summary ? (

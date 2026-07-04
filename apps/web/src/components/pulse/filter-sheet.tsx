@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { SlidersHorizontal } from "lucide-react";
 import { AdaptiveBottomSheet } from "./adaptive-bottom-sheet";
 import { Button } from "./button";
@@ -21,25 +22,26 @@ export interface FilterSheetProps {
 }
 
 export function FilterSheet({ activeCount, children }: FilterSheetProps) {
+  const t = useTranslations("common");
   const [open, setOpen] = useState(false);
-  const label = activeCount > 0 ? `Filters (${activeCount} active)` : "Filters";
+  const label = activeCount > 0 ? t("filtersActive", { count: activeCount }) : t("filters");
 
   return (
     <div className="md:hidden">
       <AdaptiveBottomSheet
         open={open}
         onOpenChange={setOpen}
-        title="Filters"
+        title={t("filters")}
         trigger={
           <Button variant="secondary" aria-label={label}>
             <SlidersHorizontal aria-hidden className="size-4" />
-            Filters
+            {t("filters")}
             {activeCount > 0 ? <span className="tabular">({activeCount})</span> : null}
           </Button>
         }
         footer={
           <Button variant="secondary" onClick={() => setOpen(false)}>
-            Done
+            {t("done")}
           </Button>
         }
       >

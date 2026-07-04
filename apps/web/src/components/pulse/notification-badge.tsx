@@ -25,7 +25,7 @@ export function NotificationBadge({ count, children, max = 9, className }: Notif
       {show ? (
         <span
           aria-hidden
-          className="absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-eyebrow font-semibold tabular text-primary-foreground"
+          className="absolute -top-1 -end-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-eyebrow font-semibold tabular text-primary-foreground"
         >
           {display}
         </span>

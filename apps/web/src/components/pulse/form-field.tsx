@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useId, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 /**
@@ -47,6 +48,7 @@ export function FormField({
   error,
   className,
 }: FormFieldProps) {
+  const t = useTranslations("common");
   const controlId = useId();
   const helpId = `${controlId}-help`;
   const errorId = `${controlId}-error`;
@@ -60,9 +62,9 @@ export function FormField({
         <label htmlFor={controlId} className="text-body-sm font-medium text-foreground">
           {label}
           {required ? (
-            <span className="ml-1 text-muted-foreground">
+            <span className="ms-1 text-muted-foreground">
               <span aria-hidden>*</span>
-              <span className="sr-only">(required)</span>
+              <span className="sr-only">{t("required")}</span>
             </span>
           ) : null}
         </label>

@@ -2,6 +2,7 @@
 
 import type { Ref } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Bell, LogOut, Menu } from "lucide-react";
 import { Avatar } from "./avatar";
 import { ActionMenu } from "./action-menu";
@@ -41,8 +42,9 @@ export function TopBar({
   notificationCount,
   signOut,
 }: TopBarProps) {
+  const t = useTranslations("common");
   const count = notificationCount ?? 0;
-  const bellLabel = count > 0 ? `Notifications, ${count} unread` : "Notifications";
+  const bellLabel = count > 0 ? t("notificationsUnread", { count }) : t("notifications");
   return (
     <header className="sticky top-0 z-(--z-sticky) flex h-(--topbar-h) items-center gap-3 border-b border-border bg-surface px-4 md:px-8">
       <Button
@@ -50,7 +52,7 @@ export function TopBar({
         variant="ghost"
         size="icon"
         className="lg:hidden"
-        aria-label="Open navigation"
+        aria-label={t("openNav")}
         onClick={onMenuClick}
       >
         <Menu aria-hidden />
@@ -76,7 +78,7 @@ export function TopBar({
 
       <ActionMenu
         trigger={
-          <Button variant="ghost" size="md" className="gap-2 px-2" aria-label="User menu">
+          <Button variant="ghost" size="md" className="gap-2 px-2" aria-label={t("userMenu")}>
             <Avatar name={user.displayName} size="sm" />
             <span className="hidden max-w-40 truncate font-medium sm:inline">
               {user.displayName}
@@ -89,7 +91,7 @@ export function TopBar({
             <span className="text-caption text-muted-foreground">{user.email}</span>
           </span>
         }
-        items={[{ label: "Sign out", icon: <LogOut aria-hidden />, onSelect: signOut }]}
+        items={[{ label: t("signOut"), icon: <LogOut aria-hidden />, onSelect: signOut }]}
       />
     </header>
   );

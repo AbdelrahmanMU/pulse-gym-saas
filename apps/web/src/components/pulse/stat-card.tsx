@@ -29,7 +29,7 @@ export function StatCard({ label, value, format, currency, icon, hint, href }: S
     <>
       <span
         aria-hidden
-        className="absolute inset-y-0 left-0 w-(--border-accent) rounded-l-md bg-brand-500"
+        className="absolute inset-y-0 start-0 w-(--border-accent) rounded-s-md bg-brand-500"
       />
       <div className="flex items-center justify-between gap-2">
         <span className="eyebrow text-muted-foreground">{label}</span>
@@ -45,7 +45,7 @@ export function StatCard({ label, value, format, currency, icon, hint, href }: S
   );
 
   const base =
-    "relative flex flex-col gap-2 overflow-hidden rounded-md border border-border bg-surface p-5 pl-6";
+    "relative flex flex-col gap-2 overflow-hidden rounded-md border border-border bg-surface p-5 ps-6";
 
   if (href) {
     return (

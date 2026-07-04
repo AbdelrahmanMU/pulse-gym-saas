@@ -44,7 +44,7 @@ export const SelectInput = forwardRef<HTMLSelectElement, SelectInputProps>(funct
         required={props.required ?? field?.required}
         className={cn(
           // ≥16px below md so iOS Safari never focus-zooms (v1.2 §5.10); text-body ≥md.
-          "h-11 w-full appearance-none rounded-sm border bg-surface pl-3 pr-10 text-(length:--control-font-mobile) text-foreground md:text-body",
+          "h-11 w-full appearance-none rounded-sm border bg-surface ps-3 pe-10 text-(length:--control-font-mobile) text-foreground md:text-body",
           "disabled:pointer-events-none disabled:opacity-(--opacity-disabled)",
           field?.hasError ? "border-danger" : "border-border",
           className,
@@ -64,7 +64,7 @@ export const SelectInput = forwardRef<HTMLSelectElement, SelectInputProps>(funct
       </select>
       <ChevronDown
         aria-hidden
-        className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+        className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
       />
     </div>
   );

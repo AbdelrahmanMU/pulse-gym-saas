@@ -1,4 +1,7 @@
+"use client";
+
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 /**
@@ -24,11 +27,9 @@ export interface LoadingStateProps {
   className?: string;
 }
 
-export function LoadingState({
-  variant = "skeleton",
-  label = "Loading…",
-  className,
-}: LoadingStateProps) {
+export function LoadingState({ variant = "skeleton", label, className }: LoadingStateProps) {
+  const t = useTranslations("common");
+  const text = label ?? t("loading");
   if (variant === "spinner") {
     return (
       <div
@@ -40,7 +41,7 @@ export function LoadingState({
         )}
       >
         <Loader2 aria-hidden className="size-5 animate-spin" />
-        <span className="text-body">{label}</span>
+        <span className="text-body">{text}</span>
       </div>
     );
   }
@@ -49,7 +50,7 @@ export function LoadingState({
     <div
       role="status"
       aria-busy="true"
-      aria-label={label}
+      aria-label={text}
       className={cn(
         "flex flex-col gap-3 rounded-md border border-border bg-surface p-6",
         className,

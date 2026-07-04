@@ -1,5 +1,39 @@
 {
   "meta": {
     "description": "PULSE Gym Membership Management"
+  },
+  "common": {
+    "skipToContent": "Skip to content",
+    "navigation": "Navigation",
+    "primaryNav": "Primary",
+    "openNav": "Open navigation",
+    "userMenu": "User menu",
+    "signOut": "Sign out",
+    "notifications": "Notifications",
+    "notificationsUnread": "Notifications, {count} unread",
+    "pagination": "Pagination",
+    "previous": "Previous",
+    "next": "Next",
+    "pageRange": "Showing {from}–{to} of {total}",
+    "required": "(required)",
+    "filters": "Filters",
+    "filtersActive": "Filters ({count} active)",
+    "done": "Done",
+    "close": "Close",
+    "loading": "Loading…"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "notifications": "Notifications",
+    "reports": "Reports",
+    "members": "Members",
+    "plans": "Plans",
+    "memberships": "Memberships",
+    "gym": "Gym",
+    "branch": "Branch",
+    "staff": "Staff",
+    "account": "My Profile",
+    "groupManage": "Manage",
+    "groupSettings": "Settings"
   }
 }

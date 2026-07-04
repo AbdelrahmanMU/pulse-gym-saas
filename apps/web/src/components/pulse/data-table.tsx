@@ -61,7 +61,7 @@ function DerivedCard<Row>({ columns, row }: { columns: DataTableColumn<Row>[]; r
       {columns.map((col) => (
         <div key={col.key} className="flex items-baseline justify-between gap-4">
           <span className="shrink-0 text-body-sm text-muted-foreground">{col.header}</span>
-          <span className={cn("text-body text-foreground", col.numeric && "tabular text-right")}>
+          <span className={cn("text-body text-foreground", col.numeric && "tabular text-end")}>
             {col.render(row)}
           </span>
         </div>
@@ -113,7 +113,7 @@ export function DataTable<Row>({
                   scope="col"
                   className={cn(
                     "px-4 py-3 text-body-sm font-medium text-muted-foreground",
-                    col.numeric ? "text-right" : "text-left",
+                    col.numeric ? "text-end" : "text-start",
                     priorityClass(col.priority),
                   )}
                 >
@@ -133,7 +133,7 @@ export function DataTable<Row>({
                     key={col.key}
                     className={cn(
                       "px-4 py-3 align-middle text-foreground",
-                      col.numeric && "text-right tabular",
+                      col.numeric && "text-end tabular",
                       priorityClass(col.priority),
                     )}
                   >

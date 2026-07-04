@@ -43,7 +43,7 @@ function NavItem({ item, active }: { item: NavItemDef; active: boolean }) {
       {active ? (
         <span
           aria-hidden
-          className="absolute top-1.5 bottom-1.5 left-0 w-(--border-accent) rounded-full bg-rail-fg-active"
+          className="absolute top-1.5 bottom-1.5 start-0 w-(--border-accent) rounded-full bg-rail-fg-active"
         />
       ) : null}
       {item.icon ? <span className="[&_svg]:size-5 [&_svg]:shrink-0">{item.icon}</span> : null}

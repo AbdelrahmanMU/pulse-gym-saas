@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Sidebar } from "./sidebar";
 import { TopBar, type TopBarUser } from "./topbar";
@@ -32,6 +33,7 @@ export function AppShell({ user, navGroups, notificationCount, signOut, children
   const [drawerOpen, setDrawerOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
+  const t = useTranslations("common");
 
   // Navigating from a drawer NavItem closes the drawer.
   useEffect(() => {
@@ -41,11 +43,11 @@ export function AppShell({ user, navGroups, notificationCount, signOut, children
   return (
     <div className="min-h-dvh bg-background text-foreground">
       <a href="#main-content" className="skip-link">
-        Skip to content
+        {t("skipToContent")}
       </a>
 
       {/* Persistent rail (≥lg). Hidden from the a11y tree below lg (drawer takes over). */}
-      <div className="fixed inset-y-0 left-0 hidden w-(--sidebar-w) lg:block">
+      <div className="fixed inset-y-0 start-0 hidden w-(--sidebar-w) lg:block">
         <Sidebar groups={navGroups} />
       </div>
 
@@ -59,13 +61,13 @@ export function AppShell({ user, navGroups, notificationCount, signOut, children
             menuButtonRef.current?.focus();
           }}
         >
-          <SheetTitle className="sr-only">Navigation</SheetTitle>
+          <SheetTitle className="sr-only">{t("navigation")}</SheetTitle>
           <Sidebar groups={navGroups} />
         </SheetContent>
       </Sheet>
 
       {/* Content column — offset by the rail width on desktop. */}
-      <div className="flex min-h-dvh flex-col lg:pl-(--sidebar-w)">
+      <div className="flex min-h-dvh flex-col lg:ps-(--sidebar-w)">
         <TopBar
           menuButtonRef={menuButtonRef}
           onMenuClick={() => setDrawerOpen(true)}
