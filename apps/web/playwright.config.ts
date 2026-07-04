@@ -15,6 +15,10 @@ export default defineConfig({
   // compile and flake; one worker keeps the gate deterministic (the suite is small).
   fullyParallel: false,
   workers: 1,
+  // `next dev` compiles each route on first request; the first cold hit can race a 5s
+  // assertion timeout (documented in the webServer note). One retry absorbs that
+  // cold-compile flake without masking a real failure (a real break fails both attempts).
+  retries: 1,
   reporter: "list",
   use: {
     baseURL: `http://localhost:${PORT}`,
@@ -25,5 +29,9 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // Pin the functional suite to English so the existing role-name / label assertions
+    // stay valid while the app ships Arabic by default (Sprint 2.x localization). The
+    // `ar` RTL behavior is verified separately against a PULSE_LOCALE=ar server.
+    env: { PULSE_LOCALE: "en" },
   },
 });

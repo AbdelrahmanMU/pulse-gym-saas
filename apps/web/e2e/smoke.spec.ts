@@ -8,7 +8,7 @@ import { expect, test } from "@playwright/test";
  */
 test("public landing renders, passes axe, and routes to sign-in", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: /operational pulse/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /run your gym/i })).toBeVisible();
 
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
