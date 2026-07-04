@@ -140,19 +140,33 @@ flipped, so the shell renders correctly RTL. Verified:
 - **Directional CSS uses logical utilities only** — the token-compliance fitness test (which forbids
   arbitrary `[…]` values) stays green.
 
-**`ar` RTL axe smoke:** a standalone Playwright pass (`scratchpad/ar-shots.mjs`) drives the public
-surfaces (landing, sign-in) against a `PULSE_LOCALE=ar` server at **375 + 1280 × light + dark**,
-asserting `dir=rtl` and running axe. *(Result appended below once executed; authenticated pages are
-covered by the English functional e2e and need the auth harness for an Arabic screenshot.)*
+**`ar` RTL axe smoke — executed, clean.** A standalone Playwright pass drove the public surfaces
+(landing, sign-in) against a `PULSE_LOCALE=ar` server at **375 + 1280 × light + dark** (8 renders).
+Every render confirmed `document.documentElement` `dir="rtl" lang="ar"` and **0 axe violations**:
+
+```
+landing / sign-in × desktop(1280) / mobile(375) × light / dark  →  dir=rtl lang=ar, axe=0  (8/8)
+```
+
+Authenticated pages are covered by the English functional e2e and need the storage-state auth
+harness for an Arabic screenshot — deferred to the module passes that localize them.
 
 ---
 
 ## Deliverable 4 — Screenshots
 
-Captured to `docs/localization/screenshots/` by `scratchpad/ar-shots.mjs` — public surfaces
-(landing, sign-in) at desktop (1280) + mobile (375), light + dark, in Arabic RTL. *(Authenticated
-Arabic screenshots require the e2e storage-state/auth harness; deferred with the module passes that
-localize those pages, so a screenshot would show real Arabic rather than fallback English.)*
+Captured to `docs/localization/screenshots/` (8 PNGs) — public surfaces in Arabic RTL:
+
+| | desktop (1280) | mobile (375) |
+|---|---|---|
+| **Landing** light / dark | `landing-desktop-{light,dark}.png` | `landing-mobile-{light,dark}.png` |
+| **Sign-in** light / dark | `sign-in-desktop-{light,dark}.png` | `sign-in-mobile-{light,dark}.png` |
+
+The landing shot shows the full stack: eyebrow `إدارة اشتراكات الجيم`, headline `أدِر جيمك من مكان
+واحد.`, the piece-list subheadline, and the `تسجيل الدخول` CTA — RTL, Noto Sans Arabic, brand
+"PULSE" kept Latin at the inline-start corner. *(Authenticated Arabic screenshots require the e2e
+storage-state/auth harness; deferred with the module passes that localize those pages, so a shot
+would show real Arabic rather than fallback English.)*
 
 ---
 
