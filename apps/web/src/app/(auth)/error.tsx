@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { ErrorState } from "@/components/pulse/error-state";
 import { Button } from "@/components/pulse/button";
 
@@ -17,13 +18,14 @@ export default function AuthSegmentError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useTranslations("auth");
   const reference = error.digest ?? "unavailable";
 
   return (
     <ErrorState
-      title="Something went wrong"
-      description={`An unexpected error interrupted sign-in. If it keeps happening, contact support with reference ${reference}.`}
-      action={<Button onClick={reset}>Try again</Button>}
+      title={t("errorTitle")}
+      description={t("errorDescription", { reference })}
+      action={<Button onClick={reset}>{t("tryAgain")}</Button>}
     />
   );
 }

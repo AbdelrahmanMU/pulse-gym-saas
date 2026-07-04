@@ -35,5 +35,24 @@
     "account": "My Profile",
     "groupManage": "Manage",
     "groupSettings": "Settings"
+  },
+  "landing": {
+    "eyebrow": "Gym membership management",
+    "headline": "Run your gym from one place.",
+    "subheadline": "Members, plans, memberships, and payments — the daily work of running a gym, in one place for your whole team.",
+    "signIn": "Sign in"
+  },
+  "auth": {
+    "title": "Sign in",
+    "subtitle": "Use your staff account to manage your gym.",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "pending": "Signing in…",
+    "invalidCredentials": "Invalid email or password.",
+    "loading": "Loading sign-in…",
+    "errorTitle": "Something went wrong",
+    "errorDescription": "An unexpected error interrupted sign-in. If it keeps happening, contact support with reference {reference}.",
+    "tryAgain": "Try again"
   }
 }

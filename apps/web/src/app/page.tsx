@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/pulse/button";
 import { currentUser } from "@/lib/auth/current-user";
 
@@ -14,6 +15,8 @@ export default async function HomePage() {
   const principal = await currentUser.get();
   if (principal) redirect("/dashboard");
 
+  const t = await getTranslations("landing");
+
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <header className="flex h-(--topbar-h) shrink-0 items-center gap-2 px-4 md:px-8">
@@ -22,16 +25,11 @@ export default async function HomePage() {
       </header>
       <main className="flex flex-1 items-center justify-center px-4 py-16">
         <div className="flex w-full max-w-(--breakpoint-md) flex-col items-center gap-6 text-center">
-          <p className="eyebrow">Gym membership management</p>
-          <h1 className="text-display-lg text-foreground md:text-display-xl">
-            The operational pulse of your gym.
-          </h1>
-          <p className="max-w-md text-body-lg text-muted-foreground">
-            Members, plans, memberships, and payments — the daily work of running a gym, in one
-            place for your whole team.
-          </p>
+          <p className="eyebrow">{t("eyebrow")}</p>
+          <h1 className="text-display-lg text-foreground md:text-display-xl">{t("headline")}</h1>
+          <p className="max-w-md text-body-lg text-muted-foreground">{t("subheadline")}</p>
           <Button asChild size="lg">
-            <Link href="/sign-in">Sign in</Link>
+            <Link href="/sign-in">{t("signIn")}</Link>
           </Button>
         </div>
       </main>

@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { attemptSignIn } from "@/lib/auth/sign-in";
 import { log } from "@/lib/logger";
 
@@ -21,7 +22,8 @@ export async function signInAction(_prev: SignInState, formData: FormData): Prom
   const ok = await attemptSignIn(email, password);
   if (!ok) {
     log.warn("auth.signin.invalid", { code: "AUTH", module: "auth" });
-    return { error: "Invalid email or password." };
+    const t = await getTranslations("auth");
+    return { error: t("invalidCredentials") };
   }
 
   redirect("/dashboard");
