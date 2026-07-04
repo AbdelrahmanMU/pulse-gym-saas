@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Plus, Search } from "lucide-react";
 import { TextInput } from "@/components/pulse/text-input";
 import { SelectInput, type SelectOption } from "@/components/pulse/select-input";
@@ -17,12 +18,6 @@ import type { TrainerOption } from "../service";
  * filter renders only when the actor can read assignments (options provided). Catalogued
  * components + tokens only.
  */
-const STATUS_OPTIONS: SelectOption[] = [
-  { value: "ACTIVE", label: "Active" },
-  { value: "ARCHIVED", label: "Archived" },
-  { value: "ALL", label: "All statuses" },
-];
-
 export function MembersToolbar({
   query,
   status,
@@ -37,10 +32,18 @@ export function MembersToolbar({
   trainerOptions: TrainerOption[];
   canCreate: boolean;
 }) {
+  const t = useTranslations("members");
+  const tActions = useTranslations("actions");
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const [q, setQ] = useState(query);
+
+  const STATUS_OPTIONS: SelectOption[] = [
+    { value: "ACTIVE", label: t("filterActive") },
+    { value: "ARCHIVED", label: t("filterArchived") },
+    { value: "ALL", label: t("filterAllStatuses") },
+  ];
 
   function navigate(next: URLSearchParams): void {
     next.delete("page"); // any filter/search change returns to the first page
@@ -61,9 +64,9 @@ export function MembersToolbar({
   }
 
   const trainerSelectOptions: SelectOption[] = [
-    { value: "ALL", label: "Any trainer" },
-    { value: "UNASSIGNED", label: "No trainer" },
-    ...trainerOptions.map((t) => ({ value: t.gymUserId, label: t.name })),
+    { value: "ALL", label: t("filterAnyTrainer") },
+    { value: "UNASSIGNED", label: t("filterNoTrainer") },
+    ...trainerOptions.map((opt) => ({ value: opt.gymUserId, label: opt.name })),
   ];
 
   // The same catalogued controls serve both presentations (AP-3 adaptive-parity):
@@ -71,7 +74,7 @@ export function MembersToolbar({
   const filters = (
     <>
       <SelectInput
-        aria-label="Filter by status"
+        aria-label={t("filterStatusAria")}
         options={STATUS_OPTIONS}
         value={status}
         onChange={(e) => setParam("status", e.target.value, "ACTIVE")}
@@ -79,7 +82,7 @@ export function MembersToolbar({
       />
       {trainerOptions.length > 0 ? (
         <SelectInput
-          aria-label="Filter by responsible trainer"
+          aria-label={t("filterTrainerAria")}
           options={trainerSelectOptions}
           value={trainer}
           onChange={(e) => setParam("trainer", e.target.value, "ALL")}
@@ -100,13 +103,13 @@ export function MembersToolbar({
         >
           <TextInput
             type="search"
-            aria-label="Search members by name, phone, or email"
-            placeholder="Search members…"
+            aria-label={t("searchAria")}
+            placeholder={t("searchPlaceholder")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             className="md:w-64"
           />
-          <Button type="submit" variant="secondary" size="md" aria-label="Search">
+          <Button type="submit" variant="secondary" size="md" aria-label={t("searchButton")}>
             <Search aria-hidden className="size-4" />
           </Button>
         </form>
@@ -121,7 +124,7 @@ export function MembersToolbar({
         <Button asChild className="max-md:hidden">
           <Link href="/members/new">
             <Plus aria-hidden className="size-4" />
-            Add member
+            {tActions("addMember")}
           </Link>
         </Button>
       ) : null}

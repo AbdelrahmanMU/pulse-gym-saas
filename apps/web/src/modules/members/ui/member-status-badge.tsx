@@ -1,4 +1,5 @@
 import { Archive, CircleCheck } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { StatusBadge } from "@/components/pulse/status-badge";
 
 /**
@@ -7,7 +8,7 @@ import { StatusBadge } from "@/components/pulse/status-badge";
  * alone (constitution §3). ACTIVE = success; ARCHIVED = neutral (an archived member is not
  * an error state — they are retained history, ARC-1/2).
  */
-export function MemberStatusBadge({
+export async function MemberStatusBadge({
   status,
   size,
   withNoun = false,
@@ -17,17 +18,18 @@ export function MemberStatusBadge({
   /** Adds the noun ("Active member") where the surface names people, not statuses (§D14). */
   withNoun?: boolean;
 }) {
+  const t = await getTranslations("status");
   return status === "ACTIVE" ? (
     <StatusBadge
       tone="success"
-      label={withNoun ? "Active member" : "Active"}
+      label={t(withNoun ? "memberActiveNoun" : "memberActive")}
       size={size}
       icon={<CircleCheck />}
     />
   ) : (
     <StatusBadge
       tone="neutral"
-      label={withNoun ? "Archived member" : "Archived"}
+      label={t(withNoun ? "memberArchivedNoun" : "memberArchived")}
       size={size}
       icon={<Archive />}
     />

@@ -97,5 +97,35 @@
     },
     "expiresToday": "Expires today",
     "remainingDays": "{days, plural, one {{n} day left} other {{n} days left}}"
+  },
+  "status": {
+    "memberActive": "Active",
+    "memberActiveNoun": "Active member",
+    "memberArchived": "Archived",
+    "memberArchivedNoun": "Archived member"
+  },
+  "members": {
+    "title": "Members",
+    "subtitle": "Your gym's members — search, filter, and manage.",
+    "colName": "Name",
+    "colStatus": "Status",
+    "colContact": "Contact",
+    "colTrainer": "Trainer",
+    "colJoined": "Joined",
+    "cardTrainer": "Trainer:",
+    "searchPlaceholder": "Search by name or phone…",
+    "searchAria": "Search members by name, phone, or email",
+    "searchButton": "Search",
+    "filterStatusAria": "Filter by status",
+    "filterActive": "Active",
+    "filterArchived": "Archived",
+    "filterAllStatuses": "All statuses",
+    "filterTrainerAria": "Filter by responsible trainer",
+    "filterAnyTrainer": "Any trainer",
+    "filterNoTrainer": "No trainer",
+    "emptyFilteredTitle": "No members match your filters",
+    "emptyFilteredBody": "Try a different search term or clear the filters.",
+    "emptyTitle": "No members yet",
+    "emptyBody": "Add your first member to start building your roster."
   }
 }

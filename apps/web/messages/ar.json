@@ -97,5 +97,35 @@
     },
     "expiresToday": "ينتهي اليوم",
     "remainingDays": "{days, plural, zero {متبقي {n} يوم} one {متبقي يوم واحد} two {متبقي يومان} few {متبقي {n} أيام} many {متبقي {n} يومًا} other {متبقي {n} يوم}}"
+  },
+  "status": {
+    "memberActive": "نشط",
+    "memberActiveNoun": "عضو نشط",
+    "memberArchived": "مؤرشف",
+    "memberArchivedNoun": "عضو مؤرشف"
+  },
+  "members": {
+    "title": "الأعضاء",
+    "subtitle": "أعضاء جيمك — ابحث وفلتر وأدِر.",
+    "colName": "الاسم",
+    "colStatus": "الحالة",
+    "colContact": "التواصل",
+    "colTrainer": "المدرب",
+    "colJoined": "تاريخ الانضمام",
+    "cardTrainer": "المدرب:",
+    "searchPlaceholder": "ابحث بالاسم أو الهاتف…",
+    "searchAria": "ابحث عن الأعضاء بالاسم أو الهاتف أو البريد الإلكتروني",
+    "searchButton": "بحث",
+    "filterStatusAria": "تصفية حسب الحالة",
+    "filterActive": "نشط",
+    "filterArchived": "مؤرشف",
+    "filterAllStatuses": "كل الحالات",
+    "filterTrainerAria": "تصفية حسب المدرب المسؤول",
+    "filterAnyTrainer": "أي مدرب",
+    "filterNoTrainer": "بدون مدرب",
+    "emptyFilteredTitle": "لا أعضاء مطابقون للفلاتر",
+    "emptyFilteredBody": "جرّب كلمة بحث مختلفة أو امسح الفلاتر.",
+    "emptyTitle": "لا يوجد أعضاء بعد",
+    "emptyBody": "أضف أول عضو لتبدأ بناء قائمتك."
   }
 }

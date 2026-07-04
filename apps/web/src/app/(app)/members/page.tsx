@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Users } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { hasPermission, PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError } from "@/lib/errors";
@@ -68,9 +69,13 @@ export default async function MembersPage({
   const firstRow = (result.page - 1) * result.pageSize + 1;
   const lastRow = Math.min(result.page * result.pageSize, result.total);
 
+  const t = await getTranslations("members");
+  const tActions = await getTranslations("actions");
+  const tCommon = await getTranslations("common");
+
   return (
     <PageContainer>
-      <PageHeader title="Members" subtitle="Your gym's members — search, filter, and manage." />
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       <MembersToolbar
         query={raw.q ?? ""}
@@ -86,18 +91,18 @@ export default async function MembersPage({
           hasFilters ? (
             <EmptyState
               icon={<Users aria-hidden />}
-              title="No members match your filters"
-              description="Try a different search term or clear the filters."
+              title={t("emptyFilteredTitle")}
+              description={t("emptyFilteredBody")}
             />
           ) : (
             <EmptyState
               icon={<Users aria-hidden />}
-              title="No members yet"
-              description="Add your first member to start building your roster."
+              title={t("emptyTitle")}
+              description={t("emptyBody")}
               action={
                 canCreate ? (
                   <Button asChild>
-                    <Link href="/members/new">Add member</Link>
+                    <Link href="/members/new">{tActions("addMember")}</Link>
                   </Button>
                 ) : undefined
               }
@@ -111,27 +116,28 @@ export default async function MembersPage({
           page={result.page}
           totalPages={result.totalPages}
           hrefForPage={hrefForPage}
-          rangeLabel={`Showing ${firstRow}–${lastRow} of ${result.total}`}
+          rangeLabel={tCommon("pageRange", { from: firstRow, to: lastRow, total: result.total })}
           className="mt-4"
         />
       ) : null}
 
       {/* Mobile relocation of the single "Add member" primary (AP-6 / Catalog §12.2). */}
-      {canCreate ? <CreationFab label="Add member" href="/members/new" /> : null}
+      {canCreate ? <CreationFab label={tActions("addMember")} href="/members/new" /> : null}
     </PageContainer>
   );
 }
 
-function Forbidden() {
+async function Forbidden() {
+  const t = await getTranslations("errors");
   return (
     <PageContainer>
       <ErrorState
         variant="inline"
-        title="Access denied"
-        description="You don't have permission to view members. Contact your gym owner."
+        title={t("accessDenied")}
+        description={t("forbiddenBody")}
         action={
           <Button asChild variant="secondary">
-            <Link href="/dashboard">Back to dashboard</Link>
+            <Link href="/dashboard">{t("backToDashboard")}</Link>
           </Button>
         }
       />
