@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BellRing } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { NotificationState } from "@pulse/db";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/pulse/button";
@@ -14,7 +15,7 @@ import { NotificationItem } from "./notification-item";
  * manage and unread exist), then the queue or an EmptyState. Unread are surfaced first by the query.
  * Composes catalogued components + tokens only; server-rendered (the actions are the only writes).
  */
-export function NotificationList({
+export async function NotificationList({
   notifications,
   filter,
   canManage,
@@ -23,23 +24,24 @@ export function NotificationList({
   filter: NotificationFilter;
   canManage: boolean;
 }) {
+  const t = await getTranslations("notifications");
   const hasUnread = notifications.some((n) => n.state === NotificationState.UNREAD);
 
   return (
     <section className="flex flex-col gap-4 rounded-md border border-border bg-surface p-6">
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-1" role="group" aria-label="Filter notifications">
+        <div className="flex items-center gap-1" role="group" aria-label={t("filterAria")}>
           <FilterLink value="all" current={filter}>
-            All
+            {t("filterAll")}
           </FilterLink>
           <FilterLink value="unread" current={filter}>
-            Unread
+            {t("filterUnread")}
           </FilterLink>
         </div>
         {canManage && hasUnread ? (
           <form action={markAllReadAction}>
             <Button type="submit" variant="outline" size="sm">
-              Mark all read
+              {t("markAllRead")}
             </Button>
           </form>
         ) : null}
@@ -48,12 +50,8 @@ export function NotificationList({
       {notifications.length === 0 ? (
         <EmptyState
           icon={<BellRing aria-hidden />}
-          title={filter === "unread" ? "You’re all caught up" : "No notifications"}
-          description={
-            filter === "unread"
-              ? "There are no unread alerts right now."
-              : "Expiry alerts appear here as memberships approach or pass their end date."
-          }
+          title={filter === "unread" ? t("emptyUnreadTitle") : t("emptyAllTitle")}
+          description={filter === "unread" ? t("emptyUnreadBody") : t("emptyAllBody")}
         />
       ) : (
         <ul className="flex flex-col divide-y divide-border">

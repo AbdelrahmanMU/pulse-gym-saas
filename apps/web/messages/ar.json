@@ -127,5 +127,23 @@
     "emptyFilteredBody": "جرّب كلمة بحث مختلفة أو امسح الفلاتر.",
     "emptyTitle": "لا يوجد أعضاء بعد",
     "emptyBody": "أضف أول عضو لتبدأ بناء قائمتك."
+  },
+  "notifications": {
+    "title": "الإشعارات",
+    "subtitle": "تنبيهات انتهاء الاشتراكات في جيمك — اقرأها وأزلها لإبقاء القائمة مرتبة.",
+    "filterAll": "الكل",
+    "filterUnread": "غير مقروء",
+    "filterAria": "تصفية الإشعارات",
+    "markAllRead": "تحديد الكل كمقروء",
+    "markRead": "تحديد كمقروء",
+    "dismiss": "تجاهل",
+    "new": "جديد",
+    "viewMembership": "عرض الاشتراك",
+    "typeExpiringSoon": "ينتهي قريبًا",
+    "typeExpired": "منتهي",
+    "emptyUnreadTitle": "لا جديد",
+    "emptyUnreadBody": "لا تنبيهات غير مقروءة الآن.",
+    "emptyAllTitle": "لا إشعارات",
+    "emptyAllBody": "تظهر تنبيهات الانتهاء هنا مع اقتراب انتهاء الاشتراكات أو تجاوزها."
   }
 }

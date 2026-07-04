@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { hasPermission, PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError } from "@/lib/errors";
@@ -39,29 +40,28 @@ export default async function NotificationsPage({
   const filter: NotificationFilter = first(sp.filter) === "unread" ? "unread" : "all";
   const notifications = await loadNotifications(filter);
   const canManage = hasPermission(principal.permissions, PERMISSION_KEYS.NOTIFICATIONS_MANAGE);
+  const t = await getTranslations("notifications");
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Notifications"
-        subtitle="Membership expiry alerts for your gym — read and clear them to keep the queue tidy."
-      />
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
       <GenerateOnOpen />
       <NotificationList notifications={notifications} filter={filter} canManage={canManage} />
     </PageContainer>
   );
 }
 
-function Forbidden() {
+async function Forbidden() {
+  const t = await getTranslations("errors");
   return (
     <PageContainer>
       <ErrorState
         variant="inline"
-        title="Access denied"
-        description="You don’t have permission to view notifications. Contact your gym owner."
+        title={t("accessDenied")}
+        description={t("forbiddenBody")}
         action={
           <Button asChild variant="secondary">
-            <Link href="/dashboard">Back to dashboard</Link>
+            <Link href="/dashboard">{t("backToDashboard")}</Link>
           </Button>
         }
       />

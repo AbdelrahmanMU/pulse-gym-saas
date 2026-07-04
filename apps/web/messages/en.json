@@ -127,5 +127,23 @@
     "emptyFilteredBody": "Try a different search term or clear the filters.",
     "emptyTitle": "No members yet",
     "emptyBody": "Add your first member to start building your roster."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Membership expiry alerts for your gym — read and clear them to keep the queue tidy.",
+    "filterAll": "All",
+    "filterUnread": "Unread",
+    "filterAria": "Filter notifications",
+    "markAllRead": "Mark all read",
+    "markRead": "Mark read",
+    "dismiss": "Dismiss",
+    "new": "New",
+    "viewMembership": "View membership",
+    "typeExpiringSoon": "Expiring soon",
+    "typeExpired": "Expired",
+    "emptyUnreadTitle": "You're all caught up",
+    "emptyUnreadBody": "There are no unread alerts right now.",
+    "emptyAllTitle": "No notifications",
+    "emptyAllBody": "Expiry alerts appear here as memberships approach or pass their end date."
   }
 }
