@@ -39,10 +39,14 @@ export interface NotificationView {
   id: string;
   type: NotificationType;
   state: NotificationState;
+  /** The stored English body (audit/source). The queue renders a locale-aware message at display
+   *  time from `type` + `memberName` + `effectiveEndDate` instead (Localization Authority D11). */
   message: string;
   memberName: string;
   planName: string;
   membershipId: string;
+  /** The membership end date this alert is about (parsed from the structured `dedupeKey`). */
+  effectiveEndDate: string;
   generatedAt: Date;
 }
 
@@ -101,6 +105,8 @@ export async function listNotifications(
     memberName: n.member.fullName,
     planName: n.membership.snapshotPlanName,
     membershipId: n.membershipId,
+    // dedupeKey = `${membershipId}:${type}:${effectiveEndDate}` — the date is the last segment.
+    effectiveEndDate: n.dedupeKey.split(":").pop() ?? "",
     generatedAt: n.generatedAt,
   }));
 }
