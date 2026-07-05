@@ -36,7 +36,7 @@ export async function NotificationItem({
   const isExpiringSoon = notification.type === NotificationType.MEMBERSHIP_EXPIRING_SOON;
   const typeLabel = isExpiringSoon ? t("typeExpiringSoon") : t("typeExpired");
   return (
-    <li className="flex items-start justify-between gap-4 py-4">
+    <li className="flex flex-col gap-3 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
       <div className="flex min-w-0 flex-col gap-1.5">
         <div className="flex items-center gap-2">
           <StatusBadge
@@ -73,7 +73,7 @@ export async function NotificationItem({
       </div>
 
       {canManage ? (
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="-ms-2 flex shrink-0 items-center gap-1 sm:ms-0">
           {isUnread ? (
             <form action={markReadAction}>
               <input type="hidden" name="id" value={notification.id} />

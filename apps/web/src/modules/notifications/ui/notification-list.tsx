@@ -28,7 +28,7 @@ export async function NotificationList({
   const hasUnread = notifications.some((n) => n.state === NotificationState.UNREAD);
 
   return (
-    <section className="flex flex-col gap-4 rounded-md border border-border bg-surface p-6">
+    <section className="flex flex-col gap-4 rounded-md border border-border bg-surface p-4 sm:p-6">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-1" role="group" aria-label={t("filterAria")}>
           <FilterLink value="all" current={filter}>
