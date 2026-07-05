@@ -830,7 +830,7 @@ These apply to **all** components below. Per-component sections state only delta
 5. **Props / Config** — `title`, `summary`, `actions`.
 6. **Visual Behavior** — Success token accent + icon.
 7. **Interaction Rules** — Offers logical next steps.
-8. **Accessibility** — Heading conveys success; not color-only.
+8. **Accessibility** — As a full-page flow-completion state it replaces the PageHeader, so its `title` renders the page's single `<h1>` (§7 — one `<h1>` per page) at the calm `heading-2` size; heading conveys success, not color-only.
 9. **Responsive** — Centered, scales down.
 10. **Do** — Use after multi-step flows.
 11. **Don't** — Don't use for trivial saves (use Toast).

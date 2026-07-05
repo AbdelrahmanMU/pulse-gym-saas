@@ -84,7 +84,7 @@ Verified against a `PULSE_LOCALE=ar` dev server via a standalone Playwright evid
 | **Themes** | **light** · **dark** (`.dir="rtl"` + `.dark` class) |
 | **Direction** | every captured page reported `document.documentElement.dir === "rtl"` |
 | **axe (WCAG) — main matrix** | **44 checks · 0 violations** across all 11 module × viewport × theme combinations |
-| **axe — onboarding pass** (4 steps, first-run state, desktop) | gym/branch/profile **0**; **all four render without SSR error** (confirms the non-async `useTranslations` on `onboarding/complete` executes cleanly). `onboarding/complete` reports **1 pre-existing, locale-independent** `page-has-heading-one` (moderate) — see Retrospective |
+| **axe — onboarding pass** (4 steps, first-run state, desktop) | **all four 0 violations**, all render without SSR error (confirms the non-async `useTranslations` on `onboarding/complete` executes cleanly). Rendering `complete` surfaced a pre-existing `page-has-heading-one` — **fixed this pass** (`SuccessState` now renders the page `<h1>`); see Retrospective |
 
 **Spot-checked RTL correctness (settings/gym, desktop):** page flows right-to-left; the sidebar
 sits on the inline-end edge with the active-item **3px accent bar on the inline-start (right)
@@ -155,14 +155,16 @@ month names, ordinals (الأول…), duration units, and `paymentMethodLabel` 
 live in TypeScript, treated as CLDR-like locale data (like `Intl`), not catalog UI copy. This is
 the same class of decision as pinning Latin digits.
 
-**Pre-existing a11y item discovered (not a localization regression):** rendering the onboarding
-completion page under first-run state surfaced a moderate `page-has-heading-one` axe finding —
-`SuccessState` (a shared catalog component) renders its title as `<h2>`, so `onboarding/complete`
-has no `<h1>`. This is **identical in English** (localization only swapped the `<h2>`'s text via
-`t()`, never the tag) and was simply never axe-checked before (the onboarding e2e only scans step
-1). It is orthogonal to this sprint and a catalog-component/design decision to fix — flagged here,
-not changed (changing a shared component's heading level is out of a localization sprint's scope).
-The three other onboarding steps are axe-clean; all four render without SSR error.
+**Pre-existing a11y item discovered — and fixed:** rendering the onboarding completion page under
+first-run state surfaced a moderate `page-has-heading-one` axe finding — `SuccessState` (Catalog
+§SuccessState) rendered its title as `<h2>`, so `onboarding/complete` (which uses `SuccessState`
+as the whole page, with no PageHeader) had no `<h1>`. This was **identical in English** and had
+simply never been axe-checked (the onboarding e2e only scans step 1). **Fix:** `SuccessState` now
+renders its `title` as the page's single `<h1>` at the calm `text-h2` size (Design System v1.1 §7
+— one `<h1>` per page; `SuccessState` stands in for the PageHeader on a full-page flow-completion
+state). The catalog §SuccessState accessibility note was updated to record this. It is used in
+exactly one place, so the change is contained; re-verified **axe 0/4** across all onboarding steps,
+and `getByRole("heading", …)` assertions are level-agnostic so nothing else is affected.
 
 **Product enhancement left for later (surfaced, not silent):** Authority D9 describes the currency
 picker showing **code + Arabic name**; the picker currently shows the **code only** (`USD`,

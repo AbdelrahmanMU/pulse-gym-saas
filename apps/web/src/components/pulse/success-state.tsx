@@ -7,6 +7,10 @@ import { cn } from "@/lib/utils";
  * (used by the gym-initialization onboarding to confirm "your gym is ready" before the
  * Dashboard). Success carried by icon + text; offers the logical next action(s). Calm,
  * centered. Tokens only; the heading conveys state (not colour alone).
+ *
+ * As a full-page flow-completion state it stands in for the PageHeader, so its title is
+ * the page's single `<h1>` (Design System v1.1 §7 — one `<h1>` per page) rendered at the
+ * calm `text-h2` size.
  */
 export interface SuccessStateProps {
   title: string;
@@ -28,7 +32,7 @@ export function SuccessState({ title, summary, actions, className }: SuccessStat
         <CircleCheck aria-hidden />
       </span>
       <div className="flex max-w-md flex-col gap-1">
-        <h2 className="text-h2 text-foreground">{title}</h2>
+        <h1 className="text-h2 text-foreground">{title}</h1>
         {summary ? <p className="text-body text-muted-foreground">{summary}</p> : null}
       </div>
       {actions ? (

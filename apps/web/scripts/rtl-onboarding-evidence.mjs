@@ -6,19 +6,22 @@
  * `PULSE_LOCALE=ar pnpm exec next dev -p 3200` server.
  */
 import { mkdirSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+// Anchor paths to this script's location (apps/web/scripts), not the caller's cwd.
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const BASE = "http://localhost:3200";
 const OWNER_EMAIL = "owner@pulse.local";
 const OWNER_PASSWORD = process.env.OWNER_INITIAL_PASSWORD ?? "ChangeMe!Owner1";
-const OUT = resolve(process.cwd(), "../../docs/localization/screenshots/ar");
+const OUT = resolve(ROOT, "docs/localization/screenshots/ar");
 mkdirSync(OUT, { recursive: true });
 
 async function setSetupCompleted(value) {
   try {
-    process.loadEnvFile(resolve(process.cwd(), "../../.env"));
+    process.loadEnvFile(resolve(ROOT, ".env"));
   } catch {
     /* ambient env */
   }
