@@ -1,16 +1,19 @@
 import { Activity } from "lucide-react";
+import { getLocale, getTranslations } from "next-intl/server";
 import type { TimelineEntry } from "../service";
+import { formatDate, toISODate } from "@/lib/format-date";
 
 /**
  * Membership lifecycle timeline (Decision C) — a read-only, append-only narrative composed in
  * the service from immutable records (created/activated/frozen/resumed/cancelled). Dates render
- * as `<time>`; no business logic here, presentation only. Tokens only.
+ * as `<time>`; no business logic here, presentation only. Tokens only. The `entry.title`/`detail`
+ * are service-composed English strings (a documented localization residual — see report).
  */
-const isoDate = (d: Date): string => d.toISOString().slice(0, 10);
-
-export function MembershipTimeline({ entries }: { entries: TimelineEntry[] }) {
+export async function MembershipTimeline({ entries }: { entries: TimelineEntry[] }) {
+  const t = await getTranslations("memberships");
+  const locale = await getLocale();
   if (entries.length === 0) {
-    return <p className="text-body text-muted-foreground">No lifecycle events yet.</p>;
+    return <p className="text-body text-muted-foreground">{t("timelineEmpty")}</p>;
   }
   return (
     <ol className="flex flex-col gap-4">
@@ -25,10 +28,10 @@ export function MembershipTimeline({ entries }: { entries: TimelineEntry[] }) {
               <span className="text-body-sm text-muted-foreground">{entry.detail}</span>
             ) : null}
             <time
-              dateTime={isoDate(entry.at)}
+              dateTime={toISODate(entry.at)}
               className="tabular text-body-sm text-muted-foreground"
             >
-              {isoDate(entry.at)}
+              {formatDate(entry.at, locale, "iso")}
             </time>
           </div>
         </li>

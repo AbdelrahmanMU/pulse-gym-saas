@@ -1,5 +1,8 @@
+import type { ReactNode } from "react";
 import { MembershipStatus } from "@pulse/db";
+import { useLocale, useTranslations } from "next-intl";
 import { Alert } from "@/components/pulse/alert";
+import { formatDate } from "@/lib/format-date";
 
 /**
  * Informational (non-authoritative) context for a membership's Period (Sprint-1 UX slice).
@@ -18,24 +21,28 @@ export function MembershipPeriodNote({
   isRenewal: boolean;
   activeFreeze: { plannedDays: number; projectedEndDate: string } | null;
 }) {
+  const t = useTranslations("memberships");
+  const locale = useLocale();
   if (status === MembershipStatus.FROZEN && activeFreeze) {
     return (
-      <Alert severity="info" title="Freeze in progress">
-        This membership is paused and won’t expire while frozen. The{" "}
-        <strong>end date above stays in effect</strong> until you resume it — on resume it extends
-        by the days it stays paused. Freeze requested: {activeFreeze.plannedDays} days → about{" "}
-        <time dateTime={activeFreeze.projectedEndDate} className="tabular font-medium">
-          {activeFreeze.projectedEndDate}
-        </time>{" "}
-        if resumed as planned. That projected date is an estimate, not the saved end date.
+      <Alert severity="info" title={t("pnFreezeTitle")}>
+        {t.rich("pnFreezeBody", {
+          days: activeFreeze.plannedDays,
+          n: String(activeFreeze.plannedDays),
+          strong: (chunks: ReactNode) => <strong>{chunks}</strong>,
+          end: () => (
+            <time dateTime={activeFreeze.projectedEndDate} className="tabular font-medium">
+              {formatDate(activeFreeze.projectedEndDate, locale, "full")}
+            </time>
+          ),
+        })}
       </Alert>
     );
   }
   if (status === MembershipStatus.SCHEDULED && isRenewal) {
     return (
-      <Alert severity="info" title="Scheduled renewal">
-        This membership activates when the current membership ends — not on the start date shown
-        above. It stays scheduled until then, even if that date has already passed.
+      <Alert severity="info" title={t("pnScheduledTitle")}>
+        {t("pnScheduledBody")}
       </Alert>
     );
   }

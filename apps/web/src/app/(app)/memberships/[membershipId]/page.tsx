@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { CircleCheck } from "lucide-react";
 import { MembershipStatus, PaymentStanding } from "@pulse/db";
 import { hasPermission, PERMISSION_KEYS } from "@pulse/auth";
@@ -27,6 +28,7 @@ import type { MembershipBilling } from "@/modules/payments/service";
 import { PaymentSummary } from "@/modules/payments/ui/payment-summary";
 import { PaymentHistory } from "@/modules/payments/ui/payment-history";
 import { RecordPaymentForm } from "@/modules/payments/ui/record-payment-form";
+import { formatDate, toISODate } from "@/lib/format-date";
 
 /**
  * Membership detail (Sprint-1 Epic-4). Gated by `memberships.read`. Shows the member, the
@@ -80,6 +82,10 @@ export default async function MembershipDetailPage({
     ? await loadMembershipBilling(membershipId)
     : null;
 
+  const t = await getTranslations("memberships");
+  const locale = await getLocale();
+  const remaining = remainingDaysLabel(membership.status, membership.remainingDays);
+
   return (
     <PageContainer>
       <PageHeader
@@ -87,7 +93,7 @@ export default async function MembershipDetailPage({
         subtitle={membership.planName}
         actions={
           <Button asChild variant="secondary">
-            <Link href={`/members/${membership.memberId}`}>View member</Link>
+            <Link href={`/members/${membership.memberId}`}>{t("detailViewMember")}</Link>
           </Button>
         }
       />
@@ -98,7 +104,7 @@ export default async function MembershipDetailPage({
           isExpiringSoon={membership.isExpiringSoon}
         />
         <span className="text-body-sm text-muted-foreground">
-          {remainingDaysLabel(membership.status, membership.remainingDays)}
+          {t(remaining.key, remaining.values)}
         </span>
       </div>
 
@@ -108,7 +114,7 @@ export default async function MembershipDetailPage({
           2-column grid leads with Billing + Actions (reading order = DOM order, §5.11). */}
       <div className="grid gap-6 md:grid-cols-2">
         {billing ? (
-          <Section title="Billing">
+          <Section title={t("sectionBilling")}>
             <PaymentSummary billing={billing} />
             {canRecordPayment ? (
               // Payment is always *permitted* server-side (recordPayment is status-independent);
@@ -119,7 +125,7 @@ export default async function MembershipDetailPage({
               billing.standing === PaymentStanding.PAID ? (
                 <div className="mt-2 flex items-center gap-2 border-t border-border pt-4 text-body-sm text-muted-foreground">
                   <CircleCheck aria-hidden className="size-4 text-success-text" />
-                  <span>Paid in full — no balance due.</span>
+                  <span>{t("detailPaidInFull")}</span>
                 </div>
               ) : (
                 <div className="mt-2 border-t border-border pt-4">
@@ -131,7 +137,7 @@ export default async function MembershipDetailPage({
         ) : null}
 
         {showControls ? (
-          <Section title="Actions">
+          <Section title={t("sectionActions")}>
             <MembershipLifecycleControls
               membershipId={membership.id}
               status={membership.status}
@@ -141,31 +147,33 @@ export default async function MembershipDetailPage({
           </Section>
         ) : null}
 
-        <Section title="Period">
-          <Detail label="Start">
-            <DateValue value={membership.startDate} />
+        <Section title={t("sectionPeriod")}>
+          <Detail label={t("detailStart")}>
+            <DateValue value={membership.startDate} locale={locale} />
           </Detail>
-          <Detail label="Ends (inclusive)">
-            <DateValue value={membership.effectiveEndDate} />
+          <Detail label={t("detailEndsInclusive")}>
+            <DateValue value={membership.effectiveEndDate} locale={locale} />
           </Detail>
           {membership.activeFreeze ? (
-            <Detail label="Projected end on resume">
+            <Detail label={t("detailProjectedEnd")}>
               <span className="text-muted-foreground">
-                <DateValue value={membership.activeFreeze.projectedEndDate} />
-                {" · estimate"}
+                <DateValue value={membership.activeFreeze.projectedEndDate} locale={locale} />
+                {t("detailEstimateSuffix")}
               </span>
             </Detail>
           ) : null}
           {membership.scheduledEffectiveFrom ? (
-            <Detail label="Scheduled to start">
-              <DateValue value={membership.scheduledEffectiveFrom} />
+            <Detail label={t("detailScheduledStart")}>
+              <DateValue value={membership.scheduledEffectiveFrom} locale={locale} />
             </Detail>
           ) : null}
           {membership.totalFrozenDays > 0 ? (
-            <Detail label="Frozen days applied">{membership.totalFrozenDays}</Detail>
+            <Detail label={t("detailFrozenDays")}>{membership.totalFrozenDays}</Detail>
           ) : null}
-          <Detail label="Responsible trainer">
-            {membership.trainerName ?? <span className="text-muted-foreground">None</span>}
+          <Detail label={t("detailTrainer")}>
+            {membership.trainerName ?? (
+              <span className="text-muted-foreground">{t("detailTrainerNone")}</span>
+            )}
           </Detail>
           <MembershipPeriodNote
             status={membership.status}
@@ -174,22 +182,22 @@ export default async function MembershipDetailPage({
           />
         </Section>
 
-        <Section title="Plan (snapshot)">
-          <Detail label="Plan">{membership.planName}</Detail>
-          <Detail label="Price">
+        <Section title={t("sectionPlanSnapshot")}>
+          <Detail label={t("detailPlan")}>{membership.planName}</Detail>
+          <Detail label={t("detailPrice")}>
             <MetricValue
               value={membership.priceMinor}
               format="currency"
               currency={membership.currency}
             />
           </Detail>
-          <Detail label="Duration">
-            {formatDuration(membership.durationValue, membership.durationUnit)}
+          <Detail label={t("detailDuration")}>
+            {formatDuration(membership.durationValue, membership.durationUnit, locale)}
           </Detail>
         </Section>
 
         {billing ? (
-          <Section title="Payment history">
+          <Section title={t("sectionPaymentHistory")}>
             <PaymentHistory
               membershipId={membership.id}
               entries={billing.history}
@@ -198,7 +206,7 @@ export default async function MembershipDetailPage({
           </Section>
         ) : null}
 
-        <Section title="Lifecycle timeline">
+        <Section title={t("sectionTimeline")}>
           <MembershipTimeline entries={membership.timeline} />
         </Section>
       </div>
@@ -224,24 +232,25 @@ function Detail({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function DateValue({ value }: { value: string }) {
+function DateValue({ value, locale }: { value: string; locale: string }) {
   return (
-    <time dateTime={value} className="tabular">
-      {value}
+    <time dateTime={toISODate(value)} className="tabular">
+      {formatDate(value, locale, "full")}
     </time>
   );
 }
 
-function Forbidden() {
+async function Forbidden() {
+  const t = await getTranslations("errors");
   return (
     <PageContainer>
       <ErrorState
         variant="inline"
-        title="Access denied"
-        description="You don't have permission to view this membership. Contact your gym owner."
+        title={t("accessDenied")}
+        description={t("forbiddenBody")}
         action={
           <Button asChild variant="secondary">
-            <Link href="/memberships">Back to memberships</Link>
+            <Link href="/dashboard">{t("backToDashboard")}</Link>
           </Button>
         }
       />

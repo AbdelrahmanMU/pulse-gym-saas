@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 /**
  * Client shell for the rail's expandable cards (catalog §13.3) — expansion state and the
@@ -44,17 +45,20 @@ export function RailCardShell({
           aria-expanded={open}
           aria-controls={regionId}
           onClick={toggle}
-          className="flex min-h-11 w-full min-w-0 flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-left"
+          className="flex min-h-11 w-full min-w-0 flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-start"
         >
           {open ? (
             <ChevronDown aria-hidden className="size-4 shrink-0 text-muted-foreground" />
           ) : (
-            <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+            <ChevronRight
+              aria-hidden
+              className="size-4 shrink-0 text-muted-foreground rtl:-scale-x-100"
+            />
           )}
           {header}
         </button>
       </h3>
-      <div id={regionId} hidden={!open} className="px-4 pb-4 pl-11">
+      <div id={regionId} hidden={!open} className="px-4 pb-4 ps-11">
         {children}
       </div>
     </div>
@@ -67,6 +71,7 @@ export function RailCardShell({
  */
 export function ShowOlder({ count, children }: { count: number; children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const t = useTranslations("memberships");
   if (open) return <>{children}</>;
   return (
     <li className="py-1">
@@ -75,7 +80,7 @@ export function ShowOlder({ count, children }: { count: number; children: ReactN
         onClick={() => setOpen(true)}
         className="min-h-11 px-4 text-body-sm text-accent-text hover:underline"
       >
-        Show older · {count} more
+        {t("showOlder", { count })}
       </button>
     </li>
   );

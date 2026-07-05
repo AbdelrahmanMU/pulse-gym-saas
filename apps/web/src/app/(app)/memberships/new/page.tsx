@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError } from "@/lib/errors";
@@ -31,21 +32,20 @@ export default async function NewMembershipPage({
   const sp = await searchParams;
   const defaultMemberId = typeof sp.memberId === "string" ? sp.memberId : undefined;
 
+  const t = await getTranslations("memberships");
+  const ta = await getTranslations("actions");
+
   if (plans.length === 0 || members.length === 0) {
     return (
       <PageContainer>
-        <PageHeader title="Sell membership" />
+        <PageHeader title={t("sellTitle")} />
         <EmptyState
-          title={plans.length === 0 ? "No active plans" : "No active members"}
-          description={
-            plans.length === 0
-              ? "Create an active plan before selling a membership."
-              : "Add a member before selling a membership."
-          }
+          title={plans.length === 0 ? t("noActivePlans") : t("noActiveMembers")}
+          description={plans.length === 0 ? t("noActivePlansBody") : t("noActiveMembersBody")}
           action={
             <Button asChild>
               <Link href={plans.length === 0 ? "/plans/new" : "/members/new"}>
-                {plans.length === 0 ? "Add plan" : "Add member"}
+                {plans.length === 0 ? ta("addPlan") : ta("addMember")}
               </Link>
             </Button>
           }
@@ -56,25 +56,23 @@ export default async function NewMembershipPage({
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Sell membership"
-        subtitle="Grant a member access by selling them a plan."
-      />
+      <PageHeader title={t("sellTitle")} subtitle={t("sellSubtitle")} />
       <MembershipForm members={members} plans={plans} defaultMemberId={defaultMemberId} />
     </PageContainer>
   );
 }
 
-function Forbidden() {
+async function Forbidden() {
+  const t = await getTranslations("errors");
   return (
     <PageContainer>
       <ErrorState
         variant="inline"
-        title="Access denied"
-        description="You don't have permission to sell memberships. Contact your gym owner."
+        title={t("accessDenied")}
+        description={t("forbiddenBody")}
         action={
           <Button asChild variant="secondary">
-            <Link href="/memberships">Back to memberships</Link>
+            <Link href="/dashboard">{t("backToDashboard")}</Link>
           </Button>
         }
       />

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { FormField } from "@/components/pulse/form-field";
 import { TextInput } from "@/components/pulse/text-input";
 import { SelectInput, type SelectOption } from "@/components/pulse/select-input";
@@ -27,12 +28,17 @@ export function MembershipForm({
   plans: PlanOption[];
   defaultMemberId?: string;
 }) {
+  const t = useTranslations("memberships");
+  const locale = useLocale();
   const [state, formAction] = useActionState(createMembershipAction, INITIAL_STATE);
 
   const memberOptions: SelectOption[] = members.map((m) => ({ value: m.id, label: m.name }));
   const planOptions: SelectOption[] = plans.map((p) => ({
     value: p.id,
-    label: `${p.name} — ${formatMinorCurrency(BigInt(p.priceMinor), p.currency)}`,
+    label: t("planPriceOption", {
+      name: p.name,
+      price: formatMinorCurrency(BigInt(p.priceMinor), p.currency, locale),
+    }),
   }));
 
   return (
@@ -41,30 +47,30 @@ export function MembershipForm({
       actions={
         <>
           <Button asChild variant="secondary">
-            <Link href="/memberships">Cancel</Link>
+            <Link href="/memberships">{t("formCancel")}</Link>
           </Button>
-          <SubmitButton pendingLabel="Selling…">Sell membership</SubmitButton>
+          <SubmitButton pendingLabel={t("formPending")}>{t("formSubmit")}</SubmitButton>
         </>
       }
     >
       <FormFeedback state={state} />
 
-      <FormSection title="Membership" description="Who is buying, and which plan.">
-        <FormField label="Member" required error={fieldError(state, "memberId")}>
+      <FormSection title={t("formSectionTitle")} description={t("formSectionDesc")}>
+        <FormField label={t("formMember")} required error={fieldError(state, "memberId")}>
           <SelectInput
             name="memberId"
             options={memberOptions}
             defaultValue={defaultMemberId ?? ""}
-            placeholder="Select a member"
+            placeholder={t("formSelectMember")}
           />
         </FormField>
-        <FormField label="Plan" required error={fieldError(state, "planId")}>
-          <SelectInput name="planId" options={planOptions} placeholder="Select a plan" />
+        <FormField label={t("formPlan")} required error={fieldError(state, "planId")}>
+          <SelectInput name="planId" options={planOptions} placeholder={t("formSelectPlan")} />
         </FormField>
         <FormField
-          label="Start date"
+          label={t("formStartDate")}
           error={fieldError(state, "startDate")}
-          help="Defaults to today if left blank."
+          help={t("formStartHelp")}
         >
           <TextInput name="startDate" type="date" className="sm:w-52" />
         </FormField>

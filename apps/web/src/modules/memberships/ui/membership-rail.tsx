@@ -7,6 +7,7 @@ import {
   RefreshCw,
   TriangleAlert,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/pulse/empty-state";
 import { cn } from "@/lib/utils";
 import type { MembershipPaymentSummary } from "@/modules/payments";
@@ -42,13 +43,14 @@ export function MembershipRail({
   /** The empty rail's call to action (permission-gated by the page). */
   sellAction?: ReactNode;
 }) {
+  const t = useTranslations("memberships");
   if (timeline.memberships.length === 0) {
     return (
       <div className="flex flex-col gap-4">
         <EmptyState
           icon={<CircleOff aria-hidden />}
-          title="No memberships yet."
-          description="Sell a plan to start this member's membership story."
+          title={t("railEmptyTitle")}
+          description={t("railEmptyBody")}
           action={sellAction}
         />
         <Terminus joinedOn={timeline.joinedOn} />
@@ -123,22 +125,22 @@ export function MembershipRail({
 
 /** Non-card rail rows: connectors, gaps, the lapsed head, and the live renewal question. */
 function Glue({ segment, severedAbove }: { segment: RailSegment; severedAbove: boolean }) {
+  const t = useTranslations("memberships");
   switch (segment.kind) {
     case "gap-to-now":
       return (
         <p className="flex items-center gap-2 py-1 text-body-sm font-medium text-warning-text">
           <TriangleAlert aria-hidden className="size-4 shrink-0" />
-          No membership · {segment.days} day{segment.days === 1 ? "" : "s"} and counting
+          {t("gapToNow", { days: segment.days, n: String(segment.days) })}
         </p>
       );
     case "renewal-warning":
       return (
         <p className="flex items-center gap-2 rounded-md border border-dashed border-border-strong px-4 py-2.5 text-body-sm font-medium text-warning-text">
           <TriangleAlert aria-hidden className="size-4 shrink-0" />
-          NO RENEWAL QUEUED —{" "}
           {segment.endsInDays === 0
-            ? "current ends today"
-            : `current ends in ${segment.endsInDays} day${segment.endsInDays === 1 ? "" : "s"}`}
+            ? t("renewalWarningToday")
+            : t("renewalWarning", { days: segment.endsInDays, n: String(segment.endsInDays) })}
         </p>
       );
     case "connector":
@@ -146,7 +148,7 @@ function Glue({ segment, severedAbove }: { segment: RailSegment; severedAbove: b
         // The rail line between two chained cards; it visibly stops under a cancellation.
         <p
           className={cn(
-            "ml-6 flex items-center gap-2 border-l-2 py-1.5 pl-4 text-body-sm text-muted-foreground",
+            "ms-6 flex items-center gap-2 border-s-2 py-1.5 ps-4 text-body-sm text-muted-foreground",
             severedAbove ? "border-transparent" : "border-border",
           )}
         >
@@ -158,11 +160,11 @@ function Glue({ segment, severedAbove }: { segment: RailSegment; severedAbove: b
       return (
         <p
           className={cn(
-            "ml-6 border-l-2 border-dashed py-1.5 pl-4 text-body-sm text-muted-foreground",
+            "ms-6 border-s-2 border-dashed py-1.5 ps-4 text-body-sm text-muted-foreground",
             severedAbove ? "border-transparent" : "border-border",
           )}
         >
-          No membership · {segment.days} day{segment.days === 1 ? "" : "s"}
+          {t("gap", { days: segment.days, n: String(segment.days) })}
         </p>
       );
     default:
@@ -171,37 +173,48 @@ function Glue({ segment, severedAbove }: { segment: RailSegment; severedAbove: b
 }
 
 function ConnectorIcon({ variant }: { variant: "renewed" | "upgraded" | "smaller-plan" }) {
-  const className = "size-3.5 shrink-0";
+  // Directional arrows mirror under RTL (Authority D8.5); the refresh glyph is symmetric.
+  const className = "size-3.5 shrink-0 rtl:-scale-x-100";
   if (variant === "upgraded") return <ArrowUpRight aria-hidden className={className} />;
   if (variant === "smaller-plan") return <ArrowDownRight aria-hidden className={className} />;
-  return <RefreshCw aria-hidden className={className} />;
+  return <RefreshCw aria-hidden className="size-3.5 shrink-0" />;
+}
+
+/** Plan names are user data — bidi-isolated inside Arabic sentences (Authority D8.3). */
+function PlanName({ children }: { children: ReactNode }) {
+  return <span dir="auto">{children}</span>;
 }
 
 function ConnectorLabel({ segment }: { segment: Extract<RailSegment, { kind: "connector" }> }) {
+  const t = useTranslations("memberships");
   if (segment.variant === "renewed") {
     return (
       <span>
-        Renewed · sold <Day iso={segment.soldOn} form="short" />
+        {t.rich("connectorRenewed", { d: () => <Day iso={segment.soldOn} form="short" /> })}
       </span>
     );
   }
-  const verb = segment.variant === "upgraded" ? "Upgraded" : "Changed to a smaller plan";
+  const key = segment.variant === "upgraded" ? "connectorUpgraded" : "connectorSmaller";
   return (
     <span>
-      {verb} · {segment.fromPlan} → {segment.toPlan}
+      {t.rich(key, {
+        from: () => <PlanName>{segment.fromPlan}</PlanName>,
+        to: () => <PlanName>{segment.toPlan}</PlanName>,
+      })}
     </span>
   );
 }
 
 /** The rail's ground: the relationship, not the first contract (§D2.1). */
 function Terminus({ joinedOn, as }: { joinedOn: string | null; as?: "li" }) {
+  const t = useTranslations("memberships");
   if (!joinedOn) return null;
   const Tag = as ?? "p";
   return (
     <Tag className="flex items-center gap-2 pt-1 text-body-sm text-muted-foreground">
       <Circle aria-hidden className="size-2.5 shrink-0" />
       <span>
-        Joined the gym · <Day iso={joinedOn} />
+        {t("terminusJoined")} <Day iso={joinedOn} />
       </span>
     </Tag>
   );

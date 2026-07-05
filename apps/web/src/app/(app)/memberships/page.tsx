@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ClipboardList } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { hasPermission, PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError } from "@/lib/errors";
@@ -59,12 +60,13 @@ export default async function MembershipsPage({
   const firstRow = (result.page - 1) * result.pageSize + 1;
   const lastRow = Math.min(result.page * result.pageSize, result.total);
 
+  const t = await getTranslations("memberships");
+  const ta = await getTranslations("actions");
+  const tc = await getTranslations("common");
+
   return (
     <PageContainer>
-      <PageHeader
-        title="Memberships"
-        subtitle="Your gym's current memberships. Switch the status filter to view past periods."
-      />
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       <MembershipsToolbar query={raw.q ?? ""} status={statusValue} canCreate={canCreate} />
 
@@ -74,18 +76,18 @@ export default async function MembershipsPage({
           hasFilters ? (
             <EmptyState
               icon={<ClipboardList aria-hidden />}
-              title="No memberships match your filters"
-              description="Try a different search term or clear the filters."
+              title={t("emptyFilteredTitle")}
+              description={t("emptyFilteredBody")}
             />
           ) : (
             <EmptyState
               icon={<ClipboardList aria-hidden />}
-              title="No current memberships"
-              description="Active, scheduled, and frozen memberships appear here. Switch to “All (incl. history)” to see past periods, or sell a plan to a member."
+              title={t("emptyTitle")}
+              description={t("emptyBody")}
               action={
                 canCreate ? (
                   <Button asChild>
-                    <Link href="/memberships/new">Sell membership</Link>
+                    <Link href="/memberships/new">{ta("sellMembership")}</Link>
                   </Button>
                 ) : undefined
               }
@@ -99,27 +101,28 @@ export default async function MembershipsPage({
           page={result.page}
           totalPages={result.totalPages}
           hrefForPage={hrefForPage}
-          rangeLabel={`Showing ${firstRow}–${lastRow} of ${result.total}`}
+          rangeLabel={tc("pageRange", { from: firstRow, to: lastRow, total: result.total })}
           className="mt-4"
         />
       ) : null}
 
       {/* Mobile relocation of the single "Sell membership" primary (AP-6 / Catalog §12.2). */}
-      {canCreate ? <CreationFab label="Sell membership" href="/memberships/new" /> : null}
+      {canCreate ? <CreationFab label={ta("sellMembership")} href="/memberships/new" /> : null}
     </PageContainer>
   );
 }
 
-function Forbidden() {
+async function Forbidden() {
+  const t = await getTranslations("errors");
   return (
     <PageContainer>
       <ErrorState
         variant="inline"
-        title="Access denied"
-        description="You don't have permission to view memberships. Contact your gym owner."
+        title={t("accessDenied")}
+        description={t("forbiddenBody")}
         action={
           <Button asChild variant="secondary">
-            <Link href="/dashboard">Back to dashboard</Link>
+            <Link href="/dashboard">{t("backToDashboard")}</Link>
           </Button>
         }
       />

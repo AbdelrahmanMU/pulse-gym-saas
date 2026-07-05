@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Ban, RefreshCw, Snowflake, TrendingUp, Play } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import type { MembershipStatus } from "@pulse/db";
 import { FormField } from "@/components/pulse/form-field";
 import { TextInput } from "@/components/pulse/text-input";
@@ -66,74 +67,76 @@ export function MembershipLifecycleControls({
 
 function RenewControl({ membershipId }: { membershipId: string }) {
   const [state, action] = useActionState(renewMembershipAction, INITIAL_STATE);
+  const t = useTranslations("memberships");
   return (
     <form action={action} className="flex flex-col gap-2">
       <input type="hidden" name="membershipId" value={membershipId} />
-      <FormFeedback state={state} title="Couldn’t renew" />
-      <SubmitButton variant="secondary" pendingLabel="Renewing…">
+      <FormFeedback state={state} title={t("lcRenewErr")} />
+      <SubmitButton variant="secondary" pendingLabel={t("lcRenewPending")}>
         <RefreshCw aria-hidden className="size-4" />
-        Renew membership
+        {t("lcRenewButton")}
       </SubmitButton>
-      <p className="text-body-sm text-muted-foreground">
-        Continues access into a new period — early renewal keeps remaining days (REN-1).
-      </p>
+      <p className="text-body-sm text-muted-foreground">{t("lcRenewHelp")}</p>
     </form>
   );
 }
 
 function UpgradeControl({ membershipId, plans }: { membershipId: string; plans: PlanOption[] }) {
   const [state, action] = useActionState(upgradeMembershipAction, INITIAL_STATE);
+  const t = useTranslations("memberships");
+  const locale = useLocale();
   const options: SelectOption[] = plans.map((p) => ({
     value: p.id,
-    label: `${p.name} — ${formatMinorCurrency(BigInt(p.priceMinor), p.currency)}`,
+    label: t("planPriceOption", {
+      name: p.name,
+      price: formatMinorCurrency(BigInt(p.priceMinor), p.currency, locale),
+    }),
   }));
   return (
     <form action={action} className="flex flex-col gap-2">
       <input type="hidden" name="membershipId" value={membershipId} />
-      <FormFeedback state={state} title="Couldn’t schedule the change" />
-      <FormField label="Change to plan" error={fieldError(state, "planId")}>
-        <SelectInput name="planId" options={options} placeholder="Select a plan" />
+      <FormFeedback state={state} title={t("lcUpgradeErr")} />
+      <FormField label={t("lcUpgradeChangeTo")} error={fieldError(state, "planId")}>
+        <SelectInput name="planId" options={options} placeholder={t("lcUpgradeSelectPlan")} />
       </FormField>
-      <SubmitButton variant="secondary" pendingLabel="Scheduling…">
+      <SubmitButton variant="secondary" pendingLabel={t("lcUpgradePending")}>
         <TrendingUp aria-hidden className="size-4" />
-        Schedule upgrade / downgrade
+        {t("lcUpgradeButton")}
       </SubmitButton>
-      <p className="text-body-sm text-muted-foreground">
-        The current period runs unchanged; the new plan starts the day after it ends (UPG-1).
-      </p>
+      <p className="text-body-sm text-muted-foreground">{t("lcUpgradeHelp")}</p>
     </form>
   );
 }
 
 function FreezeControl({ membershipId }: { membershipId: string }) {
   const [state, action] = useActionState(freezeMembershipAction, INITIAL_STATE);
+  const t = useTranslations("memberships");
   return (
     <form action={action} className="flex flex-col gap-2">
       <input type="hidden" name="membershipId" value={membershipId} />
-      <FormFeedback state={state} title="Couldn’t freeze" />
-      <FormField label="Freeze for (days)" error={fieldError(state, "frozenDays")}>
+      <FormFeedback state={state} title={t("lcFreezeErr")} />
+      <FormField label={t("lcFreezeLabel")} error={fieldError(state, "frozenDays")}>
         <TextInput name="frozenDays" type="number" inputMode="numeric" min={1} className="w-28" />
       </FormField>
-      <SubmitButton variant="outline" pendingLabel="Freezing…">
+      <SubmitButton variant="outline" pendingLabel={t("lcFreezePending")}>
         <Snowflake aria-hidden className="size-4" />
-        Freeze membership
+        {t("lcFreezeButton")}
       </SubmitButton>
-      <p className="text-body-sm text-muted-foreground">
-        Pauses the clock; the end date extends by the frozen days on resume (FRZ-2).
-      </p>
+      <p className="text-body-sm text-muted-foreground">{t("lcFreezeHelp")}</p>
     </form>
   );
 }
 
 function ResumeControl({ membershipId }: { membershipId: string }) {
   const [state, action] = useActionState(resumeMembershipAction, INITIAL_STATE);
+  const t = useTranslations("memberships");
   return (
     <form action={action} className="flex flex-col gap-2">
       <input type="hidden" name="membershipId" value={membershipId} />
-      <FormFeedback state={state} title="Couldn’t resume" />
-      <SubmitButton variant="secondary" pendingLabel="Resuming…">
+      <FormFeedback state={state} title={t("lcResumeErr")} />
+      <SubmitButton variant="secondary" pendingLabel={t("lcResumePending")}>
         <Play aria-hidden className="size-4" />
-        Resume membership
+        {t("lcResumeButton")}
       </SubmitButton>
     </form>
   );
@@ -141,17 +144,16 @@ function ResumeControl({ membershipId }: { membershipId: string }) {
 
 function CancelControl({ membershipId }: { membershipId: string }) {
   const [state, action] = useActionState(cancelMembershipAction, INITIAL_STATE);
+  const t = useTranslations("memberships");
   return (
     <form action={action} className="flex flex-col gap-2">
       <input type="hidden" name="membershipId" value={membershipId} />
-      <FormFeedback state={state} title="Couldn’t cancel" />
-      <SubmitButton variant="outline" pendingLabel="Cancelling…">
+      <FormFeedback state={state} title={t("lcCancelErr")} />
+      <SubmitButton variant="outline" pendingLabel={t("lcCancelPending")}>
         <Ban aria-hidden className="size-4" />
-        Cancel membership
+        {t("lcCancelButton")}
       </SubmitButton>
-      <p className="text-body-sm text-muted-foreground">
-        Ends access immediately and can’t be undone — create a new membership instead (REN-4).
-      </p>
+      <p className="text-body-sm text-muted-foreground">{t("lcCancelHelp")}</p>
     </form>
   );
 }
