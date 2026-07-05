@@ -1,13 +1,14 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTranslations } from "next-intl";
 import { FormField } from "@/components/pulse/form-field";
 import { SelectInput, type SelectOption } from "@/components/pulse/select-input";
 import { SubmitButton } from "@/components/pulse/form-layout";
 import { Button } from "@/components/pulse/button";
 import { assignTrainerAction, unassignTrainerAction } from "../actions";
 import type { TrainerOption } from "../service";
-import { fieldError, FormFeedback, INITIAL_STATE } from "./form-state";
+import { useFieldError, FormFeedback, INITIAL_STATE } from "./form-state";
 
 /**
  * Assign / reassign / unassign a member's responsible trainer (ASN-1; gated by
@@ -26,6 +27,8 @@ export function AssignTrainerForm({
 }) {
   const [assignState, assign] = useActionState(assignTrainerAction, INITIAL_STATE);
   const [unassignState, unassign] = useActionState(unassignTrainerAction, INITIAL_STATE);
+  const t = useTranslations("members");
+  const fieldError = useFieldError();
 
   const selectOptions: SelectOption[] = options.map((o) => ({ value: o.gymUserId, label: o.name }));
 
@@ -33,18 +36,18 @@ export function AssignTrainerForm({
     <div className="flex flex-col gap-3">
       <form action={assign} className="flex flex-col gap-3">
         <input type="hidden" name="memberId" value={memberId} />
-        <FormField label="Responsible trainer" error={fieldError(assignState, "trainerGymUserId")}>
+        <FormField label={t("atLabel")} error={fieldError(assignState, "trainerGymUserId")}>
           <SelectInput
             name="trainerGymUserId"
             options={selectOptions}
             defaultValue={currentTrainerGymUserId ?? ""}
-            placeholder="Select a staff member"
+            placeholder={t("atPlaceholder")}
           />
         </FormField>
-        <FormFeedback state={assignState} successMessage="Trainer updated." />
+        <FormFeedback state={assignState} successMessage={t("atSuccess")} />
         <div className="flex items-center gap-2">
-          <SubmitButton variant="secondary" pendingLabel="Saving…">
-            Save trainer
+          <SubmitButton variant="secondary" pendingLabel={t("fmSaving")}>
+            {t("atSave")}
           </SubmitButton>
         </div>
       </form>
@@ -52,9 +55,9 @@ export function AssignTrainerForm({
       {currentTrainerGymUserId ? (
         <form action={unassign}>
           <input type="hidden" name="memberId" value={memberId} />
-          <FormFeedback state={unassignState} successMessage="Trainer removed." />
+          <FormFeedback state={unassignState} successMessage={t("atRemoveSuccess")} />
           <Button type="submit" variant="ghost" size="sm">
-            Remove trainer
+            {t("atRemove")}
           </Button>
         </form>
       ) : null}

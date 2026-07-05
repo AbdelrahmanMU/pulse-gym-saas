@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTranslations } from "next-intl";
 import { Archive, RotateCcw } from "lucide-react";
 import { SubmitButton } from "@/components/pulse/form-layout";
 import { archiveMemberAction, reactivateMemberAction } from "../actions";
@@ -26,6 +27,7 @@ export function MemberArchiveControls({
 }) {
   const [archiveState, archive] = useActionState(archiveMemberAction, INITIAL_STATE);
   const [reactivateState, reactivate] = useActionState(reactivateMemberAction, INITIAL_STATE);
+  const t = useTranslations("members");
 
   if (status === "ACTIVE") {
     if (!canArchive) return null;
@@ -33,9 +35,9 @@ export function MemberArchiveControls({
       <form action={archive} className="flex flex-col gap-2">
         <input type="hidden" name="memberId" value={memberId} />
         <FormFeedback state={archiveState} />
-        <SubmitButton variant="outline" pendingLabel="Archiving…">
+        <SubmitButton variant="outline" pendingLabel={t("archivePending")}>
           <Archive aria-hidden className="size-4" />
-          Archive member
+          {t("archiveButton")}
         </SubmitButton>
       </form>
     );
@@ -46,9 +48,9 @@ export function MemberArchiveControls({
     <form action={reactivate} className="flex flex-col gap-2">
       <input type="hidden" name="memberId" value={memberId} />
       <FormFeedback state={reactivateState} />
-      <SubmitButton variant="secondary" pendingLabel="Reactivating…">
+      <SubmitButton variant="secondary" pendingLabel={t("reactivatePending")}>
         <RotateCcw aria-hidden className="size-4" />
-        Reactivate member
+        {t("reactivateButton")}
       </SubmitButton>
     </form>
   );

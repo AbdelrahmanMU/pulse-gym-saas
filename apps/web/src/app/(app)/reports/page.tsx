@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CalendarClock, CircleDollarSign, ClipboardList, Wallet } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError } from "@/lib/errors";
@@ -11,33 +12,6 @@ import { ReportForbidden } from "@/modules/reports/ui/report-forbidden";
  * Reports hub (Sprint-1 Epic-8). Gated by `reports.view` (inline Forbidden on deny). Links to the four
  * operational reports; each report page composes its data from the existing read models. Routing only.
  */
-const REPORTS = [
-  {
-    href: "/reports/revenue",
-    label: "Revenue",
-    description: "Today, this week, this month, and a custom date range.",
-    icon: <Wallet aria-hidden />,
-  },
-  {
-    href: "/reports/memberships",
-    label: "Memberships",
-    description: "Counts by status with filtering.",
-    icon: <ClipboardList aria-hidden />,
-  },
-  {
-    href: "/reports/outstanding",
-    label: "Outstanding balances",
-    description: "Member, membership, price, paid, and balance due.",
-    icon: <CircleDollarSign aria-hidden />,
-  },
-  {
-    href: "/reports/expiring",
-    label: "Expiring memberships",
-    description: "Within 7 days, within 30 days, and already expired.",
-    icon: <CalendarClock aria-hidden />,
-  },
-];
-
 export default async function ReportsPage() {
   try {
     await requirePermission(PERMISSION_KEYS.REPORTS_VIEW);
@@ -46,11 +20,39 @@ export default async function ReportsPage() {
     throw error;
   }
 
+  const t = await getTranslations("reports");
+  const reports = [
+    {
+      href: "/reports/revenue",
+      label: t("revenueLabel"),
+      description: t("revenueDesc"),
+      icon: <Wallet aria-hidden />,
+    },
+    {
+      href: "/reports/memberships",
+      label: t("membershipsLabel"),
+      description: t("membershipsDesc"),
+      icon: <ClipboardList aria-hidden />,
+    },
+    {
+      href: "/reports/outstanding",
+      label: t("outstandingLabel"),
+      description: t("outstandingDesc"),
+      icon: <CircleDollarSign aria-hidden />,
+    },
+    {
+      href: "/reports/expiring",
+      label: t("expiringLabel"),
+      description: t("expiringDesc"),
+      icon: <CalendarClock aria-hidden />,
+    },
+  ];
+
   return (
     <PageContainer>
-      <PageHeader title="Reports" subtitle="Operational reports over your gym’s live data." />
+      <PageHeader title={t("hubTitle")} subtitle={t("hubSubtitle")} />
       <div className="grid gap-4 sm:grid-cols-2">
-        {REPORTS.map((r) => (
+        {reports.map((r) => (
           <Link
             key={r.href}
             href={r.href}

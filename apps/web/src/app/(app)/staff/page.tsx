@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Users2 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { hasPermission, PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError } from "@/lib/errors";
@@ -43,6 +44,10 @@ export default async function StaffPage({
   const result = await loadStaff(raw);
   const canCreate = hasPermission(principal.permissions, PERMISSION_KEYS.STAFF_INVITE);
 
+  const t = await getTranslations("staff");
+  const tc = await getTranslations("common");
+  const ta = await getTranslations("actions");
+
   const statusValue = raw.status ?? "ACTIVE";
   const hasFilters = Boolean(raw.q) || statusValue !== "ACTIVE";
 
@@ -59,10 +64,7 @@ export default async function StaffPage({
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Staff"
-        subtitle="The people who run your gym — roles, access, and status."
-      />
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       <StaffToolbar query={raw.q ?? ""} status={statusValue} canCreate={canCreate} />
 
@@ -72,18 +74,18 @@ export default async function StaffPage({
           hasFilters ? (
             <EmptyState
               icon={<Users2 aria-hidden />}
-              title="No staff match your filters"
-              description="Try a different search term or clear the filters."
+              title={t("emptyFilteredTitle")}
+              description={t("emptyFilteredBody")}
             />
           ) : (
             <EmptyState
               icon={<Users2 aria-hidden />}
-              title="No staff yet"
-              description="Add your first staff member to give your team access."
+              title={t("emptyTitle")}
+              description={t("emptyBody")}
               action={
                 canCreate ? (
                   <Button asChild>
-                    <Link href="/staff/new">Add staff</Link>
+                    <Link href="/staff/new">{ta("addStaff")}</Link>
                   </Button>
                 ) : undefined
               }
@@ -97,27 +99,32 @@ export default async function StaffPage({
           page={result.page}
           totalPages={result.totalPages}
           hrefForPage={hrefForPage}
-          rangeLabel={`Showing ${firstRow}–${lastRow} of ${result.total}`}
+          rangeLabel={tc("pageRange", {
+            from: String(firstRow),
+            to: String(lastRow),
+            total: String(result.total),
+          })}
           className="mt-4"
         />
       ) : null}
 
       {/* Mobile relocation of the single "Add staff" primary (AP-6 / Catalog §12.2). */}
-      {canCreate ? <CreationFab label="Add staff" href="/staff/new" /> : null}
+      {canCreate ? <CreationFab label={ta("addStaff")} href="/staff/new" /> : null}
     </PageContainer>
   );
 }
 
-function Forbidden() {
+async function Forbidden() {
+  const t = await getTranslations("errors");
   return (
     <PageContainer>
       <ErrorState
         variant="inline"
-        title="Access denied"
-        description="You don't have permission to view staff. Contact your gym owner."
+        title={t("accessDenied")}
+        description={t("forbiddenBody")}
         action={
           <Button asChild variant="secondary">
-            <Link href="/dashboard">Back to dashboard</Link>
+            <Link href="/dashboard">{t("backToDashboard")}</Link>
           </Button>
         }
       />

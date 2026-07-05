@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Archive, RotateCcw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { SubmitButton } from "@/components/pulse/form-layout";
 import { archivePlanAction, restorePlanAction } from "../actions";
 import { FormFeedback, INITIAL_STATE } from "./form-state";
@@ -15,15 +16,16 @@ import { FormFeedback, INITIAL_STATE } from "./form-state";
 export function PlanLifecycleControls({ planId, isActive }: { planId: string; isActive: boolean }) {
   const [archiveState, archive] = useActionState(archivePlanAction, INITIAL_STATE);
   const [restoreState, restore] = useActionState(restorePlanAction, INITIAL_STATE);
+  const t = useTranslations("plans");
 
   if (isActive) {
     return (
       <form action={archive} className="flex flex-col gap-2">
         <input type="hidden" name="planId" value={planId} />
         <FormFeedback state={archiveState} />
-        <SubmitButton variant="outline" pendingLabel="Archiving…">
+        <SubmitButton variant="outline" pendingLabel={t("lcArchivePending")}>
           <Archive aria-hidden className="size-4" />
-          Archive plan
+          {t("lcArchiveButton")}
         </SubmitButton>
       </form>
     );
@@ -33,9 +35,9 @@ export function PlanLifecycleControls({ planId, isActive }: { planId: string; is
     <form action={restore} className="flex flex-col gap-2">
       <input type="hidden" name="planId" value={planId} />
       <FormFeedback state={restoreState} />
-      <SubmitButton variant="secondary" pendingLabel="Restoring…">
+      <SubmitButton variant="secondary" pendingLabel={t("lcRestorePending")}>
         <RotateCcw aria-hidden className="size-4" />
-        Restore plan
+        {t("lcRestoreButton")}
       </SubmitButton>
     </form>
   );

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError, NotFoundError } from "@/lib/errors";
@@ -37,29 +38,31 @@ export default async function EditMemberPage({
     throw error;
   }
 
+  const t = await getTranslations("members");
   return (
     <PageContainer width="narrow">
-      <PageHeader title="Edit member" subtitle={member.fullName} />
+      <PageHeader title={t("editTitle")} subtitle={<span dir="auto">{member.fullName}</span>} />
       <MemberForm
         action={updateMemberAction}
         initial={member}
         memberId={member.id}
-        submitLabel="Save changes"
+        submitLabel={t("editSubmit")}
       />
     </PageContainer>
   );
 }
 
-function Forbidden() {
+async function Forbidden() {
+  const t = await getTranslations("errors");
   return (
     <PageContainer width="narrow">
       <ErrorState
         variant="inline"
-        title="Access denied"
-        description="You don't have permission to edit members. Contact your gym owner."
+        title={t("accessDenied")}
+        description={t("forbiddenBody")}
         action={
           <Button asChild variant="secondary">
-            <Link href="/members">Back to members</Link>
+            <Link href="/dashboard">{t("backToDashboard")}</Link>
           </Button>
         }
       />

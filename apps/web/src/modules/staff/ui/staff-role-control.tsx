@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTranslations } from "next-intl";
 import { FormField } from "@/components/pulse/form-field";
 import { SelectInput } from "@/components/pulse/select-input";
 import { SubmitButton } from "@/components/pulse/form-layout";
@@ -28,14 +29,13 @@ export function StaffRoleControl({
   isSelf: boolean;
 }) {
   const [state, action] = useActionState(assignRoleAction, INITIAL_STATE);
+  const t = useTranslations("staff");
 
   if (isSelf) {
     return (
       <p className="text-body text-foreground">
         {currentRoleName}
-        <span className="ml-2 text-body-sm text-muted-foreground">
-          (you can't change your own role)
-        </span>
+        <span className="ms-2 text-body-sm text-muted-foreground">{t("rcSelfNote")}</span>
       </p>
     );
   }
@@ -43,16 +43,16 @@ export function StaffRoleControl({
   return (
     <form action={action} className="flex flex-col gap-3">
       <input type="hidden" name="gymUserId" value={gymUserId} />
-      <FormFeedback state={state} successMessage="Role updated." />
-      <FormField label="Role" error={fieldError(state, "roleId")}>
+      <FormFeedback state={state} successMessage={t("rcRoleUpdated")} />
+      <FormField label={t("rcRole")} error={fieldError(state, "roleId")}>
         <SelectInput
           name="roleId"
           defaultValue={currentRoleId}
           options={roleOptions.map((r) => ({ value: r.id, label: r.name }))}
         />
       </FormField>
-      <SubmitButton variant="secondary" pendingLabel="Updating…" className="self-start">
-        Update role
+      <SubmitButton variant="secondary" pendingLabel={t("rcUpdating")} className="self-start">
+        {t("rcUpdateRole")}
       </SubmitButton>
     </form>
   );

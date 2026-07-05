@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Plus, Search } from "lucide-react";
 import { TextInput } from "@/components/pulse/text-input";
 import { SelectInput, type SelectOption } from "@/components/pulse/select-input";
@@ -14,12 +15,6 @@ import { FilterSheet } from "@/components/pulse/filter-sheet";
  * filter, driven through the URL query (shareable, back-button correct) — the RSC list page
  * reads them. Any change resets to page 1. Catalogued components + tokens only.
  */
-const STATUS_OPTIONS: SelectOption[] = [
-  { value: "ACTIVE", label: "Active" },
-  { value: "ARCHIVED", label: "Archived" },
-  { value: "ALL", label: "All statuses" },
-];
-
 export function PlansToolbar({
   query,
   status,
@@ -32,7 +27,16 @@ export function PlansToolbar({
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const t = useTranslations("plans");
+  const ts = useTranslations("status");
+  const ta = useTranslations("actions");
   const [q, setQ] = useState(query);
+
+  const statusOptions: SelectOption[] = [
+    { value: "ACTIVE", label: ts("planAvailable") },
+    { value: "ARCHIVED", label: ts("planRetired") },
+    { value: "ALL", label: t("filterAll") },
+  ];
 
   function navigate(next: URLSearchParams): void {
     next.delete("page");
@@ -59,8 +63,8 @@ export function PlansToolbar({
   // inline in the toolbar ≥md, inside the FilterSheet <md.
   const statusFilter = (
     <SelectInput
-      aria-label="Filter by status"
-      options={STATUS_OPTIONS}
+      aria-label={t("filterStatusAria")}
+      options={statusOptions}
       value={status}
       onChange={(e) => onStatus(e.target.value)}
       className="md:w-40"
@@ -77,13 +81,13 @@ export function PlansToolbar({
         >
           <TextInput
             type="search"
-            aria-label="Search plans by name or description"
-            placeholder="Search plans…"
+            aria-label={t("searchAria")}
+            placeholder={t("searchPlaceholder")}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             className="md:w-64"
           />
-          <Button type="submit" variant="secondary" aria-label="Search">
+          <Button type="submit" variant="secondary" aria-label={t("searchButton")}>
             <Search aria-hidden className="size-4" />
           </Button>
         </form>
@@ -97,7 +101,7 @@ export function PlansToolbar({
         <Button asChild className="max-md:hidden">
           <Link href="/plans/new">
             <Plus aria-hidden className="size-4" />
-            Add plan
+            {ta("addPlan")}
           </Link>
         </Button>
       ) : null}

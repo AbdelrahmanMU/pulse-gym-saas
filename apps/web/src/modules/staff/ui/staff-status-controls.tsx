@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Ban, RotateCcw } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { SubmitButton } from "@/components/pulse/form-layout";
 import type { StaffStatus } from "../service";
 import { reactivateStaffAction, suspendStaffAction } from "../actions";
@@ -26,11 +27,10 @@ export function StaffStatusControls({
 }) {
   const [suspendState, suspend] = useActionState(suspendStaffAction, INITIAL_STATE);
   const [reactivateState, reactivate] = useActionState(reactivateStaffAction, INITIAL_STATE);
+  const t = useTranslations("staff");
 
   if (isSelf) {
-    return (
-      <p className="text-body-sm text-muted-foreground">You can't suspend your own account.</p>
-    );
+    return <p className="text-body-sm text-muted-foreground">{t("scSelfNote")}</p>;
   }
 
   if (status === "ACTIVE") {
@@ -38,13 +38,10 @@ export function StaffStatusControls({
       <form action={suspend} className="flex flex-col gap-2">
         <input type="hidden" name="gymUserId" value={gymUserId} />
         <FormFeedback state={suspendState} />
-        <p className="text-body-sm text-muted-foreground">
-          Suspending blocks new sign-ins and unassigns this person from any members they coach (not
-          restored automatically on reactivation). An active session may persist until it expires.
-        </p>
-        <SubmitButton variant="outline" pendingLabel="Suspending…">
+        <p className="text-body-sm text-muted-foreground">{t("scSuspendNote")}</p>
+        <SubmitButton variant="outline" pendingLabel={t("scSuspendPending")}>
           <Ban aria-hidden className="size-4" />
-          Suspend staff
+          {t("scSuspendButton")}
         </SubmitButton>
       </form>
     );
@@ -54,9 +51,9 @@ export function StaffStatusControls({
     <form action={reactivate} className="flex flex-col gap-2">
       <input type="hidden" name="gymUserId" value={gymUserId} />
       <FormFeedback state={reactivateState} />
-      <SubmitButton variant="secondary" pendingLabel="Reactivating…">
+      <SubmitButton variant="secondary" pendingLabel={t("scReactivatePending")}>
         <RotateCcw aria-hidden className="size-4" />
-        Reactivate staff
+        {t("scReactivateButton")}
       </SubmitButton>
     </form>
   );

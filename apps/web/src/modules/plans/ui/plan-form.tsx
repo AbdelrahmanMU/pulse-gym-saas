@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { FormField } from "@/components/pulse/form-field";
 import { TextInput } from "@/components/pulse/text-input";
 import { TextArea } from "@/components/pulse/text-area";
@@ -20,18 +21,12 @@ import { fieldError, FormFeedback, INITIAL_STATE } from "./form-state";
  */
 type PlanFormAction = (state: ActionState, form: FormData) => Promise<ActionState>;
 
-const UNIT_OPTIONS: SelectOption[] = [
-  { value: "DAY", label: "Day(s)" },
-  { value: "WEEK", label: "Week(s)" },
-  { value: "MONTH", label: "Month(s)" },
-];
-
 export function PlanForm({
   action,
   currency,
   initial,
   planId,
-  submitLabel = "Save plan",
+  submitLabel,
 }: {
   action: PlanFormAction;
   currency: string;
@@ -40,6 +35,13 @@ export function PlanForm({
   submitLabel?: string;
 }) {
   const [state, formAction] = useActionState(action, INITIAL_STATE);
+  const t = useTranslations("plans");
+
+  const unitOptions: SelectOption[] = [
+    { value: "DAY", label: t("unitDay") },
+    { value: "WEEK", label: t("unitWeek") },
+    { value: "MONTH", label: t("unitMonth") },
+  ];
 
   return (
     <FormLayout
@@ -47,26 +49,28 @@ export function PlanForm({
       actions={
         <>
           <Button asChild variant="secondary">
-            <Link href={planId ? `/plans/${planId}` : "/plans"}>Cancel</Link>
+            <Link href={planId ? `/plans/${planId}` : "/plans"}>{t("formCancel")}</Link>
           </Button>
-          <SubmitButton pendingLabel="Saving…">{submitLabel}</SubmitButton>
+          <SubmitButton pendingLabel={t("formPending")}>
+            {submitLabel ?? t("formSavePlan")}
+          </SubmitButton>
         </>
       }
     >
       <FormFeedback state={state} />
       {planId ? <input type="hidden" name="planId" value={planId} /> : null}
 
-      <FormSection title="Plan" description="What members are buying.">
-        <FormField label="Name" required error={fieldError(state, "name")}>
+      <FormSection title={t("formSectionPlan")} description={t("formSectionPlanDesc")}>
+        <FormField label={t("formName")} required error={fieldError(state, "name")}>
           <TextInput name="name" defaultValue={initial?.name ?? ""} />
         </FormField>
-        <FormField label="Description" error={fieldError(state, "description")}>
+        <FormField label={t("formDescription")} error={fieldError(state, "description")}>
           <TextArea name="description" defaultValue={initial?.description ?? ""} rows={3} />
         </FormField>
       </FormSection>
 
-      <FormSection title="Terms" description="Duration and price (in your gym's currency).">
-        <FormField label="Duration" required error={fieldError(state, "durationValue")}>
+      <FormSection title={t("formSectionTerms")} description={t("formSectionTermsDesc")}>
+        <FormField label={t("formDuration")} required error={fieldError(state, "durationValue")}>
           <div className="flex gap-2">
             <TextInput
               name="durationValue"
@@ -78,13 +82,13 @@ export function PlanForm({
             />
             <SelectInput
               name="durationUnit"
-              options={UNIT_OPTIONS}
+              options={unitOptions}
               defaultValue={initial?.durationUnit ?? "MONTH"}
-              aria-label="Duration unit"
+              aria-label={t("formDurationUnitAria")}
             />
           </div>
         </FormField>
-        <FormField label="Price" required error={fieldError(state, "price")}>
+        <FormField label={t("formPrice")} required error={fieldError(state, "price")}>
           <CurrencyInput name="price" currency={currency} defaultMinor={initial?.priceMinor} />
         </FormField>
       </FormSection>

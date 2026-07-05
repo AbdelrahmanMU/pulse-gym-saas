@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { MetricValue } from "@/components/pulse/metric-value";
 import type { MembershipBilling } from "../service";
 import { PaymentStandingBadge } from "./payment-standing-badge";
@@ -6,11 +7,12 @@ import { PaymentStandingBadge } from "./payment-standing-badge";
  * Outstanding-balance panel — Price / Total Paid / Remaining, all **derived** from the immutable
  * ledger (never stored), plus the derived Payment Standing badge. Money renders via the catalogued
  * MetricValue (mono-tabular, exact minor units). A negative remaining means an overpayment and is
- * labelled as credit. Display-only; tokens only.
+ * labelled as credit. Async server component (reads the active locale). Display-only; tokens only.
  */
-export function PaymentSummary({ billing }: { billing: MembershipBilling }) {
+export async function PaymentSummary({ billing }: { billing: MembershipBilling }) {
+  const t = await getTranslations("payments");
   const overpaid = BigInt(billing.remainingMinor) < 0n;
-  const remainingLabel = overpaid ? "Credit (overpaid)" : "Remaining balance";
+  const remainingLabel = overpaid ? t("creditOverpaid") : t("remainingBalance");
   const remainingMinor = overpaid
     ? (-BigInt(billing.remainingMinor)).toString()
     : billing.remainingMinor;
@@ -18,14 +20,14 @@ export function PaymentSummary({ billing }: { billing: MembershipBilling }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <span className="text-body-sm text-muted-foreground">Standing</span>
+        <span className="text-body-sm text-muted-foreground">{t("standing")}</span>
         <PaymentStandingBadge standing={billing.standing} />
       </div>
       <dl className="flex flex-col gap-3">
-        <Line label="Membership price">
+        <Line label={t("membershipPrice")}>
           <MetricValue value={billing.priceMinor} format="currency" currency={billing.currency} />
         </Line>
-        <Line label="Total paid">
+        <Line label={t("totalPaid")}>
           <MetricValue
             value={billing.totalPaidMinor}
             format="currency"

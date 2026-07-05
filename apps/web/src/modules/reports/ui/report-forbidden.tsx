@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { PageContainer } from "@/components/pulse/page-container";
 import { ErrorState } from "@/components/pulse/error-state";
 import { Button } from "@/components/pulse/button";
@@ -8,16 +9,17 @@ import { Button } from "@/components/pulse/button";
  * instead of the report (the read model raises `AuthorizationError`, caught at the page). Mirrors the
  * memberships/notifications Forbidden pattern — a 403 shown inline, never a leaked 404/500.
  */
-export function ReportForbidden() {
+export async function ReportForbidden() {
+  const t = await getTranslations("errors");
   return (
     <PageContainer>
       <ErrorState
         variant="inline"
-        title="Access denied"
-        description="You don’t have permission to view reports. Contact your gym owner."
+        title={t("accessDenied")}
+        description={t("forbiddenBody")}
         action={
           <Button asChild variant="secondary">
-            <Link href="/dashboard">Back to dashboard</Link>
+            <Link href="/dashboard">{t("backToDashboard")}</Link>
           </Button>
         }
       />

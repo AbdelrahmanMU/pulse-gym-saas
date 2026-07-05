@@ -1,5 +1,7 @@
 import { PaymentEntryType } from "@pulse/db";
+import { getLocale, getTranslations } from "next-intl/server";
 import { cn } from "@/lib/utils";
+import { formatDate, toISODate } from "@/lib/format-date";
 import { MetricValue } from "@/components/pulse/metric-value";
 import { EmptyState } from "@/components/pulse/empty-state";
 import type { PaymentHistoryEntry } from "../service";
@@ -10,11 +12,9 @@ import { VoidPaymentControl } from "./void-payment-control";
  * Payment history — the chronological (append-order) ledger for a membership: date, amount, method,
  * recorder, note, and a **running total**. Voided payments render struck + marked; a VOID entry
  * renders as a reversal. Per-row void controls appear only when the caller passes `canVoid` (the
- * page resolves `payments.void`). Display-only; tokens only.
+ * page resolves `payments.void`). Async server component (locale-aware). Display-only; tokens only.
  */
-const isoDate = (d: Date): string => d.toISOString().slice(0, 10);
-
-export function PaymentHistory({
+export async function PaymentHistory({
   membershipId,
   entries,
   canVoid,
@@ -23,13 +23,10 @@ export function PaymentHistory({
   entries: PaymentHistoryEntry[];
   canVoid: boolean;
 }) {
+  const t = await getTranslations("payments");
+  const locale = await getLocale();
   if (entries.length === 0) {
-    return (
-      <EmptyState
-        title="No payments yet"
-        description="Record the first payment to start tracking this membership’s balance."
-      />
-    );
+    return <EmptyState title={t("historyEmptyTitle")} description={t("historyEmptyBody")} />;
   }
 
   return (
@@ -49,19 +46,20 @@ export function PaymentHistory({
                       entry.isVoided && "text-muted-foreground line-through",
                     )}
                   >
-                    {isVoidEntry ? "Void" : paymentMethodLabel(entry.method)}
+                    {isVoidEntry ? t("voidEntry") : paymentMethodLabel(entry.method, locale)}
                   </span>
                   {entry.isVoided ? (
                     <span className="text-eyebrow font-semibold uppercase tracking-wide text-muted-foreground">
-                      Voided
+                      {t("voidedBadge")}
                     </span>
                   ) : null}
                 </span>
                 <time
-                  dateTime={isoDate(entry.receivedAt)}
+                  dateTime={toISODate(entry.receivedAt)}
                   className="tabular text-body-sm text-muted-foreground"
                 >
-                  {isoDate(entry.receivedAt)} · {entry.recordedByName}
+                  {formatDate(entry.receivedAt, locale, "iso")} ·{" "}
+                  <span dir="auto">{entry.recordedByName}</span>
                 </time>
               </div>
               <div className="flex flex-col items-end gap-0.5">
@@ -72,7 +70,7 @@ export function PaymentHistory({
                   className={cn(entry.isVoided && "text-muted-foreground line-through")}
                 />
                 <span className="text-body-sm text-muted-foreground">
-                  Balance paid:{" "}
+                  {t("balancePaid")}{" "}
                   <MetricValue
                     value={entry.runningTotalMinor}
                     format="currency"
@@ -85,7 +83,9 @@ export function PaymentHistory({
 
             {entry.note ? <p className="text-body-sm text-muted-foreground">{entry.note}</p> : null}
             {isVoidEntry && entry.voidReason ? (
-              <p className="text-body-sm text-muted-foreground">Reason: {entry.voidReason}</p>
+              <p className="text-body-sm text-muted-foreground">
+                {t("reasonPrefix")} <span dir="auto">{entry.voidReason}</span>
+              </p>
             ) : null}
 
             {canVoid && entry.isVoidable ? (

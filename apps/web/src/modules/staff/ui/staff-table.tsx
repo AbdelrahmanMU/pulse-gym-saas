@@ -1,65 +1,71 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { getLocale, getTranslations } from "next-intl/server";
 import { DataTable, type DataTableColumn } from "@/components/pulse/data-table";
+import { formatDate, toISODate } from "@/lib/format-date";
 import type { StaffRow } from "../service";
 import { StaffStatusBadge } from "./staff-status-badge";
 
 /**
  * Staff table — maps `StaffRow`s onto the canonical DataTable (Catalog §DataTable). The name links
- * to the staff detail page (accessible row navigation without bespoke JS); status uses the
- * StaffStatusBadge (icon + label + token); Last login uses `<time>` with tabular-mono, or "Never".
- * Server component — presentation only.
+ * to the staff detail page; status uses the StaffStatusBadge (icon + label + token); Last login uses
+ * `<time>` with tabular-mono, or "Never". Async server component so headers/dates read the locale.
  */
-function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
+export async function StaffTable({ rows, empty }: { rows: StaffRow[]; empty?: ReactNode }) {
+  const t = await getTranslations("staff");
+  const locale = await getLocale();
 
-const columns: DataTableColumn<StaffRow>[] = [
-  {
-    key: "name",
-    header: "Name",
-    render: (s) => (
-      <Link href={`/staff/${s.id}`} className="font-medium text-foreground hover:underline">
-        {s.displayName}
-      </Link>
-    ),
-  },
-  {
-    key: "role",
-    header: "Role",
-    render: (s) => <span>{s.roleName}</span>,
-  },
-  {
-    key: "status",
-    header: "Status",
-    render: (s) => <StaffStatusBadge status={s.status} size="sm" />,
-  },
-  {
-    key: "email",
-    header: "Email",
-    priority: 2,
-    render: (s) => <span className="text-body-sm text-muted-foreground">{s.email}</span>,
-  },
-  {
-    key: "lastLogin",
-    header: "Last login",
-    priority: 3,
-    numeric: true,
-    render: (s) =>
-      s.lastLoginAt ? (
-        <time dateTime={s.lastLoginAt.toISOString()}>{isoDate(s.lastLoginAt)}</time>
-      ) : (
-        <span className="text-muted-foreground">Never</span>
+  const columns: DataTableColumn<StaffRow>[] = [
+    {
+      key: "name",
+      header: t("colName"),
+      render: (s) => (
+        <Link href={`/staff/${s.id}`} className="font-medium text-foreground hover:underline">
+          {s.displayName}
+        </Link>
       ),
-  },
-];
+    },
+    {
+      key: "role",
+      header: t("colRole"),
+      render: (s) => <span>{s.roleName}</span>,
+    },
+    {
+      key: "status",
+      header: t("colStatus"),
+      render: (s) => <StaffStatusBadge status={s.status} size="sm" />,
+    },
+    {
+      key: "email",
+      header: t("colEmail"),
+      priority: 2,
+      render: (s) => (
+        <span dir="ltr" className="text-body-sm text-muted-foreground">
+          {s.email}
+        </span>
+      ),
+    },
+    {
+      key: "lastLogin",
+      header: t("colLastLogin"),
+      priority: 3,
+      numeric: true,
+      render: (s) =>
+        s.lastLoginAt ? (
+          <time dateTime={toISODate(s.lastLoginAt)}>
+            {formatDate(s.lastLoginAt, locale, "iso")}
+          </time>
+        ) : (
+          <span className="text-muted-foreground">{t("lastLoginNever")}</span>
+        ),
+    },
+  ];
 
-/**
- * AP-1 mobile card — operational-first order (v1.2 §6 / adaptive-design-report §9):
- * P0 Active/Revoked status · role → P1 name (link) → P2 email · last login.
- */
-function StaffCard(s: StaffRow) {
-  return (
+  /**
+   * AP-1 mobile card — operational-first order (v1.2 §6 / adaptive-design-report §9):
+   * P0 Active/Revoked status · role → P1 name (link) → P2 email · last login.
+   */
+  const renderCard = (s: StaffRow): ReactNode => (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-3">
         <StaffStatusBadge status={s.status} size="sm" />
@@ -72,31 +78,31 @@ function StaffCard(s: StaffRow) {
         {s.displayName}
       </Link>
       <div className="flex flex-col text-body-sm text-muted-foreground">
-        <span>{s.email}</span>
+        <span dir="ltr" className="text-start">
+          {s.email}
+        </span>
         <span>
-          Last login:{" "}
+          {t("cardLastLogin")}{" "}
           {s.lastLoginAt ? (
-            <time dateTime={s.lastLoginAt.toISOString()} className="tabular">
-              {isoDate(s.lastLoginAt)}
+            <time dateTime={toISODate(s.lastLoginAt)} className="tabular">
+              {formatDate(s.lastLoginAt, locale, "iso")}
             </time>
           ) : (
-            "Never"
+            t("lastLoginNever")
           )}
         </span>
       </div>
     </div>
   );
-}
 
-export function StaffTable({ rows, empty }: { rows: StaffRow[]; empty?: ReactNode }) {
   return (
     <DataTable
       columns={columns}
       rows={rows}
       rowKey={(s) => s.id}
-      caption="Staff"
+      caption={t("caption")}
       empty={empty}
-      renderCard={StaffCard}
+      renderCard={renderCard}
     />
   );
 }

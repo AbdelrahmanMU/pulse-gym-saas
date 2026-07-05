@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError } from "@/lib/errors";
@@ -23,25 +24,28 @@ export default async function NewPlanPage() {
   }
 
   const currency = await loadGymCurrency();
+  const t = await getTranslations("plans");
+  const ta = await getTranslations("actions");
 
   return (
     <PageContainer width="narrow">
-      <PageHeader title="Add plan" subtitle="Create a membership plan staff can sell." />
-      <PlanForm action={createPlanAction} currency={currency} submitLabel="Add plan" />
+      <PageHeader title={t("newTitle")} subtitle={t("newSubtitle")} />
+      <PlanForm action={createPlanAction} currency={currency} submitLabel={ta("addPlan")} />
     </PageContainer>
   );
 }
 
-function Forbidden() {
+async function Forbidden() {
+  const t = await getTranslations("errors");
   return (
     <PageContainer width="narrow">
       <ErrorState
         variant="inline"
-        title="Access denied"
-        description="You don't have permission to create plans. Contact your gym owner."
+        title={t("accessDenied")}
+        description={t("forbiddenBody")}
         action={
           <Button asChild variant="secondary">
-            <Link href="/plans">Back to plans</Link>
+            <Link href="/dashboard">{t("backToDashboard")}</Link>
           </Button>
         }
       />

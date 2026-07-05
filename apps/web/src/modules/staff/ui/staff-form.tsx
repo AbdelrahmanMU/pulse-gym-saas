@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { FormField } from "@/components/pulse/form-field";
 import { TextInput } from "@/components/pulse/text-input";
 import { SelectInput } from "@/components/pulse/select-input";
@@ -24,7 +25,7 @@ export function StaffForm({
   roleOptions,
   initial,
   gymUserId,
-  submitLabel = "Save",
+  submitLabel,
 }: {
   action: StaffFormAction;
   roleOptions?: RoleOption[];
@@ -34,6 +35,7 @@ export function StaffForm({
 }) {
   const [state, formAction] = useActionState(action, INITIAL_STATE);
   const isEdit = Boolean(initial);
+  const t = useTranslations("staff");
 
   return (
     <FormLayout
@@ -41,17 +43,19 @@ export function StaffForm({
       actions={
         <>
           <Button asChild variant="secondary">
-            <Link href={gymUserId ? `/staff/${gymUserId}` : "/staff"}>Cancel</Link>
+            <Link href={gymUserId ? `/staff/${gymUserId}` : "/staff"}>{t("formCancel")}</Link>
           </Button>
-          <SubmitButton pendingLabel="Saving…">{submitLabel}</SubmitButton>
+          <SubmitButton pendingLabel={t("formPending")}>
+            {submitLabel ?? t("formSave")}
+          </SubmitButton>
         </>
       }
     >
       <FormFeedback state={state} />
       {gymUserId ? <input type="hidden" name="gymUserId" value={gymUserId} /> : null}
 
-      <FormSection title="Identity" description="Who this staff member is.">
-        <FormField label="Full name" required error={fieldError(state, "displayName")}>
+      <FormSection title={t("formSectionIdentity")} description={t("formSectionIdentityDesc")}>
+        <FormField label={t("formFullName")} required error={fieldError(state, "displayName")}>
           <TextInput
             name="displayName"
             defaultValue={initial?.displayName ?? ""}
@@ -59,15 +63,15 @@ export function StaffForm({
           />
         </FormField>
         {isEdit ? (
-          <FormField label="Email" help="Email is the sign-in identity and can't be changed here.">
+          <FormField label={t("formEmail")} help={t("formEmailHelp")}>
             <TextInput name="emailDisplay" defaultValue={initial?.email ?? ""} disabled />
           </FormField>
         ) : (
-          <FormField label="Email" required error={fieldError(state, "email")}>
+          <FormField label={t("formEmail")} required error={fieldError(state, "email")}>
             <TextInput name="email" type="email" autoComplete="off" />
           </FormField>
         )}
-        <FormField label="Phone" error={fieldError(state, "phone")}>
+        <FormField label={t("formPhone")} error={fieldError(state, "phone")}>
           <TextInput
             name="phone"
             type="tel"
@@ -78,22 +82,19 @@ export function StaffForm({
       </FormSection>
 
       {isEdit ? null : (
-        <FormSection
-          title="Role & access"
-          description="The role is a permission bundle; the temporary password is set now and shared with the staff member directly."
-        >
-          <FormField label="Role" required error={fieldError(state, "roleId")}>
+        <FormSection title={t("formSectionRole")} description={t("formSectionRoleDesc")}>
+          <FormField label={t("formRole")} required error={fieldError(state, "roleId")}>
             <SelectInput
               name="roleId"
-              placeholder="Choose a role"
+              placeholder={t("formRolePlaceholder")}
               options={(roleOptions ?? []).map((r) => ({ value: r.id, label: r.name }))}
             />
           </FormField>
           <FormField
-            label="Temporary password"
+            label={t("formTempPassword")}
             required
             error={fieldError(state, "temporaryPassword")}
-            help="At least 8 characters. The staff member should change it after signing in."
+            help={t("formTempPasswordHelp")}
           >
             <TextInput name="temporaryPassword" type="password" autoComplete="new-password" />
           </FormField>

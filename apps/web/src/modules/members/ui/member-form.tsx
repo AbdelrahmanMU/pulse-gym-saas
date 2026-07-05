@@ -2,13 +2,14 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { FormField } from "@/components/pulse/form-field";
 import { TextInput } from "@/components/pulse/text-input";
 import { FormLayout, FormSection, SubmitButton } from "@/components/pulse/form-layout";
 import { Button } from "@/components/pulse/button";
 import type { ActionState } from "../service";
 import type { MemberDetail } from "../service";
-import { fieldError, FormFeedback, INITIAL_STATE } from "./form-state";
+import { useFieldError, FormFeedback, INITIAL_STATE } from "./form-state";
 
 /**
  * Member create/edit form (Catalog §9 composition). One form for both flows: `new` passes
@@ -33,6 +34,8 @@ export function MemberForm({
   submitLabel?: string;
 }) {
   const [state, formAction] = useActionState(action, INITIAL_STATE);
+  const t = useTranslations("members");
+  const fieldError = useFieldError();
 
   return (
     <FormLayout
@@ -40,55 +43,56 @@ export function MemberForm({
       actions={
         <>
           <Button asChild variant="secondary">
-            <Link href={memberId ? `/members/${memberId}` : "/members"}>Cancel</Link>
+            <Link href={memberId ? `/members/${memberId}` : "/members"}>{t("fmCancel")}</Link>
           </Button>
-          <SubmitButton pendingLabel="Saving…">{submitLabel}</SubmitButton>
+          <SubmitButton pendingLabel={t("fmSaving")}>
+            {submitLabel ?? t("fmSaveMember")}
+          </SubmitButton>
         </>
       }
     >
       <FormFeedback state={state} />
       {memberId ? <input type="hidden" name="memberId" value={memberId} /> : null}
 
-      <FormSection title="Identity" description="Who this member is.">
-        <FormField label="Full name" required error={fieldError(state, "fullName")}>
+      <FormSection title={t("fmSectionIdentity")} description={t("fmSectionIdentityDesc")}>
+        <FormField label={t("fmFullName")} required error={fieldError(state, "fullName")}>
           <TextInput name="fullName" defaultValue={initial?.fullName ?? ""} autoComplete="name" />
         </FormField>
       </FormSection>
 
-      <FormSection
-        title="Contact"
-        description="A member needs at least one way to be reached — a phone number or an email."
-      >
-        <FormField label="Phone" error={fieldError(state, "phone")}>
+      <FormSection title={t("fmSectionContact")} description={t("fmSectionContactDesc")}>
+        <FormField label={t("phone")} error={fieldError(state, "phone")}>
           <TextInput
             name="phone"
             type="tel"
+            dir="ltr"
             defaultValue={initial?.phone ?? ""}
             autoComplete="tel"
           />
         </FormField>
-        <FormField label="Email" error={fieldError(state, "email")}>
+        <FormField label={t("email")} error={fieldError(state, "email")}>
           <TextInput
             name="email"
             type="email"
+            dir="ltr"
             defaultValue={initial?.email ?? ""}
             autoComplete="email"
           />
         </FormField>
       </FormSection>
 
-      <FormSection title="Details" description="Optional personal details.">
-        <FormField label="Date of birth" error={fieldError(state, "dateOfBirth")}>
+      <FormSection title={t("fmSectionDetails")} description={t("fmSectionDetailsDesc")}>
+        <FormField label={t("dob")} error={fieldError(state, "dateOfBirth")}>
           <TextInput
             name="dateOfBirth"
             type="date"
             defaultValue={dateValue(initial?.dateOfBirth)}
           />
         </FormField>
-        <FormField label="Gender" error={fieldError(state, "gender")}>
+        <FormField label={t("gender")} error={fieldError(state, "gender")}>
           <TextInput name="gender" defaultValue={initial?.gender ?? ""} />
         </FormField>
-        <FormField label="Joined on" error={fieldError(state, "joinedOn")}>
+        <FormField label={t("colJoined")} error={fieldError(state, "joinedOn")}>
           <TextInput name="joinedOn" type="date" defaultValue={dateValue(initial?.joinedOn)} />
         </FormField>
       </FormSection>

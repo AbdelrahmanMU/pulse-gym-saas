@@ -2,9 +2,11 @@
 
 import { useActionState } from "react";
 import { Ban } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { FormField } from "@/components/pulse/form-field";
 import { TextInput } from "@/components/pulse/text-input";
 import { SubmitButton } from "@/components/pulse/form-layout";
+import { useFormError } from "@/lib/i18n/form-error";
 import { voidPaymentAction } from "../actions";
 import { fieldError, FormFeedback, INITIAL_STATE } from "./form-state";
 
@@ -23,21 +25,21 @@ export function VoidPaymentControl({
   paymentId: string;
 }) {
   const [state, action] = useActionState(voidPaymentAction, INITIAL_STATE);
+  const t = useTranslations("payments");
+  const tr = useFormError();
   return (
     <form action={action} className="flex flex-col gap-2">
       <input type="hidden" name="membershipId" value={membershipId} />
       <input type="hidden" name="paymentId" value={paymentId} />
-      <FormFeedback state={state} title="Couldn’t void" />
-      <FormField label="Void reason (optional)" error={fieldError(state, "voidReason")}>
-        <TextInput name="voidReason" placeholder="e.g. Entered twice" className="w-full" />
+      <FormFeedback state={state} title={t("vpErrTitle")} />
+      <FormField label={t("vpReason")} error={tr(fieldError(state, "voidReason"))}>
+        <TextInput name="voidReason" placeholder={t("vpReasonPlaceholder")} className="w-full" />
       </FormField>
-      <SubmitButton variant="outline" pendingLabel="Voiding…">
+      <SubmitButton variant="outline" pendingLabel={t("vpPending")}>
         <Ban aria-hidden className="size-4" />
-        Void payment
+        {t("vpButton")}
       </SubmitButton>
-      <p className="text-body-sm text-muted-foreground">
-        Records an immutable reversal — the original payment is kept, never deleted (PAY).
-      </p>
+      <p className="text-body-sm text-muted-foreground">{t("vpHelp")}</p>
     </form>
   );
 }

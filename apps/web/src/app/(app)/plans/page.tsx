@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Tags } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { hasPermission, PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError } from "@/lib/errors";
@@ -42,6 +43,10 @@ export default async function PlansPage({
   const result = await loadPlans(raw);
   const canCreate = hasPermission(principal.permissions, PERMISSION_KEYS.PLANS_CREATE);
 
+  const t = await getTranslations("plans");
+  const tc = await getTranslations("common");
+  const ta = await getTranslations("actions");
+
   const statusValue = raw.status ?? "ACTIVE";
   const hasFilters = Boolean(raw.q) || statusValue !== "ACTIVE";
 
@@ -58,7 +63,7 @@ export default async function PlansPage({
 
   return (
     <PageContainer>
-      <PageHeader title="Plans" subtitle="The membership plans your gym sells." />
+      <PageHeader title={t("title")} subtitle={t("subtitle")} />
 
       <PlansToolbar query={raw.q ?? ""} status={statusValue} canCreate={canCreate} />
 
@@ -68,18 +73,18 @@ export default async function PlansPage({
           hasFilters ? (
             <EmptyState
               icon={<Tags aria-hidden />}
-              title="No plans match your filters"
-              description="Try a different search term or clear the filters."
+              title={t("emptyFilteredTitle")}
+              description={t("emptyFilteredBody")}
             />
           ) : (
             <EmptyState
               icon={<Tags aria-hidden />}
-              title="No plans yet"
-              description="Create your first plan so staff can sell memberships."
+              title={t("emptyTitle")}
+              description={t("emptyBody")}
               action={
                 canCreate ? (
                   <Button asChild>
-                    <Link href="/plans/new">Add plan</Link>
+                    <Link href="/plans/new">{ta("addPlan")}</Link>
                   </Button>
                 ) : undefined
               }
@@ -93,27 +98,32 @@ export default async function PlansPage({
           page={result.page}
           totalPages={result.totalPages}
           hrefForPage={hrefForPage}
-          rangeLabel={`Showing ${firstRow}–${lastRow} of ${result.total}`}
+          rangeLabel={tc("pageRange", {
+            from: String(firstRow),
+            to: String(lastRow),
+            total: String(result.total),
+          })}
           className="mt-4"
         />
       ) : null}
 
       {/* Mobile relocation of the single "Add plan" primary (AP-6 / Catalog §12.2). */}
-      {canCreate ? <CreationFab label="Add plan" href="/plans/new" /> : null}
+      {canCreate ? <CreationFab label={ta("addPlan")} href="/plans/new" /> : null}
     </PageContainer>
   );
 }
 
-function Forbidden() {
+async function Forbidden() {
+  const t = await getTranslations("errors");
   return (
     <PageContainer>
       <ErrorState
         variant="inline"
-        title="Access denied"
-        description="You don't have permission to view plans. Contact your gym owner."
+        title={t("accessDenied")}
+        description={t("forbiddenBody")}
         action={
           <Button asChild variant="secondary">
-            <Link href="/dashboard">Back to dashboard</Link>
+            <Link href="/dashboard">{t("backToDashboard")}</Link>
           </Button>
         }
       />

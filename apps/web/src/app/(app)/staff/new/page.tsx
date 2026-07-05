@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError } from "@/lib/errors";
@@ -25,32 +26,36 @@ export default async function NewStaffPage() {
   }
 
   const roleOptions = await loadAssignableRoles();
+  const t = await getTranslations("staff");
+  const ta = await getTranslations("actions");
 
   return (
     <PageContainer width="narrow">
-      <PageHeader title="Add staff" subtitle="Give a team member access to your gym." />
+      <PageHeader title={t("newTitle")} subtitle={t("newSubtitle")} />
       {roleOptions.length === 0 ? (
-        <EmptyState
-          title="No assignable roles"
-          description="There are no assignable roles configured. Contact support."
-        />
+        <EmptyState title={t("noRolesTitle")} description={t("noRolesBody")} />
       ) : (
-        <StaffForm action={createStaffAction} roleOptions={roleOptions} submitLabel="Add staff" />
+        <StaffForm
+          action={createStaffAction}
+          roleOptions={roleOptions}
+          submitLabel={ta("addStaff")}
+        />
       )}
     </PageContainer>
   );
 }
 
-function Forbidden() {
+async function Forbidden() {
+  const t = await getTranslations("errors");
   return (
     <PageContainer width="narrow">
       <ErrorState
         variant="inline"
-        title="Access denied"
-        description="You don't have permission to add staff. Contact your gym owner."
+        title={t("accessDenied")}
+        description={t("forbiddenBody")}
         action={
           <Button asChild variant="secondary">
-            <Link href="/staff">Back to staff</Link>
+            <Link href="/dashboard">{t("backToDashboard")}</Link>
           </Button>
         }
       />

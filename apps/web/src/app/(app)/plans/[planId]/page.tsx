@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Pencil } from "lucide-react";
+import { getLocale, getTranslations } from "next-intl/server";
 import { hasPermission, PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError, NotFoundError } from "@/lib/errors";
@@ -41,6 +42,8 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ pla
 
   const canUpdate = hasPermission(principal.permissions, PERMISSION_KEYS.PLANS_UPDATE);
   const canDeactivate = hasPermission(principal.permissions, PERMISSION_KEYS.PLANS_DEACTIVATE);
+  const t = await getTranslations("plans");
+  const locale = await getLocale();
 
   return (
     <PageContainer>
@@ -51,7 +54,7 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ pla
             <Button asChild variant="secondary">
               <Link href={`/plans/${plan.id}/edit`}>
                 <Pencil aria-hidden className="size-4" />
-                Edit
+                {t("editButton")}
               </Link>
             </Button>
           ) : undefined
@@ -63,8 +66,8 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ pla
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Section title="Terms">
-          <Detail label="Price">
+        <Section title={t("detailTerms")}>
+          <Detail label={t("detailPrice")}>
             <MetricValue
               value={plan.priceMinor}
               format="currency"
@@ -72,19 +75,21 @@ export default async function PlanDetailPage({ params }: { params: Promise<{ pla
               size="lg"
             />
           </Detail>
-          <Detail label="Duration">{formatDuration(plan.durationValue, plan.durationUnit)}</Detail>
+          <Detail label={t("detailDuration")}>
+            {formatDuration(plan.durationValue, plan.durationUnit, locale)}
+          </Detail>
         </Section>
 
-        <Section title="Description">
+        <Section title={t("detailDescription")}>
           {plan.description ? (
             <p className="whitespace-pre-wrap text-body text-foreground">{plan.description}</p>
           ) : (
-            <p className="text-body text-muted-foreground">No description.</p>
+            <p className="text-body text-muted-foreground">{t("detailNoDescription")}</p>
           )}
         </Section>
 
         {canDeactivate ? (
-          <Section title="Lifecycle">
+          <Section title={t("detailLifecycle")}>
             <PlanLifecycleControls planId={plan.id} isActive={plan.isActive} />
           </Section>
         ) : null}
@@ -111,16 +116,17 @@ function Detail({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function Forbidden() {
+async function Forbidden() {
+  const t = await getTranslations("errors");
   return (
     <PageContainer>
       <ErrorState
         variant="inline"
-        title="Access denied"
-        description="You don't have permission to view this plan. Contact your gym owner."
+        title={t("accessDenied")}
+        description={t("forbiddenBody")}
         action={
           <Button asChild variant="secondary">
-            <Link href="/plans">Back to plans</Link>
+            <Link href="/dashboard">{t("backToDashboard")}</Link>
           </Button>
         }
       />

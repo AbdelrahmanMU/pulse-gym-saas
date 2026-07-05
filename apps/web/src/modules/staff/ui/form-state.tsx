@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Alert } from "@/components/pulse/alert";
 import type { ActionState } from "../service";
 
@@ -17,9 +18,10 @@ export function FormFeedback({
   state: ActionState;
   successMessage?: string;
 }) {
+  const t = useTranslations("staff");
   if (state.status === "error" && state.message) {
     return (
-      <Alert severity="danger" title="Couldn’t save">
+      <Alert severity="danger" title={t("formCouldntSave")}>
         {state.message}
       </Alert>
     );

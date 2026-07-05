@@ -10,9 +10,12 @@ import {
   Snowflake,
   TriangleAlert,
 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
+import { useLocale, useTranslations } from "next-intl";
 import { hasPermission, PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError, NotFoundError } from "@/lib/errors";
+import { formatDate, toISODate } from "@/lib/format-date";
 import { PageContainer } from "@/components/pulse/page-container";
 import { PageHeader } from "@/components/pulse/page-header";
 import { AnswerStrip } from "@/components/pulse/answer-strip";
@@ -56,14 +59,6 @@ import { MemberArchiveControls } from "@/modules/members/ui/member-archive-contr
  * standing read (W1 shape); the full L2 grammar and precedence rules 1/3/4 (§D6.2) are the
  * actions phase — the only computable primary here remains Sell membership (rule 2).
  */
-const isoDate = (d: Date): string => d.toISOString().slice(0, 10);
-
-const monthYear = new Intl.DateTimeFormat("en", {
-  month: "short",
-  year: "numeric",
-  timeZone: "UTC",
-});
-
 interface WorkspacePermissions {
   canUpdate: boolean;
   canArchive: boolean;
@@ -140,12 +135,14 @@ export default async function MemberWorkspacePage({
     member.status === "ACTIVE" &&
     perms.canCreateMembership;
   const sellHref = `/memberships/new?memberId=${member.id}`;
+  const t = await getTranslations("members");
+  const tActions = await getTranslations("actions");
 
   const sellButton = (
     <Button asChild>
       <Link href={sellHref}>
         <Plus aria-hidden className="size-4" />
-        Sell membership
+        {tActions("sellMembership")}
       </Link>
     </Button>
   );
@@ -165,7 +162,7 @@ export default async function MemberWorkspacePage({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:items-start">
         {timeline ? (
           <section className="flex flex-col gap-3 rounded-md border border-border bg-surface p-6 lg:col-span-7">
-            <h2 className="text-h3 text-foreground">Membership</h2>
+            <h2 className="text-h3 text-foreground">{t("railHeading")}</h2>
             <MembershipRail
               timeline={timeline}
               summaries={paymentSummaries}
@@ -183,7 +180,7 @@ export default async function MemberWorkspacePage({
             <Button asChild variant="secondary">
               <Link href={`/members/${member.id}/edit`}>
                 <Pencil aria-hidden className="size-4" />
-                Edit
+                {t("editShort")}
               </Link>
             </Button>
           ) : null}
@@ -196,6 +193,8 @@ export default async function MemberWorkspacePage({
 
 /** Strip L1 — the page `<h1>` + member badge, trainer/tenure meta, and the Edit overflow. */
 function IdentityLine({ member, canUpdate }: { member: MemberDetail; canUpdate: boolean }) {
+  const t = useTranslations("members");
+  const locale = useLocale();
   return (
     <PageHeader
       className="mb-0"
@@ -205,14 +204,19 @@ function IdentityLine({ member, canUpdate }: { member: MemberDetail; canUpdate: 
         <span className="text-body-sm">
           {member.trainerName ? (
             <>
-              Trainer <span className="text-foreground">{member.trainerName}</span>
+              {t("colTrainer")}{" "}
+              <span className="text-foreground" dir="auto">
+                {member.trainerName}
+              </span>
               {" · "}
             </>
           ) : null}
           {member.joinedOn ? (
             <>
-              since{" "}
-              <time dateTime={isoDate(member.joinedOn)}>{monthYear.format(member.joinedOn)}</time>
+              {t("wsSince")}{" "}
+              <time dateTime={toISODate(member.joinedOn)}>
+                {formatDate(member.joinedOn, locale, "monthYear")}
+              </time>
             </>
           ) : null}
         </span>
@@ -228,6 +232,7 @@ function IdentityLine({ member, canUpdate }: { member: MemberDetail; canUpdate: 
  * §D10) replaces these chips in W2 when the member-scoped timeline read (A-1) exists.
  */
 function MembershipStandingChips({ standing }: { standing: MemberMembershipStanding }) {
+  const t = useTranslations("members");
   const none =
     !standing.hasActiveMembership &&
     !standing.hasScheduledMembership &&
@@ -235,15 +240,15 @@ function MembershipStandingChips({ standing }: { standing: MemberMembershipStand
   return (
     <span className="flex flex-wrap items-center gap-2">
       {standing.hasActiveMembership ? (
-        <StatusBadge tone="success" icon={<CircleCheck />} label="Active membership" />
+        <StatusBadge tone="success" icon={<CircleCheck />} label={t("chipActive")} />
       ) : null}
       {standing.hasFrozenMembership ? (
-        <StatusBadge tone="info" icon={<Snowflake />} label="Frozen membership" />
+        <StatusBadge tone="info" icon={<Snowflake />} label={t("chipFrozen")} />
       ) : null}
       {standing.hasScheduledMembership ? (
-        <StatusBadge tone="info" icon={<CalendarClock />} label="Scheduled membership" />
+        <StatusBadge tone="info" icon={<CalendarClock />} label={t("chipScheduled")} />
       ) : null}
-      {none ? <StatusBadge tone="warning" icon={<CircleOff />} label="No live membership" /> : null}
+      {none ? <StatusBadge tone="warning" icon={<CircleOff />} label={t("chipNone")} /> : null}
     </span>
   );
 }
@@ -254,12 +259,14 @@ function MembershipStandingChips({ standing }: { standing: MemberMembershipStand
  * is the Next card's fact, never conflated here — §0.3).
  */
 function MoneyLine({ owed }: { owed: MemberOutstandingBalance }) {
+  const t = useTranslations("members");
+  const tMoney = useTranslations("money");
   if (owed.hasOutstanding) {
     return (
       <span className="flex items-center gap-2 font-semibold text-warning-text">
         <TriangleAlert aria-hidden className="size-4 shrink-0" />
         <span>
-          Owes{" "}
+          {tMoney("owes")}{" "}
           {owed.currency ? (
             <MetricValue value={owed.totalMinor} format="currency" currency={owed.currency} />
           ) : null}
@@ -270,7 +277,7 @@ function MoneyLine({ owed }: { owed: MemberOutstandingBalance }) {
   return (
     <span className="flex items-center gap-2 text-success-text">
       <CircleCheck aria-hidden className="size-4 shrink-0" />
-      <span>Paid up</span>
+      <span>{t("paidUp")}</span>
     </span>
   );
 }
@@ -285,18 +292,27 @@ function MemberInfoCard({
   perms: WorkspacePermissions;
   trainerOptions: TrainerOption[];
 }) {
+  const t = useTranslations("members");
   const showLifecycleControls =
     (perms.canArchive || perms.canReactivate) &&
     (member.status === "ACTIVE" ? perms.canArchive : perms.canReactivate);
   return (
     <Disclosure
-      title="Member info"
+      title={t("infoTitle")}
       className="lg:col-span-5"
       summary={
         <>
-          {member.phone ?? member.email ?? "No contact"}
+          <span dir={member.phone || member.email ? "ltr" : undefined}>
+            {member.phone ?? member.email ?? t("infoNoContact")}
+          </span>
           {" · "}
-          {member.trainerName ? `Trainer ${member.trainerName}` : "No trainer assigned"}
+          {member.trainerName ? (
+            <>
+              {t("colTrainer")} <span dir="auto">{member.trainerName}</span>
+            </>
+          ) : (
+            t("infoNoTrainer")
+          )}
         </>
       }
       headerAction={
@@ -304,7 +320,7 @@ function MemberInfoCard({
           <Button asChild variant="ghost" size="sm" className="shrink-0">
             <Link href={`/members/${member.id}/edit`}>
               <Pencil aria-hidden className="size-4" />
-              Edit member
+              {t("editMember")}
             </Link>
           </Button>
         ) : undefined
@@ -312,7 +328,7 @@ function MemberInfoCard({
     >
       <div className="grid gap-6 md:grid-cols-2">
         {perms.canReadAssignments ? (
-          <InfoGroup title="Trainer">
+          <InfoGroup title={t("colTrainer")}>
             {perms.canManageAssignments ? (
               <AssignTrainerForm
                 memberId={member.id}
@@ -320,31 +336,31 @@ function MemberInfoCard({
                 options={trainerOptions}
               />
             ) : (
-              <p className="text-body text-foreground">
+              <p className="text-body text-foreground" dir="auto">
                 {member.trainerName ?? (
-                  <span className="text-muted-foreground">No trainer assigned</span>
+                  <span className="text-muted-foreground">{t("infoNoTrainer")}</span>
                 )}
               </p>
             )}
           </InfoGroup>
         ) : null}
 
-        <InfoGroup title="Contact">
+        <InfoGroup title={t("colContact")}>
           <dl className="flex flex-col gap-3">
-            <Detail label="Phone" value={member.phone} />
-            <Detail label="Email" value={member.email} />
+            <Detail label={t("phone")} value={member.phone} ltr />
+            <Detail label={t("email")} value={member.email} ltr />
           </dl>
         </InfoGroup>
 
-        <InfoGroup title="Details">
+        <InfoGroup title={t("groupDetails")}>
           <dl className="flex flex-col gap-3">
-            <Detail label="Date of birth" date={member.dateOfBirth} />
-            <Detail label="Gender" value={member.gender} />
-            <Detail label="Joined on" date={member.joinedOn} />
+            <Detail label={t("dob")} date={member.dateOfBirth} />
+            <Detail label={t("gender")} value={member.gender} />
+            <Detail label={t("colJoined")} date={member.joinedOn} />
           </dl>
         </InfoGroup>
 
-        <InfoGroup title="Membership of the gym">
+        <InfoGroup title={t("groupMembership")}>
           <div className="flex flex-col items-start gap-3">
             <MemberStatusBadge status={member.status} withNoun />
             {showLifecycleControls ? (
@@ -375,39 +391,45 @@ function Detail({
   label,
   value,
   date,
+  ltr = false,
 }: {
   label: string;
   value?: string | null;
   date?: Date | null;
+  /** Force LTR for phone/email values inside an RTL layout (Authority D8.3). */
+  ltr?: boolean;
 }) {
+  const t = useTranslations("members");
+  const locale = useLocale();
   return (
     <div className="flex flex-col gap-0.5">
       <dt className="text-body-sm text-muted-foreground">{label}</dt>
       <dd className="text-body break-words text-foreground">
         {date ? (
-          <time dateTime={isoDate(date)} className="tabular">
-            {isoDate(date)}
+          <time dateTime={toISODate(date)} className="tabular">
+            {formatDate(date, locale, "iso")}
           </time>
         ) : value ? (
-          value
+          <span dir={ltr ? "ltr" : undefined}>{value}</span>
         ) : (
-          <span className="text-muted-foreground">—</span>
+          <span className="text-muted-foreground">{t("dash")}</span>
         )}
       </dd>
     </div>
   );
 }
 
-function Forbidden() {
+async function Forbidden() {
+  const t = await getTranslations("errors");
   return (
     <PageContainer>
       <ErrorState
         variant="inline"
-        title="Access denied"
-        description="You don't have permission to view this member. Contact your gym owner."
+        title={t("accessDenied")}
+        description={t("forbiddenBody")}
         action={
           <Button asChild variant="secondary">
-            <Link href="/members">Back to members</Link>
+            <Link href="/dashboard">{t("backToDashboard")}</Link>
           </Button>
         }
       />
