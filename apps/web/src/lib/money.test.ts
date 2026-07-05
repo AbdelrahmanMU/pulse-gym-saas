@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   currencyFractionDigits,
+  currencySymbol,
   formatMinorCurrency,
   formatMinorPlain,
   parseAmountToMinor,
@@ -68,5 +69,34 @@ describe("formatMinorCurrency", () => {
   it("renders a localized currency string", () => {
     expect(formatMinorCurrency(2999n, "USD", "en-US")).toBe("$29.99");
     expect(formatMinorCurrency(100n, "JPY", "en-US")).toBe("¥100");
+  });
+
+  /**
+   * Arabic presentation (Localization Authority · Deliverable 9): mark AFTER the amount with a
+   * space, Latin digits, "," thousands separator, and whole amounts without decimals.
+   */
+  it("renders Arabic money with the mark after the amount and Latin digits", () => {
+    expect(formatMinorCurrency(120000n, "EGP", "ar")).toBe("1,200 ج.م");
+    expect(formatMinorCurrency(40000n, "EGP", "ar")).toBe("400 ج.م");
+    expect(formatMinorCurrency(0n, "EGP", "ar")).toBe("0 ج.م");
+  });
+
+  it("keeps decimals for fractional Arabic amounts, drops them when whole", () => {
+    expect(formatMinorCurrency(40050n, "EGP", "ar")).toBe("400.50 ج.م");
+    expect(formatMinorCurrency(120000n, "SAR", "ar")).toBe("1,200 ر.س");
+    expect(formatMinorCurrency(150000n, "KWD", "ar")).toBe("150 د.ك");
+  });
+
+  it("uses each currency's Authority mark", () => {
+    expect(formatMinorCurrency(50000n, "AED", "ar")).toBe("500 د.إ");
+    expect(formatMinorCurrency(50000n, "JOD", "ar")).toBe("50 د.أ");
+  });
+});
+
+describe("currencySymbol", () => {
+  it("returns the Authority currency mark under Arabic, the Intl symbol otherwise", () => {
+    expect(currencySymbol("EGP", "ar")).toBe("ج.م");
+    expect(currencySymbol("SAR", "ar")).toBe("ر.س");
+    expect(currencySymbol("USD", "en-US")).toBe("$");
   });
 });

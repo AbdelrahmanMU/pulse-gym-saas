@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale } from "next-intl";
 import { cn } from "@/lib/utils";
 import { currencySymbol, formatMinorPlain } from "@/lib/money";
 import { useFieldControl } from "./form-field";
@@ -11,7 +12,7 @@ import { useFieldControl } from "./form-field";
  * is the single parse authority (`lib/money.parseAmountToMinor` → exact minor units), so
  * money is never a float and over-precision is rejected server-side as a field error. Light
  * client sanitization keeps the field to digits + one decimal point. Self-wires id/aria from
- * FormField. The currency symbol is resolved with a fixed locale for SSR/CSR determinism.
+ * FormField. The currency mark follows the active locale (`useLocale()` — same value SSR/CSR).
  */
 function sanitize(raw: string): string {
   const cleaned = raw.replace(/[^\d.]/g, "");
@@ -35,7 +36,7 @@ export function CurrencyInput({ name, currency, defaultMinor, className }: Curre
       ? formatMinorPlain(BigInt(defaultMinor), currency)
       : "";
   const [value, setValue] = useState(initial);
-  const symbol = currencySymbol(currency, "en");
+  const symbol = currencySymbol(currency, useLocale());
 
   return (
     <div className="relative">

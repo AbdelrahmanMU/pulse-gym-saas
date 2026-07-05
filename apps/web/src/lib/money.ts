@@ -54,10 +54,55 @@ export function formatMinorPlain(minor: bigint, currency: string): string {
   return `${negative ? "-" : ""}${whole}.${fraction}`;
 }
 
+/**
+ * Product-decided Arabic currency marks (Localization Authority · Deliverable 9). These are a
+ * deliberate presentation choice — the mark sits **after** the amount with a space («400 ج.م») —
+ * that `Intl` cannot reproduce in this form (it emits «٤٠٠ ج.م.‏» with Arabic-Indic digits and a
+ * different placement). This is a small, closed, human-ruled table (not the fraction-digit data
+ * this module otherwise refuses to hardcode); an unknown code falls back to the ISO code.
+ */
+const ARABIC_CURRENCY_MARK: Record<string, string> = {
+  EGP: "ج.م",
+  SAR: "ر.س",
+  AED: "د.إ",
+  KWD: "د.ك",
+  JOD: "د.أ",
+};
+
+const isArabicLocale = (locale?: string): boolean =>
+  locale?.toLowerCase().startsWith("ar") ?? false;
+
+/** Group a Latin integer digit string with "," every three from the right ("1200" → "1,200"). */
+function groupThousands(digits: string): string {
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+/**
+ * Arabic money presentation (Authority · Deliverable 9): Latin digits, "," thousands separator,
+ * the currency mark after the amount, and **whole amounts render without decimals** («1,200 ج.م»)
+ * while fractional amounts keep them («400.50 ج.م»). The whole-vs-fraction test stays in `bigint`
+ * space — the module's never-float invariant holds; no `Number()` conversion happens here.
+ */
+function formatArabicCurrency(minor: bigint, currency: string, fractionDigits: number): string {
+  const mark = ARABIC_CURRENCY_MARK[currency] ?? currency;
+  const negative = minor < 0n;
+  const abs = negative ? -minor : minor;
+  const base = 10n ** BigInt(fractionDigits);
+  const whole = groupThousands((abs / base).toString());
+  const remainder = abs % base;
+  const amount =
+    fractionDigits > 0 && remainder !== 0n
+      ? `${whole}.${remainder.toString().padStart(fractionDigits, "0")}`
+      : whole;
+  return `${negative ? "-" : ""}${amount} ${mark}`;
+}
+
 /** Format minor units to a localized currency string ("2999" USD → "$29.99"). Display-only
- *  (the Number conversion is presentation rounding, money-rules §3); never written back. */
+ *  (the Number conversion is presentation rounding, money-rules §3); never written back. Under an
+ *  Arabic locale it renders the Authority presentation (mark after the amount, Latin digits). */
 export function formatMinorCurrency(minor: bigint, currency: string, locale?: string): string {
   const fractionDigits = currencyFractionDigits(currency);
+  if (isArabicLocale(locale)) return formatArabicCurrency(minor, currency, fractionDigits);
   const major = Number(minor) / 10 ** fractionDigits;
   return new Intl.NumberFormat(locale, {
     style: "currency",
@@ -67,8 +112,10 @@ export function formatMinorCurrency(minor: bigint, currency: string, locale?: st
   }).format(major);
 }
 
-/** The currency's display symbol for an input prefix ("USD" → "$"); falls back to the code. */
+/** The currency's display symbol for an input prefix ("USD" → "$"); falls back to the code. Under
+ *  an Arabic locale it returns the Authority currency mark («EGP» → «ج.م»). */
 export function currencySymbol(currency: string, locale?: string): string {
+  if (isArabicLocale(locale)) return ARABIC_CURRENCY_MARK[currency] ?? currency;
   const parts = new Intl.NumberFormat(locale, { style: "currency", currency }).formatToParts(0);
   return parts.find((p) => p.type === "currency")?.value ?? currency;
 }

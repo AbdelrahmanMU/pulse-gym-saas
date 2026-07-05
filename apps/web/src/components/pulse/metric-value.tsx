@@ -1,3 +1,4 @@
+import { useLocale } from "next-intl";
 import { cn } from "@/lib/utils";
 import { formatMinorCurrency } from "@/lib/money";
 
@@ -33,9 +34,12 @@ export function MetricValue({
   size = "md",
   className,
 }: MetricValueProps) {
+  // `useLocale()` resolves in both Server and Client trees (this stays a sync component on
+  // purpose — see the note above), so money formats per the active locale without a prop thread.
+  const locale = useLocale();
   const text =
     format === "currency" && currency
-      ? formatMinorCurrency(BigInt(value), currency)
+      ? formatMinorCurrency(BigInt(value), currency, locale)
       : String(value);
   return <span className={cn("tabular", SIZE[size], className)}>{text}</span>;
 }
