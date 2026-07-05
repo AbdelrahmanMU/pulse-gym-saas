@@ -40,7 +40,6 @@ export default async function DashboardPage() {
   const perms = {
     canAddMember: hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERS_CREATE),
     canSellMembership: hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERSHIPS_CREATE),
-    canRecordPayment: hasPermission(principal.permissions, PERMISSION_KEYS.PAYMENTS_RECORD),
   };
 
   return (
