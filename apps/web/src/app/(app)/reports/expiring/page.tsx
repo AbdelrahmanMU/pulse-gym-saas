@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError } from "@/lib/errors";
@@ -21,12 +22,10 @@ export default async function ExpiringReportPage() {
     throw error;
   }
 
+  const t = await getTranslations("reports");
   return (
     <PageContainer>
-      <PageHeader
-        title="Expiring memberships"
-        subtitle="Upcoming and past expirations to drive renewals."
-      />
+      <PageHeader title={t("expiringTitle")} subtitle={t("expiringSubtitle")} />
       <ExpiringReportView report={report} />
     </PageContainer>
   );

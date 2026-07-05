@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError } from "@/lib/errors";
@@ -24,10 +25,11 @@ export default async function GymSettingsPage() {
     throw error;
   }
 
+  const t = await getTranslations("settings");
   const settings = await loadGymSettings();
   return (
     <PageContainer width="narrow">
-      <PageHeader title="Gym settings" subtitle="Your gym's identity, currency, and time zone." />
+      <PageHeader title={t("gymTitle")} subtitle={t("gymSubtitle")} />
       <GymSettingsForm
         initial={settings}
         currencyOptions={currencyOptions()}
@@ -37,16 +39,17 @@ export default async function GymSettingsPage() {
   );
 }
 
-function Forbidden() {
+async function Forbidden() {
+  const t = await getTranslations("settings");
   return (
     <PageContainer width="narrow">
       <ErrorState
         variant="inline"
-        title="Access denied"
-        description="You don't have permission to manage gym settings. Contact your gym owner."
+        title={t("gymForbiddenTitle")}
+        description={t("gymForbiddenBody")}
         action={
           <Button asChild variant="secondary">
-            <Link href="/dashboard">Back to dashboard</Link>
+            <Link href="/dashboard">{t("backToDashboard")}</Link>
           </Button>
         }
       />

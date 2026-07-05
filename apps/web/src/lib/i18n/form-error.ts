@@ -32,6 +32,17 @@ const CODE: Record<string, string> = {
   "Choose a payment method": "paymentMethodRequired",
   "Keep the note under 500 characters": "noteTooLong",
   "Keep the reason under 500 characters": "reasonTooLong",
+  // gym / branch / profile — validation (validation.ts). The dynamic "Must be N characters
+  // or fewer" max-length message is not mapped (interpolated) → English Tier-2 residual.
+  "Gym name is required": "gymNameRequired",
+  "Branch name is required": "branchNameRequired",
+  "Display name is required": "displayNameRequired",
+  "Enter a valid URL": "urlInvalid",
+  "Enter a whole number of days": "daysWholeNumber",
+  "Must be a whole number": "wholeNumber",
+  "Must be 0 or more": "zeroOrMore",
+  "Unknown currency code (ISO-4217)": "currencyUnknown",
+  "Unknown time zone (IANA)": "timeZoneUnknown",
 };
 
 /** Returns a mapper: known English error → localized message; unknown → the English source. */

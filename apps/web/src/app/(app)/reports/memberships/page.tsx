@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError } from "@/lib/errors";
@@ -29,6 +30,7 @@ export default async function MembershipReportPage({
     throw error;
   }
 
+  const t = await getTranslations("reports");
   const sp = await searchParams;
   const raw = { q: first(sp.q), status: first(sp.status), page: first(sp.page) };
   const data = await loadMembershipReport(raw);
@@ -45,10 +47,7 @@ export default async function MembershipReportPage({
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Membership report"
-        subtitle="Membership counts by status, with filtering."
-      />
+      <PageHeader title={t("membershipTitle")} subtitle={t("membershipSubtitle")} />
       <MembershipReportView
         data={data}
         status={status}

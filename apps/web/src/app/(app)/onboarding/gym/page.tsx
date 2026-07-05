@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { PageContainer } from "@/components/pulse/page-container";
 import { PageHeader } from "@/components/pulse/page-header";
 import { loadGymSettings } from "@/modules/gym/queries";
@@ -10,10 +11,11 @@ import { GymSettingsForm } from "@/modules/gym/ui/gym-settings-form";
  * server action as the settings page; on success it advances to the branch step.
  */
 export default async function OnboardingGymPage() {
+  const t = await getTranslations("settings");
   const settings = await loadGymSettings();
   return (
     <PageContainer width="narrow">
-      <PageHeader title="Set up your gym" subtitle="Step 1 of 3 · Gym details" />
+      <PageHeader title={t("onboardingTitle")} subtitle={t("onboardingGymStep")} />
       <GymSettingsForm
         initial={settings}
         currencyOptions={currencyOptions()}

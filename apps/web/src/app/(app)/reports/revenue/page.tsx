@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError } from "@/lib/errors";
@@ -29,15 +30,13 @@ export default async function RevenueReportPage({
     throw error;
   }
 
+  const t = await getTranslations("reports");
   const sp = await searchParams;
   const report = await loadRevenueReport(first(sp.from), first(sp.to));
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Revenue report"
-        subtitle="Net revenue over the immutable payment ledger."
-      />
+      <PageHeader title={t("revenueTitle")} subtitle={t("revenueSubtitle")} />
       <RevenueReportView report={report} />
     </PageContainer>
   );

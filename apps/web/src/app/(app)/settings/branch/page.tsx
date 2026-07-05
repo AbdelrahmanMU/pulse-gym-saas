@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError } from "@/lib/errors";
@@ -22,25 +23,27 @@ export default async function BranchSettingsPage() {
     throw error;
   }
 
+  const t = await getTranslations("settings");
   const branch = await loadDefaultBranch();
   return (
     <PageContainer width="narrow">
-      <PageHeader title="Branch" subtitle="Your main location's details." />
+      <PageHeader title={t("branchTitle")} subtitle={t("branchSubtitle")} />
       <BranchForm initial={branch} />
     </PageContainer>
   );
 }
 
-function Forbidden() {
+async function Forbidden() {
+  const t = await getTranslations("settings");
   return (
     <PageContainer width="narrow">
       <ErrorState
         variant="inline"
-        title="Access denied"
-        description="You don't have permission to manage branches. Contact your gym owner."
+        title={t("gymForbiddenTitle")}
+        description={t("branchForbiddenBody")}
         action={
           <Button asChild variant="secondary">
-            <Link href="/dashboard">Back to dashboard</Link>
+            <Link href="/dashboard">{t("backToDashboard")}</Link>
           </Button>
         }
       />

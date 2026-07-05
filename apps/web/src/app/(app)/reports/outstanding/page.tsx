@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { PERMISSION_KEYS } from "@pulse/auth";
 import { requirePermission } from "@/lib/auth/guard";
 import { AuthorizationError } from "@/lib/errors";
@@ -21,12 +22,10 @@ export default async function OutstandingReportPage() {
     throw error;
   }
 
+  const t = await getTranslations("reports");
   return (
     <PageContainer>
-      <PageHeader
-        title="Outstanding balances"
-        subtitle="Memberships with a balance due — price, paid, and remaining."
-      />
+      <PageHeader title={t("outstandingTitle")} subtitle={t("outstandingSubtitle")} />
       <OutstandingReportView report={report} />
     </PageContainer>
   );

@@ -1,13 +1,14 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTranslations } from "next-intl";
 import { FormField } from "@/components/pulse/form-field";
 import { TextInput } from "@/components/pulse/text-input";
 import { SelectInput, type SelectOption } from "@/components/pulse/select-input";
 import { FormLayout, FormSection, SubmitButton } from "@/components/pulse/form-layout";
 import { updateGymSettingsAction } from "../actions";
 import type { GymSettingsView } from "../service";
-import { fieldError, FormFeedback, INITIAL_STATE, useStepRedirect } from "./form-feedback";
+import { FormFeedback, INITIAL_STATE, useFieldError, useStepRedirect } from "./form-feedback";
 
 /**
  * Gym settings form (Catalog §9 composition). Used by both the persistent settings page
@@ -20,60 +21,59 @@ export function GymSettingsForm({
   currencyOptions,
   timeZoneOptions,
   nextHref,
-  submitLabel = "Save changes",
 }: {
   initial: GymSettingsView;
   currencyOptions: SelectOption[];
   timeZoneOptions: SelectOption[];
   nextHref?: string;
-  submitLabel?: string;
 }) {
   const [state, action] = useActionState(updateGymSettingsAction, INITIAL_STATE);
+  const t = useTranslations("settings");
+  const fieldError = useFieldError();
   useStepRedirect(state, nextHref);
 
   return (
     <FormLayout
       action={action}
       actions={
-        nextHref ? (
-          <SubmitButton pendingLabel="Saving…">Save &amp; continue</SubmitButton>
-        ) : (
-          <SubmitButton pendingLabel="Saving…">{submitLabel}</SubmitButton>
-        )
+        <SubmitButton pendingLabel={t("saving")}>
+          {nextHref ? t("saveAndContinue") : t("saveChanges")}
+        </SubmitButton>
       }
     >
-      <FormFeedback state={state} successMessage={nextHref ? undefined : "Gym settings saved."} />
+      <FormFeedback state={state} successMessage={nextHref ? undefined : t("gymSaved")} />
 
-      <FormSection title="Identity & contact" description="How your gym appears across the app.">
-        <FormField label="Gym name" required error={fieldError(state, "name")}>
+      <FormSection title={t("sectionIdentity")} description={t("sectionIdentityDesc")}>
+        <FormField label={t("gymName")} required error={fieldError(state, "name")}>
           <TextInput name="name" defaultValue={initial.name} autoComplete="organization" />
         </FormField>
-        <FormField label="Contact email" error={fieldError(state, "contactEmail")}>
+        <FormField label={t("contactEmail")} error={fieldError(state, "contactEmail")}>
           <TextInput name="contactEmail" type="email" defaultValue={initial.contactEmail ?? ""} />
         </FormField>
-        <FormField label="Contact phone" error={fieldError(state, "contactPhone")}>
+        <FormField label={t("contactPhone")} error={fieldError(state, "contactPhone")}>
           <TextInput name="contactPhone" defaultValue={initial.contactPhone ?? ""} />
         </FormField>
       </FormSection>
 
-      <FormSection
-        title="Localization & operations"
-        description="Currency and time zone drive all money and dates across the system."
-      >
-        <FormField label="Default currency" required error={fieldError(state, "defaultCurrency")}>
+      <FormSection title={t("sectionLocalization")} description={t("sectionLocalizationDesc")}>
+        <FormField
+          label={t("defaultCurrency")}
+          required
+          error={fieldError(state, "defaultCurrency")}
+        >
           <SelectInput
             name="defaultCurrency"
             defaultValue={initial.defaultCurrency}
             options={currencyOptions}
           />
         </FormField>
-        <FormField label="Time zone" required error={fieldError(state, "timeZone")}>
+        <FormField label={t("timeZone")} required error={fieldError(state, "timeZone")}>
           <SelectInput name="timeZone" defaultValue={initial.timeZone} options={timeZoneOptions} />
         </FormField>
         <FormField
-          label="Expiring-soon window (days)"
+          label={t("expiringWindow")}
           required
-          help="Members are flagged this many days before their membership ends."
+          help={t("expiringWindowHelp")}
           error={fieldError(state, "expiringSoonWindowDays")}
         >
           <TextInput
@@ -84,11 +84,7 @@ export function GymSettingsForm({
             defaultValue={initial.expiringSoonWindowDays}
           />
         </FormField>
-        <FormField
-          label="Grace period (days)"
-          required
-          error={fieldError(state, "gracePeriodDays")}
-        >
+        <FormField label={t("gracePeriod")} required error={fieldError(state, "gracePeriodDays")}>
           <TextInput
             name="gracePeriodDays"
             type="number"
