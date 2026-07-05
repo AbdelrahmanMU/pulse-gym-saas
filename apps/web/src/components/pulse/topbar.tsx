@@ -1,9 +1,11 @@
 "use client";
 
-import type { Ref } from "react";
+import { type Ref, useTransition } from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
-import { Bell, LogOut, Menu } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import { Bell, Languages, LogOut, Menu } from "lucide-react";
+import { setLocaleAction } from "@/i18n/actions";
 import { Avatar } from "./avatar";
 import { ActionMenu } from "./action-menu";
 import { NotificationBadge } from "./notification-badge";
@@ -43,8 +45,19 @@ export function TopBar({
   signOut,
 }: TopBarProps) {
   const t = useTranslations("common");
+  const locale = useLocale();
+  const router = useRouter();
+  const [, startLocaleSwitch] = useTransition();
   const count = notificationCount ?? 0;
   const bellLabel = count > 0 ? t("notificationsUnread", { count }) : t("notifications");
+  // Quick language switch: endonym of the *other* locale (language names are never translated).
+  const otherLocale = locale === "ar" ? "en" : "ar";
+  const otherLabel = locale === "ar" ? "English" : "العربية";
+  const switchLocale = () =>
+    startLocaleSwitch(async () => {
+      await setLocaleAction(otherLocale);
+      router.refresh();
+    });
   return (
     <header className="sticky top-0 z-(--z-sticky) flex h-(--topbar-h) items-center gap-3 border-b border-border bg-surface px-4 md:px-8">
       <Button
@@ -91,7 +104,10 @@ export function TopBar({
             <span className="text-caption text-muted-foreground">{user.email}</span>
           </span>
         }
-        items={[{ label: t("signOut"), icon: <LogOut aria-hidden />, onSelect: signOut }]}
+        items={[
+          { label: otherLabel, icon: <Languages aria-hidden />, onSelect: switchLocale },
+          { label: t("signOut"), icon: <LogOut aria-hidden />, onSelect: signOut },
+        ]}
       />
     </header>
   );

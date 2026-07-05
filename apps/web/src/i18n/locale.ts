@@ -1,4 +1,5 @@
 import "server-only";
+import { cookies } from "next/headers";
 
 /**
  * The set of locales PULSE ships. `ar` (Modern Standard Arabic, Egyptian business
@@ -12,34 +13,37 @@ export type Locale = (typeof LOCALES)[number];
 /** Source language and fallback when a key is missing in the active locale. */
 export const SOURCE_LOCALE: Locale = "en";
 
-/** The configured default until a per-gym / per-user selector ships. */
+/** The configured default when neither a user choice nor an env override is present. */
 export const DEFAULT_LOCALE: Locale = "ar";
+
+/** Cookie holding the signed-in user's chosen locale (the language switcher writes it). */
+export const LOCALE_COOKIE = "pulse-locale";
 
 function asLocale(value: string | undefined): Locale | null {
   return value === "en" || value === "ar" ? value : null;
 }
 
 /**
- * The single source of the active locale for a request.
+ * The single source of the active locale for a request. Resolution order (first wins):
  *
- * The Localization Authority (Deliverable 13 §4) models locale as a **gym setting**
- * (GYM-2, per-gym). At one-gym MVP scale (GYM-4) "the gym's locale" and "one
- * configured locale" are the same value, so today this resolves to {@link DEFAULT_LOCALE}
- * with no schema change. When multi-gym / a locale selector lands, **only this
- * function changes** (read it from the session's gym settings) — no translated string
- * moves, no call site changes.
+ *   1. **the user's `pulse-locale` cookie** — set by the in-app language switcher; a
+ *      per-user, per-device preference (the per-user override the Authority · Deliverable
+ *      13 §4 anticipated as a "future addition", now shipped without i18n routing);
+ *   2. **the `PULSE_LOCALE` env var** — how the functional e2e pins `en` (keeping the
+ *      English assertions valid) and how the `ar` RTL verification runs the app in Arabic;
+ *   3. **{@link DEFAULT_LOCALE}** — the product default (`ar`).
  *
- * The `PULSE_LOCALE` env var is an optional override: it is how the functional e2e/test
- * environment pins `en` (keeping the existing English assertions valid) and how the `ar`
- * RTL verification runs the app in Arabic — without a cookie read, so pages keep their
- * static/dynamic rendering unchanged (locale is process-level today, not per-request).
+ * Cookie-first is deliberate: the switcher must win over the env/default, while e2e (env=en,
+ * no cookie) and the RTL scripts (env=ar, no cookie) still resolve exactly as before.
  *
- * NOTE (flagged for the implementation report): GYM-2 does not yet carry a `locale`
- * column; wiring the literal gym-setting model is a future Prisma migration, kept out
- * of this presentation-only sprint deliberately.
+ * NOTE (flagged for the report): a *per-gym* locale (GYM-2) is still a future Prisma
+ * migration; this ships the per-user selector only. The Authority D13 §4 deferral of the
+ * v1 switcher is superseded by the explicit human request to build it — a follow-up
+ * amendment to that document is recommended (out of this sprint's frozen-doc scope).
  */
 export async function getUserLocale(): Promise<Locale> {
-  return asLocale(process.env.PULSE_LOCALE) ?? DEFAULT_LOCALE;
+  const fromCookie = asLocale((await cookies()).get(LOCALE_COOKIE)?.value);
+  return fromCookie ?? asLocale(process.env.PULSE_LOCALE) ?? DEFAULT_LOCALE;
 }
 
 /** Writing direction for the document root. Arabic is right-to-left. */

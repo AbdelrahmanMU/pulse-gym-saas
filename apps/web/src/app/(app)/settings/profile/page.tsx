@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { PageContainer } from "@/components/pulse/page-container";
 import { PageHeader } from "@/components/pulse/page-header";
+import { LanguageSwitcher } from "@/components/pulse/language-switcher";
 import { loadMyProfile } from "@/modules/gym/queries";
 import { ProfileForm } from "@/modules/gym/ui/profile-form";
 
@@ -15,7 +16,16 @@ export default async function ProfileSettingsPage() {
   return (
     <PageContainer width="narrow">
       <PageHeader title={t("profileTitle")} subtitle={t("profileSubtitle")} />
-      <ProfileForm initial={profile} />
+      <div className="flex flex-col gap-6">
+        <ProfileForm initial={profile} />
+        <section className="flex flex-col gap-3 rounded-md border border-border bg-surface p-6">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-h3 text-foreground">{t("language")}</h2>
+            <p className="text-body-sm text-muted-foreground">{t("languageHelp")}</p>
+          </div>
+          <LanguageSwitcher />
+        </section>
+      </div>
     </PageContainer>
   );
 }

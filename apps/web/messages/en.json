@@ -631,6 +631,8 @@
     "displayName": "Display name",
     "phone": "Phone",
     "email": "Email",
-    "emailHelp": "Email and password are managed in account security (coming later)."
+    "emailHelp": "Email and password are managed in account security (coming later).",
+    "language": "Language",
+    "languageHelp": "Applies to your account on this device."
   }
 }
