@@ -83,7 +83,8 @@ Verified against a `PULSE_LOCALE=ar` dev server via a standalone Playwright evid
 | **Viewports** | desktop **1280** · mobile **375** |
 | **Themes** | **light** · **dark** (`.dir="rtl"` + `.dark` class) |
 | **Direction** | every captured page reported `document.documentElement.dir === "rtl"` |
-| **axe (WCAG)** | **44 checks · 0 violations** across all module × viewport × theme combinations |
+| **axe (WCAG) — main matrix** | **44 checks · 0 violations** across all 11 module × viewport × theme combinations |
+| **axe — onboarding pass** (4 steps, first-run state, desktop) | gym/branch/profile **0**; **all four render without SSR error** (confirms the non-async `useTranslations` on `onboarding/complete` executes cleanly). `onboarding/complete` reports **1 pre-existing, locale-independent** `page-has-heading-one` (moderate) — see Retrospective |
 
 **Spot-checked RTL correctness (settings/gym, desktop):** page flows right-to-left; the sidebar
 sits on the inline-end edge with the active-item **3px accent bar on the inline-start (right)
@@ -97,8 +98,9 @@ alignment; the brand mark stays `PULSE` (Latin). No physical-CSS leakage in the 
 
 ## Deliverable 5 — Evidence (screenshots)
 
-**44 screenshots** at `docs/localization/screenshots/ar/` — 11 authenticated modules ×
-{desktop, mobile} × {light, dark}:
+**48 screenshots** at `docs/localization/screenshots/ar/` — 11 authenticated modules ×
+{desktop, mobile} × {light, dark} (44), plus the **4 onboarding steps** (desktop, first-run):
+`onboarding-{gym,branch,profile,complete}-desktop-light.png`:
 
 | Module | Arabic surface |
 |---|---|
@@ -112,8 +114,13 @@ alignment; the brand mark stays `PULSE` (Latin). No physical-CSS leakage in the 
 | `staff-*` | فريق العمل |
 | `notifications-*` | الإشعارات |
 | `settings-gym-*` | الإعدادات — gym settings |
+| `onboarding-{gym,branch,profile,complete}-*` | First-run flow: جهّز جيمك (steps 1–3) + «جيمك جاهز» |
 
 (Prior public-page shots — landing, sign-in — remain at `docs/localization/screenshots/`.)
+
+Evidence scripts: `apps/web/scripts/rtl-evidence.mjs` (main matrix) and
+`apps/web/scripts/rtl-onboarding-evidence.mjs` (first-run onboarding pass; toggles
+`setupCompletedAt=null` and restores it).
 
 ---
 
@@ -147,6 +154,15 @@ frozen Authority ruling.
 month names, ordinals (الأول…), duration units, and `paymentMethodLabel` (نقدًا/تحويل/بطاقة/أخرى)
 live in TypeScript, treated as CLDR-like locale data (like `Intl`), not catalog UI copy. This is
 the same class of decision as pinning Latin digits.
+
+**Pre-existing a11y item discovered (not a localization regression):** rendering the onboarding
+completion page under first-run state surfaced a moderate `page-has-heading-one` axe finding —
+`SuccessState` (a shared catalog component) renders its title as `<h2>`, so `onboarding/complete`
+has no `<h1>`. This is **identical in English** (localization only swapped the `<h2>`'s text via
+`t()`, never the tag) and was simply never axe-checked before (the onboarding e2e only scans step
+1). It is orthogonal to this sprint and a catalog-component/design decision to fix — flagged here,
+not changed (changing a shared component's heading level is out of a localization sprint's scope).
+The three other onboarding steps are axe-clean; all four render without SSR error.
 
 **Product enhancement left for later (surfaced, not silent):** Authority D9 describes the currency
 picker showing **code + Arabic name**; the picker currently shows the **code only** (`USD`,
