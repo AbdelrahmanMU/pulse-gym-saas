@@ -1,0 +1,18 @@
+# Build context excludes — keep the image lean and the build fast.
+**/node_modules
+**/.next
+**/.turbo
+**/dist
+.git
+.github
+docs
+test-results
+playwright-report
+**/*.test.ts
+apps/web/e2e
+apps/web/tests
+apps/web/scripts
+.env
+.env.*
+!.env.example
+*.log
