@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Alert } from "@/components/pulse/alert";
 import { FormField } from "@/components/pulse/form-field";
 import { TextInput } from "@/components/pulse/text-input";
+import { PasswordInput } from "@/components/pulse/password-input";
 import { FormLayout, SubmitButton } from "@/components/pulse/form-layout";
 import { signInAction, type SignInState } from "./actions";
 
@@ -47,7 +48,7 @@ export function SignInForm() {
         </FormField>
 
         <FormField label={t("password")} required>
-          <TextInput name="password" type="password" autoComplete="current-password" />
+          <PasswordInput name="password" autoComplete="current-password" />
         </FormField>
       </div>
     </FormLayout>

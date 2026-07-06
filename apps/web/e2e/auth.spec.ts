@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+﻿import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 
 /**
@@ -39,13 +39,27 @@ test("unauthenticated access to a protected route redirects to sign-in", async (
 test("the sign-in page renders the credentials form", async ({ page }) => {
   await page.goto("/sign-in");
   await expect(page.getByLabel(IDENTIFIER_LABEL)).toBeVisible();
-  await expect(page.getByLabel("Password")).toBeVisible();
+  await expect(page.getByLabel(/^Password/)).toBeVisible();
+});
+
+test("the password toggle reveals and re-masks without losing the value", async ({ page }) => {
+  await page.goto("/sign-in");
+  const password = page.getByLabel(/^Password/);
+  await password.fill("s3cret-value");
+  await expect(password).toHaveAttribute("type", "password");
+
+  await page.getByRole("button", { name: "Show password" }).click();
+  await expect(password).toHaveAttribute("type", "text");
+  await expect(password).toHaveValue("s3cret-value");
+
+  await page.getByRole("button", { name: "Hide password" }).click();
+  await expect(password).toHaveAttribute("type", "password");
 });
 
 test("invalid credentials show a generic error and stay on sign-in", async ({ page }) => {
   await page.goto("/sign-in");
   await page.getByLabel(IDENTIFIER_LABEL).fill(OWNER_EMAIL);
-  await page.getByLabel("Password").fill("definitely-not-the-password");
+  await page.getByLabel(/^Password/).fill("definitely-not-the-password");
   await page.getByRole("button", { name: /sign in/i }).click();
 
   await expect(page.getByText(/invalid sign-in details/i)).toBeVisible();
@@ -58,7 +72,7 @@ test("Owner signs in by phone (typed with spaces) and reaches the dashboard", as
   const spaced = `${phone.slice(0, 4)} ${phone.slice(4, 7)} ${phone.slice(7)}`;
   await page.goto("/sign-in");
   await page.getByLabel(IDENTIFIER_LABEL).fill(spaced);
-  await page.getByLabel("Password").fill(OWNER_PASSWORD);
+  await page.getByLabel(/^Password/).fill(OWNER_PASSWORD);
   await page.getByRole("button", { name: /sign in/i }).click();
 
   await expect(page).toHaveURL(/\/dashboard/);
@@ -67,7 +81,7 @@ test("Owner signs in by phone (typed with spaces) and reaches the dashboard", as
 test("Owner signs in, reaches the gated dashboard, and signs out", async ({ page }) => {
   await page.goto("/sign-in");
   await page.getByLabel(IDENTIFIER_LABEL).fill(OWNER_EMAIL);
-  await page.getByLabel("Password").fill(OWNER_PASSWORD);
+  await page.getByLabel(/^Password/).fill(OWNER_PASSWORD);
   await page.getByRole("button", { name: /sign in/i }).click();
 
   // Permission-gated dashboard renders inside the Application Shell (Owner holds

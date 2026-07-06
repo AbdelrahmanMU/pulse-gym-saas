@@ -47,6 +47,17 @@ for (const [name, viewport] of [
   const label = page.getByLabel("رقم الهاتف أو البريد الإلكتروني");
   if (!(await label.isVisible())) failures.push(`ar identifier label missing at ${name}`);
 
+  // Pilot UX Finish: the password toggle carries its Arabic accessible name and sits on
+  // the trailing (visual LEFT under RTL) side of the field — logical `end` positioning.
+  const toggle = page.getByRole("button", { name: "إظهار كلمة المرور" });
+  if (!(await toggle.isVisible())) failures.push(`ar password toggle missing at ${name}`);
+  const [toggleBox, fieldBox] = [
+    await toggle.boundingBox(),
+    await page.getByLabel(/^كلمة المرور/).boundingBox(),
+  ];
+  if (toggleBox && fieldBox && toggleBox.x > fieldBox.x + fieldBox.width / 2)
+    failures.push(`ar toggle is not on the trailing (left) side at ${name}`);
+
   for (const theme of ["light", "dark"]) {
     if (theme === "dark") await page.evaluate(() => document.documentElement.classList.add("dark"));
     const results = await new AxeBuilder({ page }).analyze();
@@ -64,7 +75,8 @@ const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } })
 const page = await ctx.newPage();
 await page.goto(`${BASE}/sign-in`, { waitUntil: "networkidle" });
 await page.getByLabel("رقم الهاتف أو البريد الإلكتروني").fill(arabicPhone);
-await page.getByLabel("كلمة المرور").fill(OWNER_PASSWORD);
+// Anchored: the field's accessible name is "كلمة المرور (مطلوب)"; the toggle is "إظهار كلمة المرور".
+await page.getByLabel(/^كلمة المرور/).fill(OWNER_PASSWORD);
 await page.getByRole("button", { name: "تسجيل الدخول" }).click();
 try {
   await page.waitForURL(/\/dashboard/, { timeout: 30000 });

@@ -20,7 +20,9 @@
     "filtersActive": "الفلاتر ({count} مفعّل)",
     "done": "تم",
     "close": "إغلاق",
-    "loading": "جارٍ التحميل…"
+    "loading": "جارٍ التحميل…",
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور"
   },
   "nav": {
     "dashboard": "الرئيسية",

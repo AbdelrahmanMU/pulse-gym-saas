@@ -159,9 +159,11 @@ describe("update & role assignment", () => {
   });
 
   it("stores a formatted phone in canonical form (the sign-in identifier contract)", async () => {
+    // The +20 international form canonicalizes to the local trunk form — the same
+    // string a receptionist typing "0100 555 0199" produces (one number, one identity).
     const created = await createStaff(owner, mkStaff({ phone: "+20 100-555 0199" }));
     const detail = await getStaff(owner, created.gymUserId ?? "");
-    expect(detail.phone).toBe("+201005550199");
+    expect(detail.phone).toBe("01005550199");
   });
 
   it("rejects a non-phone value in the phone field with a field error", async () => {
@@ -271,6 +273,19 @@ describe("authentication reuse — sign-in stamps lastLoginAt; suspend blocks si
     const principal = await resolvePrincipalFromCredentials({
       // Typed the human way — separators must not matter.
       identifier: `${phone.slice(0, 4)} ${phone.slice(4, 7)} ${phone.slice(7)}`,
+      password: "TempPass123",
+    });
+    expect(principal).not.toBeNull();
+    expect(principal?.email).toBe(email);
+  });
+
+  it("a staff member stored with a local phone can sign in typing the +20 form", async () => {
+    const email = uniqueEmail();
+    const phone = `0108${String(Date.now()).slice(-7)}`;
+    await createStaff(owner, mkStaff({ email, phone, temporaryPassword: "TempPass123" }));
+    const principal = await resolvePrincipalFromCredentials({
+      // Same number in E.164 — the trunk-prefix equivalence must bridge the forms.
+      identifier: `+20${phone.slice(1)}`,
       password: "TempPass123",
     });
     expect(principal).not.toBeNull();

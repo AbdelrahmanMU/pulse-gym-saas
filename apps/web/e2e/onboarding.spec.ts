@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+﻿import { resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -25,7 +25,7 @@ async function setSetupCompleted(value: Date | null): Promise<void> {
 async function signIn(page: Page): Promise<void> {
   await page.goto("/sign-in");
   await page.getByLabel("Phone number or email").fill(OWNER_EMAIL);
-  await page.getByLabel("Password").fill(OWNER_PASSWORD);
+  await page.getByLabel(/^Password/).fill(OWNER_PASSWORD);
   await page.getByRole("button", { name: /sign in/i }).click();
 }
 

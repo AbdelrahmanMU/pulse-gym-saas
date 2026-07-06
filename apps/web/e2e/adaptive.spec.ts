@@ -1,4 +1,4 @@
-import AxeBuilder from "@axe-core/playwright";
+﻿import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
 /**
@@ -29,7 +29,7 @@ const MODULE_PAGES = [
 async function signIn(page: Page): Promise<void> {
   await page.goto("/sign-in");
   await page.getByLabel("Phone number or email").fill(OWNER_EMAIL);
-  await page.getByLabel("Password").fill(OWNER_PASSWORD);
+  await page.getByLabel(/^Password/).fill(OWNER_PASSWORD);
   await page.getByRole("button", { name: /sign in/i }).click();
   await expect(page).toHaveURL(/\/dashboard/);
   // Settle on the rendered dashboard (not its loading skeleton) before assertions.

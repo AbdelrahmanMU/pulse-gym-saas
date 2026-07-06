@@ -28,6 +28,17 @@ export function isEmailIdentifier(identifier: string): boolean {
  * ASCII, separators (spaces, dashes, dots, parentheses) are stripped, a single
  * leading `+` survives. Returns `null` when the result is not a plausible phone
  * (6–20 digits) — callers treat that as "not a phone", never as an error.
+ *
+ * Equivalence rewrites (Pilot UX Finish) — the same real-world number must land on
+ * ONE canonical string however the receptionist types it. These are **fixed dialing
+ * rules, not country detection** (no guessing, no library):
+ *  - `00…` → `+…` (the universal international-dialing prefix);
+ *  - `+20…` → `0…` (`+20` is uniquely Egypt — the pilot market; the local `0` trunk
+ *    form is the canonical because that is how every existing phone is stored);
+ *  - bare `20` + a 10-digit mobile (`1…`) → `0…` (people paste the E.164 digits
+ *    without the `+`). Landlines without `+` stay as typed — too ambiguous.
+ * Applied identically at the staff write boundary and the login lookup, so both
+ * sides always agree.
  */
 export function normalizePhone(raw: string): string | null {
   const ascii = raw.trim().replace(NON_ASCII_DIGITS, (digit) => {
@@ -35,6 +46,9 @@ export function normalizePhone(raw: string): string | null {
     const zero = code >= 0x06f0 ? 0x06f0 : 0x0660;
     return String.fromCharCode(code - zero + 0x30);
   });
-  const compact = ascii.replace(PHONE_SEPARATORS, "");
+  let compact = ascii.replace(PHONE_SEPARATORS, "");
+  if (compact.startsWith("00")) compact = `+${compact.slice(2)}`;
+  if (compact.startsWith("+20")) compact = `0${compact.slice(3)}`;
+  else if (/^201\d{9}$/.test(compact)) compact = `0${compact.slice(2)}`;
   return CANONICAL_PHONE.test(compact) ? compact : null;
 }

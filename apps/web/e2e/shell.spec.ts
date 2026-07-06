@@ -1,4 +1,4 @@
-import AxeBuilder from "@axe-core/playwright";
+﻿import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
 /**
@@ -13,7 +13,7 @@ const OWNER_PASSWORD = process.env.OWNER_INITIAL_PASSWORD ?? "ChangeMe!Owner1";
 async function signIn(page: Page): Promise<void> {
   await page.goto("/sign-in");
   await page.getByLabel("Phone number or email").fill(OWNER_EMAIL);
-  await page.getByLabel("Password").fill(OWNER_PASSWORD);
+  await page.getByLabel(/^Password/).fill(OWNER_PASSWORD);
   await page.getByRole("button", { name: /sign in/i }).click();
   await expect(page).toHaveURL(/\/dashboard/);
   // Settle on the rendered dashboard (not its loading skeleton): the URL flips before
@@ -39,7 +39,9 @@ test.describe("a11y (R-4)", () => {
   test("dashboard shell has no axe violations in dark mode", async ({ page }) => {
     await signIn(page);
     // Toggle the class-based dark theme (T-14): semantic roles must resolve and stay
-    // AA-contrast in dark as well as light.
+    // AA-contrast in dark as well as light. Reduced motion zeroes `transition-colors`
+    // first so axe never samples a mid-transition blend (the documented flake).
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await page.evaluate(() => document.documentElement.classList.add("dark"));
     const results = await new AxeBuilder({ page }).analyze();
     expect(results.violations).toEqual([]);

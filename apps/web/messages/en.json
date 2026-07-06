@@ -20,7 +20,9 @@
     "filtersActive": "Filters ({count} active)",
     "done": "Done",
     "close": "Close",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password"
   },
   "nav": {
     "dashboard": "Dashboard",

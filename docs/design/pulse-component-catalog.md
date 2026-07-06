@@ -692,6 +692,20 @@ These apply to **all** components below. Per-component sections state only delta
 11. **Don't** — Don't repurpose for currency/date (use specialized inputs).
 12. **Usage** — Member name, email.
 
+## PasswordInput
+1. **Purpose** — Password entry with a show/hide interaction (Pilot UX Finish).
+2. **Responsibilities** — Composes TextInput unchanged (FormField wiring, autocomplete, password-manager support intact); adds only the visibility toggle.
+3. **Variants** — none (single form).
+4. **Anatomy** — TextInput (`pe` reserved, zero layout shift) + trailing eye toggle (`type="button"`, never submits).
+5. **Props / Config** — TextInput props minus `type` (managed internally: `password` ⇄ `text`).
+6. **Visual Behavior** — Icon `--icon-md`, muted → foreground on hover; logical `end` positioning (RTL-correct); full-height 44px hit area.
+7. **Interaction Rules** — Click/Enter/Space toggles; state is per-mount, never persisted.
+8. **Accessibility** — Toggle carries its own accessible name (`common.showPassword`/`hidePassword`) + `aria-pressed` + `aria-controls`; input labeled via FormField.
+9. **Responsive** — Full-width like TextInput.
+10. **Do** — Use for every password field (sign-in, staff temporary password).
+11. **Don't** — Don't auto-reveal; don't move focus on toggle.
+12. **Usage** — Sign-in password (first consumer).
+
 ## SelectInput
 1. **Purpose** — Choose one option from a list.
 2. **Responsibilities** — Accessible select/combobox with chevron and optional search.

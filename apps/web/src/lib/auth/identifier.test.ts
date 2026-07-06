@@ -26,13 +26,14 @@ describe("normalizePhone", () => {
     expect(normalizePhone("01001234567")).toBe("01001234567");
   });
 
-  it("preserves a single leading + (international form)", () => {
-    expect(normalizePhone("+201001234567")).toBe("+201001234567");
+  it("preserves a single leading + for non-Egyptian numbers (+20 canonicalizes to local)", () => {
+    expect(normalizePhone("+15551234567")).toBe("+15551234567");
+    expect(normalizePhone("+201001234567")).toBe("01001234567");
   });
 
   it("strips the separators people actually type (spaces, dashes, dots, parens)", () => {
     expect(normalizePhone("0100 123-4567")).toBe("01001234567");
-    expect(normalizePhone("+20 (100) 123.4567")).toBe("+201001234567");
+    expect(normalizePhone("+20 (100) 123.4567")).toBe("01001234567");
   });
 
   it("converts Arabic-Indic and Extended Arabic-Indic digits to ASCII", () => {
@@ -52,5 +53,34 @@ describe("normalizePhone", () => {
     expect(normalizePhone("12345")).toBeNull();
     expect(normalizePhone("123456")).toBe("123456");
     expect(normalizePhone("123456789012345678901")).toBeNull();
+  });
+
+  // Pilot UX Finish — every natural way to type the SAME Egyptian number lands on
+  // one canonical string (fixed dialing-rule rewrites, never country detection).
+  it("resolves all mandated Egyptian input forms to one canonical value", () => {
+    const CANONICAL = "01012345678";
+    expect(normalizePhone("01012345678")).toBe(CANONICAL);
+    expect(normalizePhone("010 1234 5678")).toBe(CANONICAL);
+    expect(normalizePhone("010-123-45678")).toBe(CANONICAL);
+    expect(normalizePhone("+201012345678")).toBe(CANONICAL);
+    expect(normalizePhone("201012345678")).toBe(CANONICAL);
+    expect(normalizePhone("٠١٠١٢٣٤٥٦٧٨")).toBe(CANONICAL);
+    expect(normalizePhone("٠١٠ ١٢٣٤ ٥٦٧٨")).toBe(CANONICAL);
+  });
+
+  it("rewrites the universal 00 international prefix, chaining into +20", () => {
+    expect(normalizePhone("00201012345678")).toBe("01012345678");
+    expect(normalizePhone("001555123456")).toBe("+1555123456");
+  });
+
+  it("converts +20 landlines too, but leaves bare non-mobile 20-prefixes alone", () => {
+    expect(normalizePhone("+20233334444")).toBe("0233334444");
+    // Bare "20" not followed by a 10-digit mobile is too ambiguous — kept as typed.
+    expect(normalizePhone("20233334444")).toBe("20233334444");
+  });
+
+  it("never rewrites other countries' numbers", () => {
+    expect(normalizePhone("+1555000")).toBe("+1555000");
+    expect(normalizePhone("+212612345678")).toBe("+212612345678");
   });
 });
