@@ -29,7 +29,7 @@ const THEMES = ["light", "dark"];
 
 async function signIn(page) {
   await page.goto(`${BASE}/sign-in`, { waitUntil: "networkidle" });
-  await page.fill('input[name="email"]', OWNER_EMAIL);
+  await page.fill('input[name="identifier"]', OWNER_EMAIL);
   await page.fill('input[name="password"]', OWNER_PASSWORD);
   await page.click('button[type="submit"]');
   await page.waitForURL(/\/dashboard/, { timeout: 30000 });

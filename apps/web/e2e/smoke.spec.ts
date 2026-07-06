@@ -20,7 +20,7 @@ test("public landing renders, passes axe, and routes to sign-in", async ({ page 
 test("sign-in page renders the auth card and passes axe", async ({ page }) => {
   await page.goto("/sign-in");
   await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible();
-  await expect(page.getByLabel("Email")).toBeVisible();
+  await expect(page.getByLabel("Phone number or email")).toBeVisible();
 
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);

@@ -1,5 +1,5 @@
 import { prisma } from "@pulse/db";
-import { derivePermissions } from "@pulse/auth";
+import { derivePermissions, isEmailIdentifier, normalizePhone } from "@pulse/auth";
 import { verifyPassword } from "@pulse/auth/password";
 import type { AuthenticatedPrincipal, Credentials } from "@pulse/types";
 import { log } from "@/lib/logger";
@@ -21,13 +21,43 @@ import { systemClock } from "@/lib/platform/clock";
  *    `verifyPassword`.
  *  - No tenant context (no active `GymUser`) → reject; we never establish a session
  *    without a gym scope.
+ *  - **Phone ambiguity fails closed:** `User.phone` carries no unique constraint, so
+ *    anything but exactly one phone match is rejected — we never pick a winner.
  */
+/**
+ * Locate the `User` for a sign-in identifier (Pilot Readiness: one field, phone OR
+ * email). Contains `@` → the global `email` unique. Otherwise it must normalize to a
+ * canonical phone (Arabic-Indic digits and separators tolerated) and match **exactly
+ * one** user — `User.phone` has no unique constraint, so 0 or 2+ matches return
+ * `null` (fail closed; the generic rejection keeps anti-enumeration intact).
+ */
+async function findUserByIdentifier(identifier: string) {
+  if (isEmailIdentifier(identifier)) {
+    return prisma.user.findUnique({ where: { email: identifier } });
+  }
+
+  const phone = normalizePhone(identifier);
+  if (!phone) return null;
+
+  const matches = await prisma.user.findMany({ where: { phone }, take: 2 });
+  if (matches.length > 1) {
+    // Ids only — never the phone itself (T-16: no credentials/PII in logs).
+    log.warn("auth.login.ambiguous_phone", {
+      code: "AUTH",
+      module: "auth",
+      userIds: matches.map((match) => match.id),
+    });
+    return null;
+  }
+  return matches[0] ?? null;
+}
+
 export async function resolvePrincipalFromCredentials(
   credentials: Credentials,
 ): Promise<AuthenticatedPrincipal | null> {
-  const { email, password } = credentials;
+  const { identifier, password } = credentials;
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await findUserByIdentifier(identifier);
   if (!user || !user.isActive) {
     // Spend comparable scrypt work, then fail closed — do not short-circuit.
     await verifyPassword(password, "!no-such-user");

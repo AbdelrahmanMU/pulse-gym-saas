@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizePhone } from "@pulse/auth";
 
 /**
  * Zod schemas for User & Staff Management (Sprint-1 Epic-9) — the trust boundary for every staff
@@ -11,14 +12,20 @@ import { z } from "zod";
  * (a minimum length only here).
  */
 
-/** Optional free-text → trimmed string or null (empty becomes null, never ""). */
-const optionalText = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max, `Must be ${max} characters or fewer`)
-    .optional()
-    .transform((v) => (v && v.length > 0 ? v : null));
+/**
+ * Optional phone → **canonical** digits or null (Pilot Readiness). A staff phone is
+ * a sign-in identifier, so it is stored exactly as the login lookup normalizes it
+ * (`normalizePhone`: Arabic-Indic digits → ASCII, separators stripped) — otherwise a
+ * phone saved as "0100 123 4567" could never sign in as "01001234567".
+ */
+const optionalPhone = z
+  .string()
+  .trim()
+  .max(40, "Must be 40 characters or fewer")
+  .optional()
+  .transform((v) => (v && v.length > 0 ? v : null))
+  .refine((v) => v === null || normalizePhone(v) !== null, "Enter a valid phone number")
+  .transform((v) => (v === null ? null : normalizePhone(v)));
 
 const displayName = z.string().trim().min(1, "A name is required").max(120, "Name is too long");
 
@@ -26,7 +33,7 @@ const displayName = z.string().trim().min(1, "A name is required").max(120, "Nam
 export const CreateStaffSchema = z.object({
   displayName,
   email: z.string().trim().toLowerCase().max(200).email("Enter a valid email address"),
-  phone: optionalText(40),
+  phone: optionalPhone,
   roleId: z.string().uuid("Choose a role"),
   temporaryPassword: z
     .string()
@@ -38,7 +45,7 @@ export type CreateStaffInput = z.infer<typeof CreateStaffSchema>;
 /** Edit a staff member's profile (name + phone). Email is identity and role has its own control. */
 export const UpdateStaffSchema = z.object({
   displayName,
-  phone: optionalText(40),
+  phone: optionalPhone,
 });
 export type UpdateStaffInput = z.infer<typeof UpdateStaffSchema>;
 

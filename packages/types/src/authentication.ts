@@ -8,9 +8,13 @@
  * `@pulse/types` is dependency-free (monorepo-strategy §4): these are pure types.
  */
 
-/** Plaintext credentials presented at sign-in (validated/handled only server-side). */
+/**
+ * Plaintext credentials presented at sign-in (validated/handled only server-side).
+ * The identifier is a **phone number or an email** in one field (Pilot Readiness:
+ * gym staff identify people by phone first); the server resolves which it is.
+ */
 export interface Credentials {
-  readonly email: string;
+  readonly identifier: string;
   readonly password: string;
 }
 

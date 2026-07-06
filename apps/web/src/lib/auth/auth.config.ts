@@ -18,8 +18,11 @@ import "./types";
  */
 
 // Boundary validation (security-guidelines.md): credentials are untrusted input.
+// The identifier is ONE field carrying a phone number or an email — shape-based
+// resolution happens in `resolvePrincipalFromCredentials`, so only presence and a
+// sane length are enforced here (a `.email()` gate would reject phone sign-in).
 const credentialsSchema = z.object({
-  email: z.string().email(),
+  identifier: z.string().trim().min(1).max(254),
   password: z.string().min(1),
 });
 
@@ -29,7 +32,7 @@ export const authConfig: NextAuthConfig = {
   pages: { signIn: "/sign-in" },
   providers: [
     Credentials({
-      credentials: { email: {}, password: {} },
+      credentials: { identifier: {}, password: {} },
       authorize: async (raw) => {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;

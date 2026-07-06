@@ -24,7 +24,7 @@ async function setSetupCompleted(value: Date | null): Promise<void> {
 
 async function signIn(page: Page): Promise<void> {
   await page.goto("/sign-in");
-  await page.getByLabel("Email").fill(OWNER_EMAIL);
+  await page.getByLabel("Phone number or email").fill(OWNER_EMAIL);
   await page.getByLabel("Password").fill(OWNER_PASSWORD);
   await page.getByRole("button", { name: /sign in/i }).click();
 }

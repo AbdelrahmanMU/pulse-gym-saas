@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 
 /**
@@ -9,6 +10,25 @@ import { expect, test } from "@playwright/test";
  */
 const OWNER_EMAIL = "owner@pulse.local";
 const OWNER_PASSWORD = process.env.OWNER_INITIAL_PASSWORD ?? "ChangeMe!Owner1";
+const IDENTIFIER_LABEL = "Phone number or email";
+
+/**
+ * The owner's phone is read from the dev DB, not assumed: the seed sets a default
+ * only when no phone exists and PRESERVES an edited one, so the database is the
+ * single source of truth for what the receptionist would actually type.
+ */
+async function ownerPhone(): Promise<string> {
+  try {
+    process.loadEnvFile(resolve(process.cwd(), "../../.env"));
+  } catch {
+    /* ambient env */
+  }
+  const { prisma } = await import("@pulse/db");
+  const owner = await prisma.user.findUniqueOrThrow({ where: { email: OWNER_EMAIL } });
+  await prisma.$disconnect();
+  if (!owner.phone) throw new Error("Seeded owner has no phone — run `pnpm db:seed` first.");
+  return owner.phone;
+}
 
 test("unauthenticated access to a protected route redirects to sign-in", async ({ page }) => {
   await page.goto("/dashboard");
@@ -18,23 +38,35 @@ test("unauthenticated access to a protected route redirects to sign-in", async (
 
 test("the sign-in page renders the credentials form", async ({ page }) => {
   await page.goto("/sign-in");
-  await expect(page.getByLabel("Email")).toBeVisible();
+  await expect(page.getByLabel(IDENTIFIER_LABEL)).toBeVisible();
   await expect(page.getByLabel("Password")).toBeVisible();
 });
 
 test("invalid credentials show a generic error and stay on sign-in", async ({ page }) => {
   await page.goto("/sign-in");
-  await page.getByLabel("Email").fill(OWNER_EMAIL);
+  await page.getByLabel(IDENTIFIER_LABEL).fill(OWNER_EMAIL);
   await page.getByLabel("Password").fill("definitely-not-the-password");
   await page.getByRole("button", { name: /sign in/i }).click();
 
-  await expect(page.getByText(/invalid email or password/i)).toBeVisible();
+  await expect(page.getByText(/invalid sign-in details/i)).toBeVisible();
   await expect(page).toHaveURL(/\/sign-in/);
+});
+
+test("Owner signs in by phone (typed with spaces) and reaches the dashboard", async ({ page }) => {
+  // The receptionist reality: the owner's real phone typed the human way, with spaces.
+  const phone = await ownerPhone();
+  const spaced = `${phone.slice(0, 4)} ${phone.slice(4, 7)} ${phone.slice(7)}`;
+  await page.goto("/sign-in");
+  await page.getByLabel(IDENTIFIER_LABEL).fill(spaced);
+  await page.getByLabel("Password").fill(OWNER_PASSWORD);
+  await page.getByRole("button", { name: /sign in/i }).click();
+
+  await expect(page).toHaveURL(/\/dashboard/);
 });
 
 test("Owner signs in, reaches the gated dashboard, and signs out", async ({ page }) => {
   await page.goto("/sign-in");
-  await page.getByLabel("Email").fill(OWNER_EMAIL);
+  await page.getByLabel(IDENTIFIER_LABEL).fill(OWNER_EMAIL);
   await page.getByLabel("Password").fill(OWNER_PASSWORD);
   await page.getByRole("button", { name: /sign in/i }).click();
 

@@ -40,7 +40,7 @@ async function main() {
 
     // Sign in → routed into onboarding.
     await page.goto(`${BASE}/sign-in`, { waitUntil: "networkidle" });
-    await page.fill('input[name="email"]', OWNER_EMAIL);
+    await page.fill('input[name="identifier"]', OWNER_EMAIL);
     await page.fill('input[name="password"]', OWNER_PASSWORD);
     await page.click('button[type="submit"]');
     await page.waitForURL(/\/onboarding\/gym/, { timeout: 30000 });

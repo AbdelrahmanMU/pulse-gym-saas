@@ -47,7 +47,7 @@ export function TopBar({
   const t = useTranslations("common");
   const locale = useLocale();
   const router = useRouter();
-  const [, startLocaleSwitch] = useTransition();
+  const [localeSwitchPending, startLocaleSwitch] = useTransition();
   const count = notificationCount ?? 0;
   const bellLabel = count > 0 ? t("notificationsUnread", { count }) : t("notifications");
   // Quick language switch: endonym of the *other* locale (language names are never translated).
@@ -91,7 +91,17 @@ export function TopBar({
 
       <ActionMenu
         trigger={
-          <Button variant="ghost" size="md" className="gap-2 px-2" aria-label={t("userMenu")}>
+          // While the quick language switch refreshes the tree, the menu is closed —
+          // the dimmed, busy trigger is the pending feedback (same recipe as
+          // LanguageSwitcher: disabled + reduced opacity, no spinner).
+          <Button
+            variant="ghost"
+            size="md"
+            className="gap-2 px-2 disabled:opacity-70"
+            aria-label={t("userMenu")}
+            aria-busy={localeSwitchPending}
+            disabled={localeSwitchPending}
+          >
             <Avatar name={user.displayName} size="sm" />
             <span className="hidden max-w-40 truncate font-medium sm:inline">
               {user.displayName}

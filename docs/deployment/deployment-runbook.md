@@ -20,6 +20,7 @@ The app **refuses to boot** unless these validate (`apps/web/src/env.ts`, Zod fa
 | `AUTH_SECRET` | ✅ app | `openssl rand -base64 32` | **Strong and STABLE** — rotating it signs everyone out (JWT sessions). Store in the platform secret store. |
 | `NODE_ENV` | ✅ (`production`) | `production` | Enables secure cookies (needs HTTPS) + `info` logging. Most platforms set it for you. |
 | `OWNER_INITIAL_PASSWORD` | ⚠️ **seed step only** | a strong password you choose | Seeds the bootstrap owner `owner@pulse.local`. **Not read by the running app.** Rotate after first login. |
+| `OWNER_PHONE` | ⚠️ **seed step only** | the owner's real phone (digits, optional leading `+`) | Seeds the owner's phone — the sign-in field accepts **phone OR email**. Set once; re-runs never overwrite an edited phone. Default `01000000000`. |
 | `PULSE_LOCALE` | optional | `ar` (default) / `en` | Only a fallback default; users pick their language in-app (cookie). Leave unset → Arabic. |
 | `LOG_LEVEL` | optional | `info` (prod default) | `debug` for troubleshooting. |
 

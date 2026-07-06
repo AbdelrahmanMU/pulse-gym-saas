@@ -3,7 +3,12 @@ import { UserPlus } from "lucide-react";
 import { requireSession } from "@/lib/auth/guard";
 import { PageContainer } from "@/components/pulse/page-container";
 import { PageHeader } from "@/components/pulse/page-header";
-import { LoadingState } from "@/components/pulse/loading-state";
+import {
+  LoadingState,
+  SkeletonForm,
+  SkeletonKpiGrid,
+  SkeletonTable,
+} from "@/components/pulse/loading-state";
 import { EmptyState } from "@/components/pulse/empty-state";
 import { ErrorState } from "@/components/pulse/error-state";
 import { Button } from "@/components/pulse/button";
@@ -57,6 +62,16 @@ export default async function UiStatesPage({
           <div className="grid gap-4 md:grid-cols-2">
             <LoadingState variant="skeleton" />
             <LoadingState variant="spinner" label="Loading members…" />
+          </div>
+        </StateBlock>
+
+        <StateBlock eyebrow="Loading — skeleton variants (Catalog §10)">
+          <div className="flex flex-col gap-4">
+            <SkeletonKpiGrid count={3} />
+            <div className="grid gap-4 md:grid-cols-2">
+              <SkeletonTable rows={3} />
+              <SkeletonForm fields={2} />
+            </div>
           </div>
         </StateBlock>
 

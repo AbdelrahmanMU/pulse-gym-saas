@@ -867,10 +867,10 @@ These apply to **all** components below. Per-component sections state only delta
 ## Skeleton
 1. **Purpose** — Placeholder mimicking content shape while loading.
 2. **Responsibilities** — Render shimmer blocks matching final layout.
-3. **Variants** — `text` · `card` · `table-row` · `stat` · `avatar`.
+3. **Variants** — `text` · `card` · `table-row` · `stat` · `avatar`. *Implemented (Pilot Readiness) as composable exports of `loading-state.tsx`: `Skeleton` (base block), `SkeletonText`, `SkeletonPageHeader`, `SkeletonTable` (toolbar + rows), `SkeletonStat`/`SkeletonKpiGrid`, `SkeletonForm`. `avatar` remains specified/unshipped (no consumer).*
 4. **Anatomy** — Shaped placeholders matching target component.
 5. **Props / Config** — `variant`, `count`, `width/height`.
-6. **Visual Behavior** — Subtle shimmer; honors reduced-motion (static fallback).
+6. **Visual Behavior** — Subtle shimmer via the token-owned `.skeleton` base (`pulse-shimmer` keyframe + `--duration-shimmer`, globals §5); RTL-aware sweep; honors reduced-motion (static fallback).
 7. **Interaction Rules** — Non-interactive.
 8. **Accessibility** — `aria-hidden`; parent carries `aria-busy`.
 9. **Responsive** — Matches the component it stands in for.

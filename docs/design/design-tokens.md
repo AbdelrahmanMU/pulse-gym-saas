@@ -179,13 +179,15 @@ Conceptual layers, expressed via shadow (light) **and** surface-lightness (dark)
 | `--duration-fast` | 120ms | State changes (hover, toggle) |
 | `--duration-base` | 200ms | Overlays (popover, drawer) |
 | `--duration-slow` | 320ms | Larger transitions, sheets |
+| `--duration-shimmer` | 1.6s | Skeleton shimmer **loop only** — never UI feedback |
 
-- **Do** — Gate all motion behind `prefers-reduced-motion`. **Don't** — exceed `--duration-slow` for UI feedback.
+- **Do** — Gate all motion behind `prefers-reduced-motion`. **Don't** — exceed `--duration-slow` for UI feedback (`--duration-shimmer` is the one sanctioned loop, scoped to `.skeleton`).
 
 ## 15. Animation Tokens
 | Token | Use |
 |---|---|
 | `pulse-shimmer` (keyframe) | Skeleton loading only, motion-safe |
+| `.skeleton` (base class, globals §5) | The token-owned skeleton surface: `--surface-raised` block + motion-safe shimmer sweep (foreground @ 5% mix, RTL-aware direction). Static block is the reduced-motion fallback. |
 
 - **Do** — Provide a static fallback under reduced-motion. **Don't** — add decorative looping animations.
 

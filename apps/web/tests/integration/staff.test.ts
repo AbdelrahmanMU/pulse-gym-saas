@@ -158,6 +158,18 @@ describe("update & role assignment", () => {
     expect(detail.phone).toBe("+1555000");
   });
 
+  it("stores a formatted phone in canonical form (the sign-in identifier contract)", async () => {
+    const created = await createStaff(owner, mkStaff({ phone: "+20 100-555 0199" }));
+    const detail = await getStaff(owner, created.gymUserId ?? "");
+    expect(detail.phone).toBe("+201005550199");
+  });
+
+  it("rejects a non-phone value in the phone field with a field error", async () => {
+    const res = await createStaff(owner, mkStaff({ phone: "not a phone" }));
+    expect(res.status).toBe("error");
+    expect(res.fieldErrors?.phone).toBeTruthy();
+  });
+
   it("denies update without staff.manage", async () => {
     const created = await createStaff(owner, mkStaff());
     await expect(
@@ -241,7 +253,10 @@ describe("authentication reuse — sign-in stamps lastLoginAt; suspend blocks si
   it("a created staff member can sign in, and sign-in records lastLoginAt", async () => {
     const email = uniqueEmail();
     const created = await createStaff(owner, mkStaff({ email, temporaryPassword: "TempPass123" }));
-    const principal = await resolvePrincipalFromCredentials({ email, password: "TempPass123" });
+    const principal = await resolvePrincipalFromCredentials({
+      identifier: email,
+      password: "TempPass123",
+    });
     expect(principal).not.toBeNull();
     expect(principal?.gymId).toBe(ownerGymId);
     const user = await prisma.user.findFirstOrThrow({ where: { email } });
@@ -249,11 +264,27 @@ describe("authentication reuse — sign-in stamps lastLoginAt; suspend blocks si
     void created;
   });
 
+  it("a created staff member can sign in by phone (typed with separators)", async () => {
+    const email = uniqueEmail();
+    const phone = `0109${String(Date.now()).slice(-7)}`;
+    await createStaff(owner, mkStaff({ email, phone, temporaryPassword: "TempPass123" }));
+    const principal = await resolvePrincipalFromCredentials({
+      // Typed the human way — separators must not matter.
+      identifier: `${phone.slice(0, 4)} ${phone.slice(4, 7)} ${phone.slice(7)}`,
+      password: "TempPass123",
+    });
+    expect(principal).not.toBeNull();
+    expect(principal?.email).toBe(email);
+  });
+
   it("a suspended staff member cannot sign in", async () => {
     const email = uniqueEmail();
     const created = await createStaff(owner, mkStaff({ email, temporaryPassword: "TempPass123" }));
     await suspendStaff(owner, created.gymUserId ?? "");
-    const principal = await resolvePrincipalFromCredentials({ email, password: "TempPass123" });
+    const principal = await resolvePrincipalFromCredentials({
+      identifier: email,
+      password: "TempPass123",
+    });
     expect(principal).toBeNull();
   });
 });

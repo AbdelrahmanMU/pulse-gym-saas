@@ -16,10 +16,10 @@ export interface SignInState {
  * on success redirects into the protected segment. Never imports `next-auth`.
  */
 export async function signInAction(_prev: SignInState, formData: FormData): Promise<SignInState> {
-  const email = String(formData.get("email") ?? "");
+  const identifier = String(formData.get("identifier") ?? "");
   const password = String(formData.get("password") ?? "");
 
-  const ok = await attemptSignIn(email, password);
+  const ok = await attemptSignIn(identifier, password);
   if (!ok) {
     log.warn("auth.signin.invalid", { code: "AUTH", module: "auth" });
     const t = await getTranslations("auth");

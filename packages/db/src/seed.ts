@@ -42,6 +42,11 @@ const OWNER_EMAIL = "owner@pulse.local";
 // override via the root `.env` for a real bootstrap. Never logged.
 const OWNER_INITIAL_PASSWORD = process.env.OWNER_INITIAL_PASSWORD ?? "ChangeMe!Owner1";
 
+// The bootstrap Owner's phone — the pilot's primary sign-in identifier (one field,
+// phone OR email). Seed-scoped like the password; set once, then preserved on
+// re-runs (an owner-edited phone is never churned back to the default).
+const OWNER_PHONE = process.env.OWNER_PHONE ?? "01000000000";
+
 // A usable scrypt hash starts with this scheme prefix; the Session-2 placeholders
 // (`!set-in-session-3-t19`, `!system-actor-no-login`) do not and are non-loginable.
 const USABLE_HASH_PREFIX = "scrypt$";
@@ -126,10 +131,11 @@ async function seed(): Promise<void> {
     : await hashPassword(OWNER_INITIAL_PASSWORD);
   const owner = await prisma.user.upsert({
     where: { email: OWNER_EMAIL },
-    update: { passwordHash: ownerHash },
+    update: { passwordHash: ownerHash, phone: ownerExisting?.phone ?? OWNER_PHONE },
     create: {
       email: OWNER_EMAIL,
       displayName: "Gym Owner",
+      phone: OWNER_PHONE,
       passwordHash: ownerHash,
       isActive: true,
     },

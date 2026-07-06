@@ -10,9 +10,9 @@ import { signIn } from "./auth";
  * `redirect: false` keeps the redirect decision in the caller (the server action),
  * and avoids signIn throwing a `NEXT_REDIRECT` we'd have to special-case here.
  */
-export async function attemptSignIn(email: string, password: string): Promise<boolean> {
+export async function attemptSignIn(identifier: string, password: string): Promise<boolean> {
   try {
-    await signIn("credentials", { email, password, redirect: false });
+    await signIn("credentials", { identifier, password, redirect: false });
     return true;
   } catch (error) {
     if (error instanceof AuthError) return false;

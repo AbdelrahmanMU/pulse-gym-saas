@@ -22,3 +22,4 @@ export {
   type RoleDef,
 } from "./catalog.js";
 export { hasPermission, derivePermissions, type RolePermissionRow } from "./authorization.js";
+export { isEmailIdentifier, normalizePhone } from "./identifier.js";
