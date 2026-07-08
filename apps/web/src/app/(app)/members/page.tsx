@@ -47,11 +47,14 @@ export default async function MembersPage({
     page: first(sp.page),
   };
 
-  const result = await loadMembers(raw);
+  // Independent reads — fetch concurrently (Performance Recovery, Task 4).
+  const [result, trainerOptions] = await Promise.all([
+    loadMembers(raw),
+    hasPermission(principal.permissions, PERMISSION_KEYS.ASSIGNMENTS_READ)
+      ? loadTrainerFilterOptions()
+      : Promise.resolve([]),
+  ]);
   const canCreate = hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERS_CREATE);
-  const trainerOptions = hasPermission(principal.permissions, PERMISSION_KEYS.ASSIGNMENTS_READ)
-    ? await loadTrainerFilterOptions()
-    : [];
 
   const statusValue = raw.status ?? "ACTIVE";
   const trainerValue = raw.trainer ?? "ALL";
@@ -69,9 +72,11 @@ export default async function MembersPage({
   const firstRow = (result.page - 1) * result.pageSize + 1;
   const lastRow = Math.min(result.page * result.pageSize, result.total);
 
-  const t = await getTranslations("members");
-  const tActions = await getTranslations("actions");
-  const tCommon = await getTranslations("common");
+  const [t, tActions, tCommon] = await Promise.all([
+    getTranslations("members"),
+    getTranslations("actions"),
+    getTranslations("common"),
+  ]);
 
   return (
     <PageContainer>

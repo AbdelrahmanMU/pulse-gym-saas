@@ -16,9 +16,20 @@ import {
 
 /**
  * `"use server"` wrappers for Membership Lifecycle (Sprint-1 Epic-4). Each resolves the current
- * principal (never trusts client-supplied identity/scope), delegates to the testable
- * {@link ./service} core, then revalidates affected paths. Shaped for `useActionState`. Ids ride
- * hidden form fields; tenancy is enforced in the service (`assertSameGym` → 404), never trusted.
+ * principal (never trusts client-supplied identity/scope) and delegates to the testable
+ * {@link ./service} core. Shaped for `useActionState`. Ids ride hidden form fields; tenancy is
+ * enforced in the service (`assertSameGym` → 404), never trusted.
+ *
+ * Post-success freshness (Performance Recovery sprint): the lifecycle actions return a PLAIN
+ * result — no `revalidatePath`, no `redirect`. In production builds, an action response that
+ * re-renders the current route in place (revalidation of this page's path, or a redirect back
+ * to it) intermittently suspends React's pending form state forever — the button sticks on its
+ * pending label and the UI never updates (data/timing-sensitive race; reproduced on Next 15.5
+ * and 16.2, never in dev). The submitting forms instead perform a **full-document navigation**
+ * on success (`useFullNavigationOnSuccess`), which re-renders everything from the server and
+ * resets the client router cache — the same freshness `revalidatePath` provided, minus the
+ * deadlock. `createMembershipAction` keeps its server redirect: it navigates to a *different*
+ * route (`/memberships/new` → the new detail page), which never exhibited the race.
  */
 
 const str = (form: FormData, key: string): string | undefined => {
@@ -50,12 +61,7 @@ export async function renewMembershipAction(
 ): Promise<CreateMembershipResult> {
   const principal = await currentUser.require();
   const membershipId = str(form, "membershipId") ?? "";
-  const result = await renewMembership(principal, membershipId);
-  if (result.status === "success" && result.membershipId) {
-    revalidateMembership(membershipId);
-    redirect(`/memberships/${result.membershipId}`);
-  }
-  return result;
+  return renewMembership(principal, membershipId);
 }
 
 export async function upgradeMembershipAction(
@@ -64,12 +70,7 @@ export async function upgradeMembershipAction(
 ): Promise<CreateMembershipResult> {
   const principal = await currentUser.require();
   const membershipId = str(form, "membershipId") ?? "";
-  const result = await upgradeMembership(principal, membershipId, { planId: str(form, "planId") });
-  if (result.status === "success" && result.membershipId) {
-    revalidateMembership(membershipId);
-    redirect(`/memberships/${result.membershipId}`);
-  }
-  return result;
+  return upgradeMembership(principal, membershipId, { planId: str(form, "planId") });
 }
 
 export async function freezeMembershipAction(
@@ -78,11 +79,9 @@ export async function freezeMembershipAction(
 ): Promise<ActionState> {
   const principal = await currentUser.require();
   const membershipId = str(form, "membershipId") ?? "";
-  const result = await freezeMembership(principal, membershipId, {
+  return freezeMembership(principal, membershipId, {
     frozenDays: str(form, "frozenDays"),
   });
-  if (result.status === "success") revalidateMembership(membershipId);
-  return result;
 }
 
 export async function resumeMembershipAction(
@@ -91,9 +90,7 @@ export async function resumeMembershipAction(
 ): Promise<ActionState> {
   const principal = await currentUser.require();
   const membershipId = str(form, "membershipId") ?? "";
-  const result = await resumeMembership(principal, membershipId);
-  if (result.status === "success") revalidateMembership(membershipId);
-  return result;
+  return resumeMembership(principal, membershipId);
 }
 
 export async function cancelMembershipAction(
@@ -102,13 +99,5 @@ export async function cancelMembershipAction(
 ): Promise<ActionState> {
   const principal = await currentUser.require();
   const membershipId = str(form, "membershipId") ?? "";
-  const result = await cancelMembership(principal, membershipId);
-  if (result.status === "success") revalidateMembership(membershipId);
-  return result;
-}
-
-function revalidateMembership(membershipId: string): void {
-  revalidatePath("/memberships");
-  revalidatePath(`/memberships/${membershipId}`);
-  revalidatePath("/dashboard"); // membership-status KPIs + expiring/expired lists
+  return cancelMembership(principal, membershipId);
 }

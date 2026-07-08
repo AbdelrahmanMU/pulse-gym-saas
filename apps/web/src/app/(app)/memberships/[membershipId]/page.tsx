@@ -20,8 +20,11 @@ import { MembershipStatusBadge } from "@/modules/memberships/ui/membership-statu
 import { MembershipPeriodNote } from "@/modules/memberships/ui/membership-period-note";
 import { MembershipTimeline } from "@/modules/memberships/ui/membership-timeline";
 import {
-  MembershipLifecycleControls,
-  type LifecyclePermissions,
+  CancelControl,
+  FreezeControl,
+  RenewControl,
+  ResumeControl,
+  UpgradeControl,
 } from "@/modules/memberships/ui/membership-lifecycle-controls";
 import { loadMembershipBilling } from "@/modules/payments/queries";
 import type { MembershipBilling } from "@/modules/payments/service";
@@ -58,32 +61,43 @@ export default async function MembershipDetailPage({
     throw error;
   }
 
-  const perms: LifecyclePermissions = {
+  const perms = {
     canRenew: hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERSHIPS_RENEW),
     canUpgrade: hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERSHIPS_UPGRADE),
     canFreeze: hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERSHIPS_FREEZE),
     canCancel: hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERSHIPS_CANCEL),
   };
-  const showControls =
-    membership.status !== MembershipStatus.CANCELLED &&
-    (perms.canRenew || perms.canUpgrade || perms.canFreeze || perms.canCancel);
-  // The upgrade picklist needs the gym's active plans — only loaded when upgrade is offered.
-  const plans =
-    perms.canUpgrade && membership.status === MembershipStatus.ACTIVE
-      ? await loadSellablePlans()
-      : [];
-
+  // Which lifecycle controls the actor sees — by permission AND allowed transition
+  // (state-machines.md). Composed HERE at the server boundary: each control hosts its own
+  // `useActionState`, and wrapping them in a client component whose props change with the
+  // membership status deadlocks the pending form in production (see the note in
+  // membership-lifecycle-controls.tsx).
+  const isActive = membership.status === MembershipStatus.ACTIVE;
+  const isFrozen = membership.status === MembershipStatus.FROZEN;
+  const showRenew = perms.canRenew && (isActive || membership.status === MembershipStatus.EXPIRED);
+  const showUpgrade = perms.canUpgrade && isActive;
+  const showFreeze = perms.canFreeze && isActive;
+  const showResume = perms.canFreeze && isFrozen;
+  const showCancel =
+    perms.canCancel && (isActive || isFrozen || membership.status === MembershipStatus.SCHEDULED);
+  const showControls = showRenew || showUpgrade || showFreeze || showResume || showCancel;
   // Billing is a separate concern (Epic-5): loaded through the payments module's public query,
   // gated by `payments.read`. Standing/balance are derived; payment activity never changes status.
   const canViewBilling = hasPermission(principal.permissions, PERMISSION_KEYS.PAYMENTS_READ);
   const canRecordPayment = hasPermission(principal.permissions, PERMISSION_KEYS.PAYMENTS_RECORD);
   const canVoidPayment = hasPermission(principal.permissions, PERMISSION_KEYS.PAYMENTS_VOID);
-  const billing: MembershipBilling | null = canViewBilling
-    ? await loadMembershipBilling(membershipId)
-    : null;
 
-  const t = await getTranslations("memberships");
-  const locale = await getLocale();
+  // Independent reads — the upgrade picklist (gym's active plans, only when upgrade is
+  // offered), billing, and translations don't depend on each other; fetch concurrently
+  // (Performance Recovery, Task 4).
+  const [plans, billing, t, locale] = await Promise.all([
+    showUpgrade ? loadSellablePlans() : Promise.resolve([]),
+    canViewBilling
+      ? loadMembershipBilling(membershipId)
+      : Promise.resolve<MembershipBilling | null>(null),
+    getTranslations("memberships"),
+    getLocale(),
+  ]);
   const remaining = remainingDaysLabel(membership.status, membership.remainingDays);
 
   return (
@@ -138,12 +152,13 @@ export default async function MembershipDetailPage({
 
         {showControls ? (
           <Section title={t("sectionActions")}>
-            <MembershipLifecycleControls
-              membershipId={membership.id}
-              status={membership.status}
-              plans={plans}
-              perms={perms}
-            />
+            <div className="flex flex-col gap-5">
+              {showRenew ? <RenewControl membershipId={membership.id} /> : null}
+              {showUpgrade ? <UpgradeControl membershipId={membership.id} plans={plans} /> : null}
+              {showFreeze ? <FreezeControl membershipId={membership.id} /> : null}
+              {showResume ? <ResumeControl membershipId={membership.id} /> : null}
+              {showCancel ? <CancelControl membershipId={membership.id} /> : null}
+            </div>
           </Section>
         ) : null}
 

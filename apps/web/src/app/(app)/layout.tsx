@@ -101,8 +101,11 @@ function buildNavGroups(principal: AuthenticatedPrincipal, t: NavLabels): NavGro
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const principal = await requireSession();
-  const notificationCount = await loadUnreadCount(principal);
-  const t = await getTranslations("nav");
+  // Independent reads — fetch concurrently (Performance Recovery, Task 4).
+  const [notificationCount, t] = await Promise.all([
+    loadUnreadCount(principal),
+    getTranslations("nav"),
+  ]);
   const labels: NavLabels = {
     dashboard: t("dashboard"),
     notifications: t("notifications"),

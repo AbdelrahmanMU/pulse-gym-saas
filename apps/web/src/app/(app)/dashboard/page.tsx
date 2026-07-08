@@ -35,8 +35,8 @@ export default async function DashboardPage() {
     throw error;
   }
 
-  const data = await loadDashboard();
-  const t = await getTranslations("dashboard");
+  // Independent reads — fetch concurrently (Performance Recovery, Task 4).
+  const [data, t] = await Promise.all([loadDashboard(), getTranslations("dashboard")]);
   const perms = {
     canAddMember: hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERS_CREATE),
     canSellMembership: hasPermission(principal.permissions, PERMISSION_KEYS.MEMBERSHIPS_CREATE),

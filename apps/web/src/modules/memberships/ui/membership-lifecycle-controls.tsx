@@ -3,12 +3,12 @@
 import { useActionState } from "react";
 import { Ban, RefreshCw, Snowflake, TrendingUp, Play } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import type { MembershipStatus } from "@pulse/db";
 import { FormField } from "@/components/pulse/form-field";
 import { TextInput } from "@/components/pulse/text-input";
 import { SelectInput, type SelectOption } from "@/components/pulse/select-input";
 import { SubmitButton } from "@/components/pulse/form-layout";
 import { formatMinorCurrency } from "@/lib/money";
+import { useFullNavigationOnSuccess } from "@/lib/forms/use-full-navigation-on-success";
 import {
   cancelMembershipAction,
   freezeMembershipAction,
@@ -24,49 +24,28 @@ import { fieldError, FormFeedback, INITIAL_STATE } from "./form-state";
  * **by permission** and **by the membership's current derived status** (state-machines.md
  * allowed transitions). Renew/Upgrade/Freeze/Resume/Cancel are independent small forms so each
  * gets its own pending/feedback state. Catalogued components + tokens only.
+ *
+ * Two hard-won constraints guard these forms against a production-only deadlock where a
+ * successful action left the button stuck on its pending label forever (reproduced on Next
+ * 15.5 and 16.2; dev builds unaffected — Performance Recovery sprint):
+ * 1. Each control is exported individually and composed directly by the server page — never
+ *    re-wrapped in a shared client component whose props change with the membership status.
+ * 2. Success leaves via {@link useFullNavigationOnSuccess} (the actions return plain results
+ *    and never revalidate/redirect in place — see the note in `../actions.ts`).
  */
-export interface LifecyclePermissions {
-  canRenew: boolean;
-  canUpgrade: boolean;
-  canFreeze: boolean;
-  canCancel: boolean;
-}
 
-export function MembershipLifecycleControls({
-  membershipId,
-  status,
-  plans,
-  perms,
-}: {
-  membershipId: string;
-  status: MembershipStatus;
-  plans: PlanOption[];
-  perms: LifecyclePermissions;
-}) {
-  // Compare against the status string union (a value, not a role) — the enum *value* is not
-  // imported here so this client component never bundles the server-only db package.
-  const isActive = status === "ACTIVE";
-  const isFrozen = status === "FROZEN";
-  const isExpired = status === "EXPIRED";
-  const canCancelNow = perms.canCancel && (isActive || isFrozen || status === "SCHEDULED");
+/** Success target: the successor membership's detail page (renew/upgrade create one). */
+const toSuccessor = (s: { status: string }): string => {
+  const id = (s as { membershipId?: string }).membershipId;
+  return id ? `/memberships/${id}` : window.location.pathname;
+};
 
-  return (
-    <div className="flex flex-col gap-5">
-      {perms.canRenew && (isActive || isExpired) ? (
-        <RenewControl membershipId={membershipId} />
-      ) : null}
-      {perms.canUpgrade && isActive ? (
-        <UpgradeControl membershipId={membershipId} plans={plans} />
-      ) : null}
-      {perms.canFreeze && isActive ? <FreezeControl membershipId={membershipId} /> : null}
-      {perms.canFreeze && isFrozen ? <ResumeControl membershipId={membershipId} /> : null}
-      {canCancelNow ? <CancelControl membershipId={membershipId} /> : null}
-    </div>
-  );
-}
+/** Success target: this page, reloaded fresh (freeze/resume/cancel change it in place). */
+const reloadHere = (): string => window.location.pathname;
 
-function RenewControl({ membershipId }: { membershipId: string }) {
+export function RenewControl({ membershipId }: { membershipId: string }) {
   const [state, action] = useActionState(renewMembershipAction, INITIAL_STATE);
+  useFullNavigationOnSuccess(state, toSuccessor);
   const t = useTranslations("memberships");
   return (
     <form action={action} className="flex flex-col gap-2">
@@ -81,8 +60,15 @@ function RenewControl({ membershipId }: { membershipId: string }) {
   );
 }
 
-function UpgradeControl({ membershipId, plans }: { membershipId: string; plans: PlanOption[] }) {
+export function UpgradeControl({
+  membershipId,
+  plans,
+}: {
+  membershipId: string;
+  plans: PlanOption[];
+}) {
   const [state, action] = useActionState(upgradeMembershipAction, INITIAL_STATE);
+  useFullNavigationOnSuccess(state, toSuccessor);
   const t = useTranslations("memberships");
   const locale = useLocale();
   const options: SelectOption[] = plans.map((p) => ({
@@ -108,8 +94,9 @@ function UpgradeControl({ membershipId, plans }: { membershipId: string; plans: 
   );
 }
 
-function FreezeControl({ membershipId }: { membershipId: string }) {
+export function FreezeControl({ membershipId }: { membershipId: string }) {
   const [state, action] = useActionState(freezeMembershipAction, INITIAL_STATE);
+  useFullNavigationOnSuccess(state, reloadHere);
   const t = useTranslations("memberships");
   return (
     <form action={action} className="flex flex-col gap-2">
@@ -127,8 +114,9 @@ function FreezeControl({ membershipId }: { membershipId: string }) {
   );
 }
 
-function ResumeControl({ membershipId }: { membershipId: string }) {
+export function ResumeControl({ membershipId }: { membershipId: string }) {
   const [state, action] = useActionState(resumeMembershipAction, INITIAL_STATE);
+  useFullNavigationOnSuccess(state, reloadHere);
   const t = useTranslations("memberships");
   return (
     <form action={action} className="flex flex-col gap-2">
@@ -142,8 +130,9 @@ function ResumeControl({ membershipId }: { membershipId: string }) {
   );
 }
 
-function CancelControl({ membershipId }: { membershipId: string }) {
+export function CancelControl({ membershipId }: { membershipId: string }) {
   const [state, action] = useActionState(cancelMembershipAction, INITIAL_STATE);
+  useFullNavigationOnSuccess(state, reloadHere);
   const t = useTranslations("memberships");
   return (
     <form action={action} className="flex flex-col gap-2">

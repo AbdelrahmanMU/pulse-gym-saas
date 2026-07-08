@@ -1,3 +1,4 @@
+import { cache } from "react";
 import {
   prisma,
   Prisma,
@@ -1068,11 +1069,19 @@ async function loadActiveFreezeIds(
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
-async function gymContext(gymId: string, clock: IClock): Promise<GymContext> {
-  const gym = await prisma.gym.findUnique({
+// Per-request memo (React cache): several derived reads that render together (dashboard
+// overview, member timeline + standing, expiring report) each need this same gym row —
+// the investigation measured it fetched 2-3× per page. Request-scoped only; outside a
+// React request (integration tests) `cache` degrades to a plain call.
+const loadGymContextRow = cache((gymId: string) =>
+  prisma.gym.findUnique({
     where: { id: gymId },
     select: { timeZone: true, expiringSoonWindowDays: true },
-  });
+  }),
+);
+
+async function gymContext(gymId: string, clock: IClock): Promise<GymContext> {
+  const gym = await loadGymContextRow(gymId);
   if (!gym) throw new NotFoundError();
   return {
     timeZone: gym.timeZone,

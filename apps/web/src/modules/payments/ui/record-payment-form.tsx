@@ -10,6 +10,7 @@ import { TextArea } from "@/components/pulse/text-area";
 import { SelectInput, type SelectOption } from "@/components/pulse/select-input";
 import { SubmitButton } from "@/components/pulse/form-layout";
 import { useFormError } from "@/lib/i18n/form-error";
+import { useFullNavigationOnSuccess } from "@/lib/forms/use-full-navigation-on-success";
 import { PAYMENT_METHODS } from "../validation";
 import { paymentMethodLabel } from "../format";
 import { recordPaymentAction } from "../actions";
@@ -29,6 +30,8 @@ export function RecordPaymentForm({
   currency: string;
 }) {
   const [state, action] = useActionState(recordPaymentAction, INITIAL_STATE);
+  // Success reloads this page fresh (see the note in ../actions.ts — never re-render in place).
+  useFullNavigationOnSuccess(state, () => window.location.pathname);
   const t = useTranslations("payments");
   const ta = useTranslations("actions");
   const locale = useLocale();

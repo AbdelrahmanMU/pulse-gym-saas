@@ -7,6 +7,7 @@ import { FormField } from "@/components/pulse/form-field";
 import { TextInput } from "@/components/pulse/text-input";
 import { SubmitButton } from "@/components/pulse/form-layout";
 import { useFormError } from "@/lib/i18n/form-error";
+import { useFullNavigationOnSuccess } from "@/lib/forms/use-full-navigation-on-success";
 import { voidPaymentAction } from "../actions";
 import { fieldError, FormFeedback, INITIAL_STATE } from "./form-state";
 
@@ -25,6 +26,8 @@ export function VoidPaymentControl({
   paymentId: string;
 }) {
   const [state, action] = useActionState(voidPaymentAction, INITIAL_STATE);
+  // Success reloads this page fresh (see the note in ../actions.ts — never re-render in place).
+  useFullNavigationOnSuccess(state, () => window.location.pathname);
   const t = useTranslations("payments");
   const tr = useFormError();
   return (
