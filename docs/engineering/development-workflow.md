@@ -57,7 +57,7 @@ No stage is skipped. A stage may be *trivially small* (a one-line spec), but it 
 - **Exit gate:** no doc contradicts the code. *Why:* docs are the AI's primary context; stale docs actively cause future errors and waste tokens.
 
 ### 9. Definition of Done
-- **Action:** confirm the feature's DoD (from its `feature-template`) and the global DoD (CLAUDE.md) are fully met.
+- **Action:** confirm the feature's DoD (from its `feature-template`) and the global DoD (CLAUDE.md) are fully met — **including the observability gate** (Engineering Observability Authority §13; cross-cutting changes also run its §13.4 architecture-review checklist).
 - **Exit gate:** every DoD box checked, honestly. *Why:* "done" must mean the same thing every time, or quality drifts silently.
 
 ### 10. Merge

@@ -57,7 +57,7 @@
 
 **Cancelled** — A membership deliberately ended; access stops immediately and it cannot be reactivated (a new membership must be created).
 
-**Archive** — Removing a member from active lists while retaining all their history. **Allowed only when the member has no Active/Scheduled membership and no Outstanding Balance.** Reversible (the member can be reactivated). Never a deletion.
+**Archive** — Removing a member from active lists while retaining all their history. **Allowed only when the member has no Active, Scheduled, or Frozen membership and no Outstanding Balance.** Reversible (the member can be reactivated). Never a deletion.
 
 **Payment** — A record of money received against a membership. In the MVP it is a record only — there is no card processing. **Every payment belongs to exactly one membership** (never orphaned). Append-only; correctable only via **void**.
 

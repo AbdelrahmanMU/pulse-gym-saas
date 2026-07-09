@@ -4,7 +4,7 @@
 | | |
 |---|---|
 | **Status** | ✅ Authoritative — governs all UI development |
-| **Design system** | Operates under **PULSE Design System v1.1** (its specs already encode the v1.1 accessibility/token fixes) |
+| **Design system** | Operates under **PULSE Design System v1.1** (its specs already encode the v1.1 accessibility/token fixes) + **v1.2 Adaptive** additions in **§12** (see [`design-system-v1.2.md`](./design-system-v1.2.md)) |
 | **Stack** | Next.js 15 · React · TypeScript · Tailwind · shadcn/ui (customized via PULSE) · Lucide |
 | **Audience** | Human maintainers **and** Claude Terminal |
 
@@ -692,6 +692,20 @@ These apply to **all** components below. Per-component sections state only delta
 11. **Don't** — Don't repurpose for currency/date (use specialized inputs).
 12. **Usage** — Member name, email.
 
+## PasswordInput
+1. **Purpose** — Password entry with a show/hide interaction (Pilot UX Finish).
+2. **Responsibilities** — Composes TextInput unchanged (FormField wiring, autocomplete, password-manager support intact); adds only the visibility toggle.
+3. **Variants** — none (single form).
+4. **Anatomy** — TextInput (`pe` reserved, zero layout shift) + trailing eye toggle (`type="button"`, never submits).
+5. **Props / Config** — TextInput props minus `type` (managed internally: `password` ⇄ `text`).
+6. **Visual Behavior** — Icon `--icon-md`, muted → foreground on hover; logical `end` positioning (RTL-correct); full-height 44px hit area.
+7. **Interaction Rules** — Click/Enter/Space toggles; state is per-mount, never persisted.
+8. **Accessibility** — Toggle carries its own accessible name (`common.showPassword`/`hidePassword`) + `aria-pressed` + `aria-controls`; input labeled via FormField.
+9. **Responsive** — Full-width like TextInput.
+10. **Do** — Use for every password field (sign-in, staff temporary password).
+11. **Don't** — Don't auto-reveal; don't move focus on toggle.
+12. **Usage** — Sign-in password (first consumer).
+
 ## SelectInput
 1. **Purpose** — Choose one option from a list.
 2. **Responsibilities** — Accessible select/combobox with chevron and optional search.
@@ -830,7 +844,7 @@ These apply to **all** components below. Per-component sections state only delta
 5. **Props / Config** — `title`, `summary`, `actions`.
 6. **Visual Behavior** — Success token accent + icon.
 7. **Interaction Rules** — Offers logical next steps.
-8. **Accessibility** — Heading conveys success; not color-only.
+8. **Accessibility** — As a full-page flow-completion state it replaces the PageHeader, so its `title` renders the page's single `<h1>` (§7 — one `<h1>` per page) at the calm `heading-2` size; heading conveys success, not color-only.
 9. **Responsive** — Centered, scales down.
 10. **Do** — Use after multi-step flows.
 11. **Don't** — Don't use for trivial saves (use Toast).
@@ -867,10 +881,10 @@ These apply to **all** components below. Per-component sections state only delta
 ## Skeleton
 1. **Purpose** — Placeholder mimicking content shape while loading.
 2. **Responsibilities** — Render shimmer blocks matching final layout.
-3. **Variants** — `text` · `card` · `table-row` · `stat` · `avatar`.
+3. **Variants** — `text` · `card` · `table-row` · `stat` · `avatar`. *Implemented (Pilot Readiness) as composable exports of `loading-state.tsx`: `Skeleton` (base block), `SkeletonText`, `SkeletonPageHeader`, `SkeletonTable` (toolbar + rows), `SkeletonStat`/`SkeletonKpiGrid`, `SkeletonForm`. `avatar` remains specified/unshipped (no consumer).*
 4. **Anatomy** — Shaped placeholders matching target component.
 5. **Props / Config** — `variant`, `count`, `width/height`.
-6. **Visual Behavior** — Subtle shimmer; honors reduced-motion (static fallback).
+6. **Visual Behavior** — Subtle shimmer via the token-owned `.skeleton` base (`pulse-shimmer` keyframe + `--duration-shimmer`, globals §5); RTL-aware sweep; honors reduced-motion (static fallback).
 7. **Interaction Rules** — Non-interactive.
 8. **Accessibility** — `aria-hidden`; parent carries `aria-busy`.
 9. **Responsive** — Matches the component it stands in for.
@@ -1020,4 +1034,264 @@ A new component may be added **only** when ALL hold:
 
 ---
 
-*End of PULSE Component Catalog v1. This document is authoritative. New or changed components require updating this catalog in the same change set.*
+---
+
+# 12. v1.2 Adaptive Additions
+
+> **Status: implemented** (v1.2 implementation slice, 2026-07-02 — `AdaptiveBottomSheet`
+> `components/pulse/adaptive-bottom-sheet.tsx` + `FilterSheet` wrapper, `CreationFAB`
+> `creation-fab.tsx`, `StickyMobileActionBar` `sticky-mobile-action-bar.tsx` (auto-applied by
+> FormLayout's action row), DataTable card mode in `data-table.tsx`). These entries are the
+> approved design authority; they are **additive** and backward-compatible (design-system-v1.2
+> §2/§9). Every §0 Global Convention applies. Nothing in §1–§11 changes except the single
+> backward-compatible DataTable enhancement in §12.4.
+
+## 12.1 AdaptiveBottomSheet
+1. **Purpose** — One overlay primitive that renders as a **centered Dialog/popover on desktop (≥md)**
+   and a **bottom-anchored sheet on mobile (<md)**. The single home for AP-3/AP-4/AP-7.
+2. **Responsibilities** — Own the adaptive overlay shell (scrim, focus trap, focus-return, dismiss),
+   built on the existing `components/ui/sheet.tsx` Radix Dialog (already powering the nav drawer) — no
+   new dependency, no new overlay a11y.
+3. **Variants** — `dialog↔sheet` (default, forms/confirmations) · `menu↔sheet` (ActionMenu actions,
+   AP-7) · `filter↔sheet` (FilterBar, AP-3) · `picker↔sheet` (SelectInput/DateInput on mobile).
+4. **Anatomy** — Scrim · sheet surface (mobile: drag handle + top-rounded `--sheet-radius`, max
+   `--sheet-max-h`, safe-area bottom inset) → header (title + close) → scrollable content → optional
+   footer actions.
+5. **Props / Config** — `open`, `onOpenChange`, `title`, `variant`, `children`, `footer`.
+6. **Visual Behavior** — Mobile: slides up (`--duration-slow` + `--ease-emphasized`); desktop:
+   standard dialog/popover entrance. Reduced-motion → fade/no-transform.
+7. **Interaction Rules** — Esc closes; scrim tap closes; mobile drag-down closes **with** a tap/scrim
+   fallback (never drag-only); returns focus to trigger.
+8. **Accessibility** — Inherits v1.1 overlay gate: `role="dialog"`/`alertdialog`, `aria-modal`, focus
+   trap, labeled by title. Content DOM order preserved across desktop/mobile.
+9. **Responsive** — The `md` boundary flips dialog↔sheet; identical content and actions on both
+   (adaptive-parity, design-system-v1.2 §5.11).
+10. **Do** — Route **every** mobile overlay through this; keep desktop dialog behavior identical to today.
+11. **Don't** — Don't hand-build a bottom sheet per screen; don't make drag the only dismiss; don't
+    drop any desktop action on mobile.
+12. **Usage** — Filters (AP-3), confirmations/pickers (AP-4), row/section overflow (AP-7), mobile
+    Select/Date menus, NotificationCenter mobile.
+
+## 12.2 CreationFAB
+1. **Purpose** — Thumb-zone **create** action on mobile, scoped to list/index screens whose primary
+   job is to create a new entity (design-system-v1.2 §5.2).
+2. **Responsibilities** — Relocate the screen's single PageHeader primary "create" action into a
+   floating bottom-trailing button on `<md` only.
+3. **Variants** — `default` (icon + `aria-label`) · `extended` (icon + short label, first-run/empty).
+4. **Anatomy** — Circular `--fab-size` button, brand fill + `--primary-foreground`, Lucide plus icon,
+   bottom-trailing at `--fab-offset` above `--safe-bottom`, `--z-fab`.
+5. **Props / Config** — `label` (accessible), `icon`, `href|onClick`.
+6. **Visual Behavior** — Brand fill (an *action* color — compliant), solid focus ring, `--shadow-md`.
+7. **Interaction Rules** — Single tap starts the create flow (same target as the desktop primary).
+8. **Accessibility** — Real button/link with an accessible name ("Add member"); ≥44px; focus-visible;
+   not the only path to create (the flow is also reachable via nav/empty-state CTA).
+9. **Responsive** — **Mobile-only.** ≥md: hidden; the inline PageHeader primary is used instead.
+10. **Do** — One per eligible list screen; mirror the desktop primary exactly.
+11. **Don't** — Never on detail/form/dashboard/report/settings screens; never a second FAB; never
+    coexist with a Sticky Mobile Action Bar; never overlap the last row (list gets bottom padding).
+12. **Usage** — Members, Memberships, Plans, Staff list screens (mobile).
+
+## 12.3 StickyMobileActionBar
+1. **Purpose** — The primary **mobile** action pattern for **forms** (submit/cancel) and **detail
+   pages** (primary action), pinned in the thumb zone (design-system-v1.2 §5.3).
+2. **Responsibilities** — Keep the screen's primary (and at most one secondary) action reachable
+   without scrolling back to the header; respect the safe-area inset and the on-screen keyboard.
+3. **Variants** — `form` (Cancel + Submit; reuses SubmitButton `useFormStatus`) · `detail` (one
+   primary + overflow) · `confirm` (destructive primary uses danger button).
+4. **Anatomy** — Bottom-pinned bar, `--action-bar-h` + `--safe-bottom` padding, `--z-sticky`, top
+   hairline border, `surface` background; primary right/full-width, secondary left.
+5. **Props / Config** — `primary`, `secondary?`, `variant`, `sticky` (auto on `<md`).
+6. **Visual Behavior** — Mobile-only pin; on desktop the same actions render inline in
+   FormLayout/PageHeader (today's behavior, unchanged).
+7. **Interaction Rules** — Submit disabled while invalid/pending (`aria-busy`), preventing
+   double-submit; stays above the keyboard; never covers the focused field.
+8. **Accessibility** — Buttons labeled; ≥44px; focus order after content; destructive still requires a
+   confirm step.
+9. **Responsive** — `<md`: pinned. ≥md: static inline (no pin).
+10. **Do** — Use for every mobile create/edit form and every detail page with a primary action;
+    exactly one primary.
+11. **Don't** — Don't stack >2 actions (overflow → ActionMenu/sheet); don't coexist with a FAB;
+    don't let it hide content (page reserves bottom padding = bar height + safe inset).
+12. **Usage** — Member/Plan/Membership/Payment/Staff forms; membership & member detail primaries.
+
+## 12.4 DataTable — Adaptive Card Mode (backward-compatible enhancement)
+
+Per **Rule E (modifying an existing component)**, this is an **additive, backward-compatible** change
+to the single canonical DataTable (§4 DataTable) — existing tables keep working unchanged.
+
+- **New behavior:** below `md`, DataTable may render each row as a **stacked card** (AP-1) instead of
+  the horizontal-scroll table. Cards surface the **operational-first** fields (design-system-v1.2 §6)
+  using column `priority` (priority-1 fields lead) and an **optional** `renderCard?(row)` for a
+  tailored card; when `renderCard` is absent, the card is derived from the visible columns as
+  label/value pairs. The desktop table (priority columns + scroll backstop) is **unchanged**.
+- **One data path:** the same `columns[]`/`rows[]` drive both forms; no second query, no divergent
+  logic (money/date/status still render via MetricValue/Timestamp/StatusBadge inside cells/cards).
+- **Row actions** move into the card's ActionMenu (→ Adaptive Bottom Sheet on tap, AP-7) — every
+  desktop row action remains available (adaptive-parity).
+- **Opt-in & safe:** tables that don't pass `renderCard` and don't need cards keep today's responsive
+  behavior; nothing regresses. Selection/sort remain as-is (still deliberately minimal).
+- **Accessibility:** the card list is a labeled `<ul>/<li>` (or preserves table semantics via ARIA);
+  reading order matches the table's logical order; the `caption` is retained as the list's accessible
+  description.
+
+## 12.5 Adaptive presentation notes for existing components (no contract change)
+
+These are **clarifications**, not modifications — each behavior is already permitted by the component's
+§9 Responsive line; v1.2 unifies them onto the new primitives:
+
+- **FilterBar** (AP-3): the "popover under md" becomes the **AdaptiveBottomSheet `filter↔sheet`**;
+  active-filter chips stay above results.
+- **ActionMenu** (AP-7): the "bottom sheet on mobile" becomes the **AdaptiveBottomSheet `menu↔sheet`**.
+- **SelectInput / DateInput** (pickers): the "sheet on mobile" becomes **AdaptiveBottomSheet
+  `picker↔sheet`**; date entry prefers the native mobile picker where it is more ergonomic.
+- **NotificationCenter** (§9): the "full-screen sheet under sm" aligns to the same primitive.
+- **PageHeader primary** (AP-6): relocates on mobile to **CreationFAB** (create-list screens) or
+  **StickyMobileActionBar** (forms/details); still exactly one primary.
+- **ContentGrid `sidebar-split`** (AP-5): mobile stack order follows the operational-first doctrine
+  (design-system-v1.2 §6), not source order.
+- **CurrencyInput / TextInput / etc.** (§5.10): render at `--control-font-mobile` (≥16px) on `<md` to
+  prevent iOS focus-zoom — a token-level tweak, no API change.
+
+## 12.6 Deferred patterns (considered, not adopted)
+
+Recorded so a future session does not re-invent or re-litigate them (design-system-v1.2 §7):
+- **BottomTabBar** — deferred in favor of drawer + StickyMobileActionBar (task-flow product, not
+  browse-heavy). Not catalogued.
+- **SwipeActions** — deferred (gesture discoverability/a11y cost; ActionMenu-in-sheet already covers
+  row actions accessibly). Not catalogued.
+
+A future adoption of either requires a new human-approved catalog entry per **Rule D**.
+
+---
+
+# 13. Member Workspace Additions
+
+> **Status: approved 2026-07-03** (human ruling (c) on the member-workspace design authority —
+> `docs/sprints/member-workspace-design-authority.md`, the copy + behavior source of truth for
+> these components; this catalog defines the component contracts, the authority owns the frozen
+> copy/vocabulary §D14 — cite, don't restate). **13.1/13.2 implemented** (W1 slice, 2026-07-03 —
+> `components/pulse/answer-strip.tsx`, `components/pulse/disclosure.tsx`; the PageHeader additive
+> props in `page-header.tsx`). **13.3/13.4 implemented** (W2 rail slice, 2026-07-03 —
+> `modules/memberships/ui/membership-rail-card.tsx` + `membership-rail-client.tsx` (13.3),
+> `modules/memberships/ui/membership-rail.tsx` over the pure `modules/memberships/rail-model.ts`
+> (13.4); actions/ledger panels arrive with the W3 phase).
+> Every §0 Global Convention applies. §12's adaptive doctrine (one DOM order, reflow-only
+> breakpoint changes, 44-pt targets under md) applies unchanged.
+
+## 13.1 AnswerStrip
+1. **Purpose** — The member workspace's fixed page-top zone: identity · coverage · money · one
+   computed action, in that order, for every member, forever (authority §D3). The "3-second
+   answers" surface — read at arrival, identical scan path on every member.
+2. **Responsibilities** — Own the four-line layout and its breakpoint reflow only. Every line's
+   *content* is composed by the page from module-owned reads/badges; the strip renders slots and
+   never computes, fetches, or interprets.
+3. **Variants** — None. The strip has one shape; states are expressed by which optional slots are
+   present (money absent without `payments.read`; action absent in the calm state).
+4. **Anatomy** — L1 identity (the page's PageHeader: `<h1>` name + member badge accessory + muted
+   trainer/tenure meta + line-end overflow) → L2 coverage (the largest line) → L3 money → L4 one
+   primary Button. No other children, ever.
+5. **Props / Config** — `identity` (required node) · `coverage?` · `money?` · `action?` ·
+   `className?`. Absent slot = absent line (never a blank placeholder).
+6. **Visual Behavior** — Mobile: four stacked lines. ≥lg: two visual rows — identity+coverage
+   left, money+action right-aligned — same DOM, CSS grid reflow only (authority §D12). The strip
+   is **not sticky** at any breakpoint (one-sticky rule §D3.3); its action is mirrored in the
+   StickyMobileActionBar by the page.
+7. **Interaction Rules** — Exactly one action, computed by the page's precedence rule (§D6.2);
+   the action targets its home elsewhere on the page (anchor/expand), never a form inside the strip.
+8. **Accessibility** — L1 hosts the page's only `<h1>`; statuses via StatusBadge (icon + label +
+   `*-text`, never color alone); money via MetricValue; dates in `<time>`. DOM order = reading
+   order at every breakpoint.
+9. **Responsive** — Reflow only (see 6). L1 may wrap its trainer/tenure meta under 360-pt; L2
+   truncates the plan name first — status and boundary always survive; L3/L4 never wrap.
+10. **Do** — Keep the hard budget: 3 facts + 1 action. New facts compete for existing lines
+    (authority §D13); the budget never grows.
+11. **Don't** — No lists, ledgers, alert content/counts, secondary or destructive actions,
+    scheduled-membership detail, or anything that scrolls within the strip (§D3.2). Never sticky.
+12. **Usage** — Member workspace (`/members/[memberId]`) only. A second surface needing this shape
+    is a design-authority decision first.
+
+## 13.2 Disclosure (folded section card)
+1. **Purpose** — The folded summary-card system for workspace zones: a Section-idiom card whose
+   header is always visible (title + operational summary facts) and whose detail folds
+   (authority §D1/§D9). Nothing critical is ever invisible — only *detail* is deferred.
+2. **Responsibilities** — Own the fold state, the disclosure a11y contract, and the
+   breakpoint-dependent default (folded on mobile, open on desktop). Header summary content is
+   supplied by the page.
+3. **Variants** — Default `defaultOpen="desktop"` (folded <md, open ≥md) · `defaultOpen={false}`
+   (folded everywhere — future sensitive cards, e.g. medical notes §D13) · `defaultOpen={true}`.
+   User toggles always win over the default.
+4. **Anatomy** — Bordered `bg-surface` card → header row (chevron + `<h2>` title + muted summary
+   line + optional header action, e.g. Edit) → foldable content region.
+5. **Props / Config** — `title` · `summary?` (node — the always-visible facts) · `headerAction?`
+   (interactive, sits beside the toggle, never nested in it) · `defaultOpen?` · `children`.
+6. **Visual Behavior** — Chevron ▸/▾ states the fold; muted summary in the header; content region
+   indented to the card padding. No entrance animation (reduced-motion safe by construction).
+7. **Interaction Rules** — The whole header row (except `headerAction`) is the toggle target,
+   ≥44-pt under md with ≥8-pt separation (v1.2 §5.4). Expansion state is per-visit, never
+   persisted.
+8. **Accessibility** — WAI-ARIA disclosure pattern: the toggle is a real `<button>` inside the
+   `<h2>` with `aria-expanded` + `aria-controls`; the region is labeled by the header. Folded
+   content is removed from the tab order.
+9. **Responsive** — Same DOM both breakpoints; only the *default* open state differs (see 3).
+10. **Do** — Put the section's two most operational facts in `summary` (the fold-header design
+    rule: e.g. phone + trainer for Member info §D9). One folding system per page.
+11. **Don't** — Don't fold anything answer-critical (that belongs in the AnswerStrip); don't nest
+    Disclosures; don't render an empty summary; a card that outgrows one summary view graduates
+    to a sub-page (§D13), not a taller card.
+12. **Usage** — Member workspace Zone 3: Member info (W1), Alerts (W5), every future member-scoped
+    module card (§D13 growth contract).
+
+## 13.3 MembershipCard — `expandable` variant (Rule E amendment to §6 MembershipCard)
+Per **Rule E**, an **additive** variant; existing `current`/`historical`/`compact` usages are
+unchanged. Implementation lands with the W2 rail.
+- **New behavior:** the card renders a one-line collapsed header (chevron · snapshot plan ·
+  coverage `<time>` range · MembershipStatusBadge · the ONE money fact `Paid ✓`/`Owes …`) and
+  expands in place to fixed-order panels: Coverage → Freezes → Payments → Actions (authority
+  §D2.2–D2.3). Panels render only if they have content; Payments loads lazily on expand via the
+  payments module's existing public read; Actions render **only** on live cards (current/next) —
+  never disabled rows on historical cards.
+- **States:** current (expanded by default, 3-pt brand accent-bar) · next/queued (dashed border,
+  collapsed) · past (collapsed, `historical` muted). Multiple cards may be open at once; expanding
+  anchors the tapped header near the viewport top (authority §D11).
+- **Accessibility:** header row is the disclosure button (≥44-pt), `aria-expanded`; whole-row
+  target; panel order identical at every breakpoint.
+- **Money safety:** snapshot values only (unchanged §6 rule); ledger rows render voided entries
+  struck-through with reason — the ledger never hides corrections.
+
+## 13.4 MembershipRail primitives
+1. **Purpose** — The connective tissue that renders a member's immutable memberships as **one
+   continuous story** on a vertical rail (authority §D2): transition connectors, gap markers, the
+   terminus node, and the severed-rail treatment.
+2. **Responsibilities** — Presentation-only chronology grammar between MembershipCards; carries
+   origin/causality copy. Zero derivation — origins/dates come from the member-scoped read (A-1).
+3. **Variants** — Connector `renewed` · `upgraded` · `smaller-plan` (UpgradeIndicator semantics —
+   direction in text + icon, never color alone) · gap marker (muted, centered, no card chrome) ·
+   terminus ("Joined the gym · <date>") · severed segment (the rail visibly stops under a
+   cancelled card).
+4. **Anatomy** — The rail is a single `<ol>` (chronology is semantic), newest first; connectors
+   sit **between two real cards only** — never above the conditional Next slot.
+5. **Props / Config** — Per primitive: `origin`/labels + dates; `days` for gaps; `joinedOn` for
+   the terminus.
+6. **Visual Behavior** — Connector copy per authority §D2.4 frozen vocabulary; gaps muted; the
+   current card is the only emphasized segment.
+7. **Interaction Rules** — Display-only; cards own all interaction.
+8. **Accessibility** — Ordered-list semantics; every relationship stated in text ("Upgraded ·
+   Silver Monthly → Gold Monthly"), dates in `<time>`; never color/line-style alone.
+9. **Responsive** — Single column at every breakpoint; labels condense, never disappear.
+10. **Do** — Show gaps explicitly (a lapse is operational truth); label every transition with its
+    origin.
+11. **Don't** — Never render payments as rail events (money lives inside card panels); never
+    number cards in collapsed headers; never draw a connector to the Next slot.
+12. **Usage** — Member workspace Zone 2 rail (W2). The §6 MembershipTimeline remains the
+    **per-record** lifecycle timeline on `/memberships/[id]` — a different grain; don't conflate.
+
+### PageHeader (Rule E, additive)
+To host the AnswerStrip's L1 without forking the mandatory header: `subtitle` widens from string
+to node, and a new optional `titleAccessory` node renders inline after the `<h1>` (the member
+badge). Both are backward-compatible; no existing usage changes.
+
+---
+
+*End of PULSE Component Catalog. v1.1 core (§1–§11) + v1.2 Adaptive additions (§12) + Member
+Workspace additions (§13). This document is authoritative. New or changed components require
+updating this catalog in the same change set.*

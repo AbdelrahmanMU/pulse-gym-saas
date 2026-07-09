@@ -1,0 +1,8 @@
+/* App stylesheet entry (T-12/T-14). Loads Tailwind v4 first — this roots Tailwind's
+   automatic content-detection at `apps/web` so utilities are generated from the class
+   names used in `src/**` — then layers the PULSE token implementation owned by
+   `@pulse/design-tokens`. There is NO `tailwind.config.js`: theme lives entirely in
+   the tokens file via `@theme` (Design System v1.1 §5). Add no rules here — all
+   visual truth is in the tokens file. */
+@import "tailwindcss";
+@import "@pulse/design-tokens/globals.css";

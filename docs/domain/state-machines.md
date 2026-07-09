@@ -152,15 +152,15 @@ A membership has **core lifecycle states**, plus **"Expiring Soon"** which is a 
 | From → To | Trigger | Entry condition | Exit condition | Rule |
 |---|---|---|---|---|
 | (none) → Active | Member registered | Name + a contact method | — | MBR-1, MBR-2 |
-| Active → Archived | Archive | **No Active/Scheduled membership AND no Outstanding Balance** (ARC-3) | Removed from active lists, history kept | ARC-1, ARC-3 |
+| Active → Archived | Archive | **No Active/Scheduled/Frozen membership AND no Outstanding Balance** (ARC-3) | Removed from active lists, history kept | ARC-1, ARC-3 |
 | Archived → Active | Reactivate | — | Reappears in active lists | ARC-2 |
 
 **Forbidden Transitions**
 - Active/Archived → **Erased** while history exists (MBR-5).
-- **Archiving while the member has an Active/Scheduled membership or any Outstanding Balance** (ARC-3 — rejected; settle/cancel first).
+- **Archiving while the member has an Active/Scheduled/Frozen membership or any Outstanding Balance** (ARC-3 — rejected; settle/cancel first).
 
 **Edge Cases**
-- **Archive attempted with an active/scheduled membership or owed balance** — rejected; the member must be settled and closed out first (ARC-3).
+- **Archive attempted with an active/scheduled/frozen membership or owed balance** — rejected; the member must be settled and closed out first (ARC-3).
 - **Reactivating** a long-archived member — allowed; their historical memberships/payments remain intact and visible.
 - **Duplicate person re-registered** instead of reactivated — a data-hygiene concern; reactivation is preferred over a new record.
 

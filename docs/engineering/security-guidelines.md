@@ -5,6 +5,7 @@
 |---|---|
 | **Status** | ✅ Authoritative |
 | **References** | ADR §7–8 (tenancy/authz), `api-standards.md`, `database-standards.md`, `error-handling.md` |
+| **Observability note** | This doc + `logging-observability.md` **own** the secrets/PII-in-logs and redaction rules. The PII *doctrine* for telemetry — the sensitive-field inventory, the erasure-vs-immutable-audit resolution (OBS-10), and the compliance posture — lives in the **[Engineering Observability Authority §14](../architecture/engineering-observability-authority.md)**, which references/extends these rules, never redefines them. |
 
 > **Why security is non-negotiable:** This system holds members' personal data and the gym's revenue across multiple tenants. A single isolation or auth flaw is not a bug — it's a breach. These rules make the safe path the default path so the AI builds securely by pattern, not by remembering.
 

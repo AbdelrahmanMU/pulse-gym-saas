@@ -1,0 +1,50 @@
+{
+  "name": "pulse-gym-saas",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20.11.0",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "test": "turbo run test",
+    "dev": "turbo run dev",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "verify": "pnpm build && pnpm lint && pnpm type-check && pnpm format:check",
+    "test:integration": "pnpm --filter @pulse/web test:integration",
+    "test:e2e": "pnpm --filter @pulse/web test:e2e",
+    "db:migrate": "pnpm --filter @pulse/db db:migrate",
+    "db:seed": "pnpm --filter @pulse/db db:seed",
+    "db:status": "pnpm --filter @pulse/db db:status",
+    "db:reset": "pnpm --filter @pulse/db db:reset",
+    "db:up": "docker compose up -d postgres",
+    "db:test:up": "docker compose --profile test up -d postgres-test",
+    "db:down": "docker compose down",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix --no-warn-ignored",
+      "prettier --write"
+    ],
+    "*.{js,mjs,cjs,json,jsonc,css,md,yaml,yml}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@pulse/config": "workspace:*",
+    "@types/node": "^22.10.5",
+    "eslint": "^9.18.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
+    "prettier": "^3.4.2",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.3"
+  }
+}

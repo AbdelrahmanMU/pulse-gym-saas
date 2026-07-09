@@ -44,7 +44,7 @@ Permissions belong to **Capabilities**; roles receive capabilities (and thus the
 | **Settings** | `settings.view`, `settings.manage` |
 | **Staff & Access** | `staff.read`, `staff.invite`, `staff.manage`, `roles.manage` |
 | **Branch Management** *(future)* | `branches.read`, `branches.manage` |
-| **Tenant/Gym** | `gym.manage` |
+| **Tenant/Gym** | `gym.view`, `gym.manage` |
 
 ## 4. Permission Keys (the stable identifiers)
 The complete MVP-relevant key set (additions are append-only; **keys are never renamed or repurposed**):
@@ -62,8 +62,9 @@ reports.view  reports.export
 settings.view  settings.manage
 staff.read  staff.invite  staff.manage  roles.manage
 branches.read  branches.manage
-gym.manage
+gym.view  gym.manage
 ```
+> *Sprint-1 Epic-1 (2026-06-30, human-directed): `gym.view` added (append-only) as the read counterpart to `gym.manage` for gym configuration — Owner-only, under Tenant/Gym.*
 
 ## 5. Permission Naming Rules
 1. **Format:** `<resource>.<action>`, all lowercase, dot-separated. Multi-word segments use no spaces (`reactivate`, not `re_activate` unless necessary).
@@ -108,7 +109,7 @@ gym.manage
 | staff.read | ● | – | – | ● | – |
 | staff.invite / manage · roles.manage | ● | – | – | – | – |
 | branches.* *(future)* | ● | – | – | ● *(scoped)* | – |
-| gym.manage | ● | – | – | – | – |
+| gym.view / manage | ● | – | – | – | – |
 
 *(Receptionist and Branch Manager are future bundles: Receptionist ⊆ Front Desk; Branch Manager = Manager scoped to a branch. Both are placeholders in strategy, not MVP.)*
 

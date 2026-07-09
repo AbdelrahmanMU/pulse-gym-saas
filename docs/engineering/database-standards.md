@@ -5,6 +5,7 @@
 |---|---|
 | **Status** | ✅ Authoritative |
 | **References** | ADR §7 (multi-tenancy), §9 (DB principles), §11 (Prisma), `naming-conventions.md` |
+| **Observability note** | This doc + DDS §2.17 **own** the `audit_logs` table shape and audit fields (INV-39); `immutable-history.md` (H-4) owns the append-only invariant. The audit *doctrine* — what must/never be audited, retention philosophy, actor attribution, the transactional-write law — lives in the **[Engineering Observability Authority §3](../architecture/engineering-observability-authority.md)**, which references this shape, never redefines it. |
 
 > **Why these standards:** The database is the least reversible part of the system and the place where tenancy and money correctness are ultimately enforced. Rigid, boring schema rules protect both for years and let the AI evolve the schema safely.
 

@@ -1,0 +1,20 @@
+# Enforce LF line endings for all text files so formatting is deterministic
+# across OSes (Prettier is configured with endOfLine: "lf", code-style-guide.md).
+# Without this, Windows checkouts flip text to CRLF and break `format:check`.
+* text=auto eol=lf
+
+# Lockfiles and configs are text — keep them LF too.
+pnpm-lock.yaml text eol=lf
+
+# Common binary assets — never normalize (none in Session 1; forward-looking).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.pdf binary

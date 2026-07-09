@@ -1,0 +1,327 @@
+﻿import AxeBuilder from "@axe-core/playwright";
+import { expect, test, type Page } from "@playwright/test";
+
+/**
+ * v1.2 Adaptive verification (DD-10 — closes RC TD-7). Extends the e2e + axe gate to the
+ * module pages AND the new adaptive behaviors at the mobile viewport: DataTable card mode
+ * (AP-1), FilterSheet (AP-3), CreationFAB + StickyMobileActionBar (AP-6), operational-first
+ * ordering (AP-2/AP-5), and the DD-11 nav fix. Mobile = 375×800 (<md), desktop = 1280×900.
+ * Requires the dev DB seeded with the real Owner (Session 3).
+ */
+const OWNER_EMAIL = "owner@pulse.local";
+const OWNER_PASSWORD = process.env.OWNER_INITIAL_PASSWORD ?? "ChangeMe!Owner1";
+
+const MOBILE = { width: 375, height: 800 };
+const DESKTOP = { width: 1280, height: 900 };
+
+/** Module pages under the a11y gate (each is axe-scanned at both viewports). */
+const MODULE_PAGES = [
+  "/members",
+  "/memberships",
+  "/plans",
+  "/staff",
+  "/notifications",
+  "/reports",
+  "/reports/outstanding",
+  "/settings/gym",
+];
+
+async function signIn(page: Page): Promise<void> {
+  await page.goto("/sign-in");
+  await page.getByLabel("Phone number or email").fill(OWNER_EMAIL);
+  await page.getByLabel(/^Password/).fill(OWNER_PASSWORD);
+  await page.getByRole("button", { name: /sign in/i }).click();
+  await expect(page).toHaveURL(/\/dashboard/);
+  // Settle on the rendered dashboard (not its loading skeleton) before assertions.
+  await expect(page.getByRole("heading", { level: 1, name: "Dashboard" })).toBeVisible();
+}
+
+async function expectAxeClean(page: Page): Promise<void> {
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations).toEqual([]);
+}
+
+test.describe("module-page a11y (DD-10 / RC TD-7)", () => {
+  for (const path of MODULE_PAGES) {
+    test(`${path} has no axe violations at mobile and desktop`, async ({ page }) => {
+      await page.setViewportSize(MOBILE);
+      await signIn(page);
+      await page.goto(path);
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      await expectAxeClean(page);
+
+      await page.setViewportSize(DESKTOP);
+      await expectAxeClean(page);
+    });
+  }
+
+  test("members page has no axe violations in dark mode at mobile", async ({ page }) => {
+    await page.setViewportSize(MOBILE);
+    await signIn(page);
+    await page.goto("/members");
+    await page.evaluate(() => document.documentElement.classList.add("dark"));
+    await expectAxeClean(page);
+  });
+});
+
+test.describe("adaptive behaviors (v1.2)", () => {
+  test("register a member one-handed: FAB → 16px inputs → sticky submit (J-2)", async ({
+    page,
+  }) => {
+    await page.setViewportSize(MOBILE);
+    await signIn(page);
+    await page.goto("/members");
+
+    // CreationFAB is the thumb-zone create entry on mobile (AP-6/§12.2)…
+    const fab = page.getByRole("link", { name: "Add member" }).last();
+    await expect(fab).toBeVisible();
+    const fabBox = await fab.boundingBox();
+    // …anchored in the thumb zone (bottom third of the viewport).
+    expect(fabBox && fabBox.y).toBeGreaterThan((MOBILE.height / 3) * 2);
+    await fab.click();
+    await expect(page).toHaveURL(/\/members\/new/);
+
+    // DD-2: inputs render ≥16px below md so iOS Safari never focus-zooms.
+    const nameInput = page.getByLabel(/full name/i);
+    const fontSize = await nameInput.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    expect(fontSize).toBeGreaterThanOrEqual(16);
+
+    // DD-3: the submit action is pinned inside the viewport while the form top is visible.
+    const submit = page.getByRole("button", { name: /add member/i });
+    const submitBox = await submit.boundingBox();
+    expect(submitBox && submitBox.y + submitBox.height).toBeLessThanOrEqual(MOBILE.height);
+
+    // Complete the journey: the form submits and lands on the member profile.
+    // (A member needs at least one contact method — validation rule.) The contact is
+    // unique per run: phone is partial-unique per gym (INV-3), so a fixed value would
+    // make the suite one-shot per database — the second full run used to fail on it.
+    const runId = Date.now().toString().slice(-9);
+    const memberName = `Adaptive E2E ${runId}`;
+    await nameInput.fill(memberName);
+    await page.getByLabel(/phone/i).fill(`01${runId}`);
+    await submit.click();
+    await expect(page.getByRole("heading", { level: 1, name: memberName })).toBeVisible();
+
+    // DD-9: the profile's P0 standing strip renders (composition-only membership standing).
+    await expect(
+      page.getByText("No live membership").or(page.getByText("Active membership")).first(),
+    ).toBeVisible();
+
+    // The profile primary actions are pinned in the mobile thumb zone (§12.3 detail variant).
+    const sell = page.getByRole("link", { name: /sell membership/i }).last();
+    await expect(sell).toBeVisible();
+    const sellBox = await sell.boundingBox();
+    expect(sellBox && sellBox.y + sellBox.height).toBeLessThanOrEqual(MOBILE.height);
+
+    // W1 Member Workspace (design authority §D3): the strip's money fact renders for a
+    // payments.read principal — a fresh member owes nothing → the quiet "Paid up" state.
+    await expect(page.getByText("Paid up")).toBeVisible();
+
+    // No horizontal scroll at 375 (DD-1) — nowrap fold-header content must reflow, not widen.
+    const workspaceOverflow = await page.evaluate(
+      () => (document.scrollingElement?.scrollWidth ?? 0) - window.innerWidth,
+    );
+    expect(workspaceOverflow).toBeLessThanOrEqual(1);
+
+    // §D9: Member info is a folded Disclosure on mobile; the two operational facts (phone,
+    // trainer) stay visible in the fold header while the detail is out of the tab order.
+    const infoToggle = page.getByRole("button", { name: /member info/i });
+    await expect(infoToggle).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByText("Date of birth")).toBeHidden();
+    await infoToggle.click();
+    await expect(infoToggle).toHaveAttribute("aria-expanded", "true");
+    await expect(page.getByText("Date of birth")).toBeVisible();
+    await expectAxeClean(page); // workspace at 375, disclosure open
+
+    // ≥md default: the fold opens on its own (reference data costs nothing on desktop).
+    await page.setViewportSize(DESKTOP);
+    await page.reload();
+    await expect(page.getByRole("button", { name: /member info/i })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await expectAxeClean(page); // workspace at 1280
+
+    // Reduced motion zeroes `transition-colors` (globals §motion) so the theme flip is
+    // instant — otherwise axe (already injected, so it samples fast) reads mid-transition
+    // blends where light text and light surfaces cross at ~1.3:1.
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.evaluate(() => document.documentElement.classList.add("dark"));
+    await expectAxeClean(page); // workspace dark
+  });
+
+  test("members list renders cards below md and the table above md (AP-1)", async ({ page }) => {
+    await page.setViewportSize(MOBILE);
+    await signIn(page);
+    await page.goto("/members");
+
+    // Card list visible, table hidden (<md).
+    const cardList = page.getByRole("list", { name: "Members" });
+    await expect(cardList).toBeVisible();
+    await expect(cardList.getByRole("listitem").first()).toBeVisible();
+    await expect(page.getByRole("table")).toBeHidden();
+
+    // No horizontal scroll at 375 — the core DD-1 readability guarantee.
+    const overflow = await page.evaluate(
+      () => (document.scrollingElement?.scrollWidth ?? 0) - window.innerWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(1);
+
+    // ≥md: the dense table returns, the card list goes away.
+    await page.setViewportSize(DESKTOP);
+    await expect(page.getByRole("table")).toBeVisible();
+    await expect(cardList).toBeHidden();
+  });
+
+  test("filters open in a bottom sheet on mobile with focus return (AP-3)", async ({ page }) => {
+    await page.setViewportSize(MOBILE);
+    await signIn(page);
+    await page.goto("/members");
+
+    const trigger = page.getByRole("button", { name: /filters/i });
+    await expect(trigger).toBeVisible();
+    await trigger.click();
+
+    const sheet = page.getByRole("dialog");
+    await expect(sheet).toBeVisible();
+    await expect(sheet.getByLabel("Filter by status")).toBeVisible();
+
+    // The same control applies the same URL contract as the desktop inline filter.
+    await sheet.getByLabel("Filter by status").selectOption("ALL");
+    await expect(page).toHaveURL(/status=ALL/);
+
+    await page.keyboard.press("Escape");
+    await expect(sheet).toBeHidden();
+    await expect(trigger).toBeFocused();
+
+    // Desktop keeps the inline filter — no Filters trigger, no sheet (unchanged workflow).
+    await page.setViewportSize(DESKTOP);
+    await expect(page.getByRole("button", { name: /filters/i })).toBeHidden();
+    await expect(page.getByLabel("Filter by status")).toBeVisible();
+  });
+
+  test("FAB and mobile primaries are hidden on desktop (AP-6 parity)", async ({ page }) => {
+    await page.setViewportSize(DESKTOP);
+    await signIn(page);
+    await page.goto("/members");
+    // Exactly one create primary on desktop: the inline toolbar button.
+    const inline = page.getByRole("link", { name: "Add member" });
+    await expect(inline).toHaveCount(1);
+    await expect(inline).toBeVisible();
+  });
+
+  test("dashboard leads with the urgent KPIs (AP-2 / DD-8)", async ({ page }) => {
+    await page.setViewportSize(MOBILE);
+    await signIn(page);
+    // The first two StatCards are the urgent pair — before any population/revenue card.
+    const labels = page.locator("main").getByText(/Expiring Soon|Expired|Active Members/);
+    await expect(labels.nth(0)).toHaveText(/Expiring Soon/);
+    await expect(labels.nth(1)).toHaveText(/Expired/);
+  });
+
+  test("membership detail stacks Billing and Actions first on mobile (AP-5 / DD-9)", async ({
+    page,
+  }) => {
+    await page.setViewportSize(MOBILE);
+    await signIn(page);
+    await page.goto("/memberships");
+    const firstMembership = page
+      .getByRole("list", { name: "Memberships" })
+      .getByRole("link")
+      .first();
+    // Only meaningful when the dev DB has a live membership; skip cleanly otherwise.
+    if ((await firstMembership.count()) === 0) test.skip();
+    await firstMembership.click();
+    await expect(page).toHaveURL(/\/memberships\//);
+
+    const headings = page.locator("main section h2");
+    await expect(headings.first()).toHaveText(/Billing|Actions|Period/);
+    // The audit timeline is always last in the operational-first order.
+    await expect(headings.last()).toHaveText(/Lifecycle timeline/);
+  });
+
+  test("membership rail (W2): empty → sell → current card → renew → next + connector", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    await page.setViewportSize(DESKTOP);
+    await signIn(page);
+
+    // A fresh member: the rail opens with the story-not-started empty state.
+    await page.goto("/members/new");
+    const runId = Date.now().toString().slice(-9);
+    const memberName = `Rail E2E ${runId}`;
+    await page.getByLabel(/full name/i).fill(memberName);
+    await page.getByLabel(/phone/i).fill(`03${runId}`);
+    await page.getByRole("button", { name: /add member/i }).click();
+    await expect(page.getByRole("heading", { level: 1, name: memberName })).toBeVisible();
+    const memberUrl = page.url();
+    await expect(page.getByText("No memberships yet.")).toBeVisible();
+
+    // Sell a membership (existing flow), then renew from the canonical record page — the
+    // rail composes the results; lifecycle actions on cards arrive with the actions phase.
+    await page
+      .getByRole("link", { name: /sell membership/i })
+      .first()
+      .click();
+    await expect(page).toHaveURL(/\/memberships\/new/);
+    await page.getByLabel("Plan").selectOption({ index: 1 });
+    await page.getByRole("button", { name: /sell membership/i }).click();
+    // Server-action round trips can be slow on a cold dev server — wait generously.
+    await expect(page).toHaveURL(/\/memberships\/(?!new)[0-9a-f-]+$/, { timeout: 30_000 });
+    const soldUrl = page.url();
+    await page.getByRole("button", { name: /renew membership/i }).click();
+    // The renew action redirects to the SUCCESSOR's record page (a different id).
+    await expect(page).not.toHaveURL(soldUrl, { timeout: 30_000 });
+
+    // The rail reads top → bottom: Next (queued, collapsed) → renewal connector → Current
+    // (expanded by default, §D2.1). Money facts render for a payments.read principal.
+    await page.goto(memberUrl);
+    await expect(page.getByText(/Renewed · sold/)).toBeVisible();
+    const nextCard = page.getByRole("button", { name: /^Next/ });
+    await expect(nextCard).toHaveAttribute("aria-expanded", "false");
+    const currentCard = page.getByRole("button", { name: /Active/ }).first();
+    await expect(currentCard).toHaveAttribute("aria-expanded", "true");
+    // ".locator(visible=true)": the collapsed Next card holds the same copy inside its
+    // hidden panel — assert the CURRENT card's visible one.
+    await expect(page.getByText("(last day included)").locator("visible=true")).toBeVisible();
+    await expect(page.getByText(/1st membership · sold by/).locator("visible=true")).toBeVisible();
+    // The queued card tags its own unpaid balance (§D5.1); the strip's Owes stays owed-now.
+    await expect(page.getByText("unpaid").first()).toBeVisible();
+
+    // Expansion is per-card and reversible; expanding reveals only that membership's panels.
+    await nextCard.click();
+    await expect(nextCard).toHaveAttribute("aria-expanded", "true");
+    await expect(page.getByText(/^Starts /).first()).toBeVisible();
+    await nextCard.click();
+    await expect(nextCard).toHaveAttribute("aria-expanded", "false");
+
+    await expectAxeClean(page); // workspace + rail at 1280
+
+    // Mobile: vertically readable, thumb-friendly, and never wider than the viewport.
+    await page.setViewportSize(MOBILE);
+    await page.reload();
+    await expect(page.getByText(/Renewed · sold/)).toBeVisible();
+    const overflow = await page.evaluate(
+      () => (document.scrollingElement?.scrollWidth ?? 0) - window.innerWidth,
+    );
+    expect(overflow).toBeLessThanOrEqual(1);
+    const headerBox = await page.getByRole("button", { name: /^Next/ }).boundingBox();
+    expect(headerBox && headerBox.height).toBeGreaterThanOrEqual(44);
+    await expectAxeClean(page); // workspace + rail at 375
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.evaluate(() => document.documentElement.classList.add("dark"));
+    await expectAxeClean(page); // workspace + rail dark
+  });
+
+  test("the nav offers no Payments placeholder (DD-11 / RC TD-15)", async ({ page }) => {
+    await page.setViewportSize(MOBILE);
+    await signIn(page);
+    await page.getByRole("button", { name: /open navigation/i }).click();
+    const drawer = page.getByRole("dialog");
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByText("Payments")).toHaveCount(0);
+    await expect(drawer.getByRole("link", { name: "Members", exact: true })).toBeVisible();
+  });
+});

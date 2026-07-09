@@ -1,0 +1,38 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
+import { Button } from "@/components/pulse/button";
+import { currentUser } from "@/lib/auth/current-user";
+
+/**
+ * Public landing (Sprint 1.6) — replaces the T-06 placeholder. Signed-in staff go
+ * straight to their dashboard (the session read reuses the platform `ICurrentUser`;
+ * no auth logic is added or changed); everyone else gets the branded entry with the
+ * single Sign-in action. Tokens/catalog only; the volt block is decorative and the
+ * wordmark is neutral text (brand is never readable text, Design System §2).
+ */
+export default async function HomePage() {
+  const principal = await currentUser.get();
+  if (principal) redirect("/dashboard");
+
+  const t = await getTranslations("landing");
+
+  return (
+    <div className="flex min-h-dvh flex-col bg-background">
+      <header className="flex h-(--topbar-h) shrink-0 items-center gap-2 px-4 md:px-8">
+        <span aria-hidden className="size-6 rounded-sm bg-primary" />
+        <span className="font-display text-h3 font-semibold text-foreground">PULSE</span>
+      </header>
+      <main className="flex flex-1 items-center justify-center px-4 py-16">
+        <div className="flex w-full max-w-(--breakpoint-md) flex-col items-center gap-6 text-center">
+          <p className="eyebrow">{t("eyebrow")}</p>
+          <h1 className="text-display-lg text-foreground md:text-display-xl">{t("headline")}</h1>
+          <p className="max-w-md text-body-lg text-muted-foreground">{t("subheadline")}</p>
+          <Button asChild size="lg">
+            <Link href="/sign-in">{t("signIn")}</Link>
+          </Button>
+        </div>
+      </main>
+    </div>
+  );
+}

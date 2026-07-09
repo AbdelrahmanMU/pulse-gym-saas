@@ -43,6 +43,9 @@
 ### 10. Testing
 *Planned tests by level (P0 tenancy + invariants mandatory), mapped to acceptance criteria, per `testing-standards.md`.* **Why:** test plan is part of design, not an afterthought.
 
+### 10a. Observability
+*Which events this slice emits, per the **Engineering Observability Authority** (§2 taxonomy, §3 MUST-audit set, §13 developer gates): the `domain.action` events, their families, what is audited (transactionally) vs logged, and the correlation scope. Ids, not bodies (OBS-4).* **Why:** observability is designed into the slice, not retrofitted after an incident (OBS-12). *Design-level today; implementation deferred until the substrate is wired (Authority §0/§15).*
+
 ### 11. Documentation
 *Which docs update in this change set (this feature doc + any token/component/standard touched).* **Why:** docs and code never diverge (workflow stage 8).
 
@@ -56,12 +59,13 @@
 - [ ] Money as integer/Decimal; dates UTC + gym timezone; snapshots immutable
 - [ ] P0 tests (tenancy + invariants) written and passing
 - [ ] Accessibility gate (Design System v1.1 §7) passed
+- [ ] Observability satisfied per the **Engineering Observability Authority §13** — MUST-audit mutations write an `audit_logs` row (`action`/`actorUserId`/`targetType`/`targetId`/`correlationId`) **in the mutation's transaction**; significant business events logged; runs inside a correlation scope; **no PII/bodies** in any event *(a design gate today; a code gate once Phase 1 wires the substrate — §15)*
 - [ ] Self-review note written; `advisor` consulted if non-trivial
 - [ ] Docs updated in this change set
 - [ ] No new dependency/abstraction without approval
 
 ### 13. Definition of Done
-A feature is **done** only when: every Acceptance Criterion passes; the Checklist (§12) is fully and honestly checked; P0 tests are green; the accessibility gate passes; docs are updated; and the human has accepted it at Merge. **Why:** a single, repeated DoD is what makes "done" trustworthy across months of AI development.
+A feature is **done** only when: every Acceptance Criterion passes; the Checklist (§12) is fully and honestly checked; P0 tests are green; the accessibility gate passes; the observability gate is satisfied (§12 / Engineering Observability Authority §13); docs are updated; and the human has accepted it at Merge. **Why:** a single, repeated DoD is what makes "done" trustworthy across months of AI development.
 
 ---
 

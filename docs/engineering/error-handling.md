@@ -5,6 +5,7 @@
 |---|---|
 | **Status** | ✅ Authoritative |
 | **References** | `api-standards.md`, `logging-observability.md`, Component Catalog (Alert/Toast/ErrorState), `code-style-guide.md` |
+| **Observability overlay** | This doc **owns** the error taxonomy, HTTP mapping, and result shape. The *observability overlay* on it (which class → plane/severity/audit/alert; expected-vs-unexpected; escalation) lives in the **[Engineering Observability Authority §6](../architecture/engineering-observability-authority.md)**, which references — never redefines — this taxonomy. |
 
 > **Why a single error strategy:** Errors are where systems lose data and users lose trust. One consistent model — typed errors, validated boundaries, user-safe messages, full developer context in logs — means failures are predictable, debuggable, and never silently swallowed.
 
