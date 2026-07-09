@@ -27,7 +27,14 @@ const credentialsSchema = z.object({
 });
 
 export const authConfig: NextAuthConfig = {
-  session: { strategy: "jwt" },
+  // JWT sessions carry no server-side revocation, so an already-signed-in principal
+  // stays valid until the token expires. Auth.js defaults that to 30 days; we bound it
+  // to 12h so a suspended/removed staff member (suspension only blocks NEW sign-ins —
+  // TD-10a) loses their live session within a working day. The complementary
+  // per-request account-status re-check is deferred to post-pilot (see the pilot
+  // release checklist). This TTL is unrelated to the Performance-Recovery router-cache
+  // matched set (that tuned navigation/mutation behaviour, not token lifetime).
+  session: { strategy: "jwt", maxAge: 60 * 60 * 12 },
   trustHost: true,
   pages: { signIn: "/sign-in" },
   providers: [
