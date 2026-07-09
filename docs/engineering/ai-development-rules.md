@@ -86,4 +86,4 @@ When you STOP:
 ---
 
 ## H. Definition of Done (for any AI-built unit)
-Done = uses only existing modules/components/tokens (no literals, no bespoke patterns) · follows the mutation pipeline with correct tenancy/permissions · Zod-validated boundaries · P0 tests green · accessibility gate passed · responsive verified · self-reviewed (+`advisor` if non-trivial) · docs updated in the same change · human-accepted at merge. Anything less is **not done** — say so honestly rather than claim completion.
+Done = uses only existing modules/components/tokens (no literals, no bespoke patterns) · follows the mutation pipeline with correct tenancy/permissions · Zod-validated boundaries · P0 tests green · accessibility gate passed · responsive verified · observability satisfied (Engineering Observability Authority §13 — audit/business-event/correlation, no PII/bodies; a design gate until Phase 1 wires the substrate) · self-reviewed (+`advisor` if non-trivial) · docs updated in the same change · human-accepted at merge. Anything less is **not done** — say so honestly rather than claim completion.

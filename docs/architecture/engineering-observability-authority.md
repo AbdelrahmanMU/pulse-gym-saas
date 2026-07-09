@@ -4,11 +4,16 @@
 
 | | |
 |---|---|
-| **Status** | 📐 **PROPOSED AUTHORITY — awaiting human ratification** (see §16 Governance). Design-only; no code, tables, or libraries introduced by this document. |
-| **Tier** | Architecture-level authority (`/docs/architecture/`). On observability it is the **parent** of the engineering-level implementation specs it cites (`logging-observability.md`, `error-handling.md`). It is **subordinate to the ADR** on any structural conflict (§12 of the constitution). |
+| **Status** | ✅ **ACCEPTED AUTHORITY** — ratified as a first-class permanent engineering authority. |
+| **Version** | **v1.0** (technical content frozen at acceptance; amendments are versioned per §16.2). |
+| **Accepted** | **2026-07-09** (Governance Ratification Sprint). Proposed 2026-07-09 (design sprint, commit `8e366f0`) → Accepted 2026-07-09. |
+| **Supersession** | **Supersedes the observability *doctrine* previously stated in `logging-observability.md`** (its `Audit Logging`, `Monitoring`, and `Future Observability Strategy` sections — now demoted to pointers). Supersedes no other document. Superseded by: none. See the supersession map in `observability-authority-ratification.md`. |
+| **Tier** | Architecture-level authority (`/docs/architecture/`). On observability it is the **parent** of the engineering-level implementation specs it cites (`logging-observability.md`, `error-handling.md`). It is **subordinate to the ADR** on any structural conflict (constitution §12). |
 | **Owns** | The *philosophy, taxonomy, correlation model, audit doctrine, exception overlay, unexpected-behaviour doctrine, replay method, metrics/tracing/dashboard/incident principles, developer gates, privacy doctrine, and roadmap* for making PULSE observable. |
 | **Does NOT own (cites instead)** | The concrete log field list, level table, and redaction paths (`logging-observability.md`); the error class taxonomy and result shape (`error-handling.md`); the `audit_logs` table shape and audit fields (`database-standards.md` / DDS §2.17 / INV-39); the `domain.action` naming grammar (`naming-conventions.md`); the mutation pipeline + tenancy laws (ADR §7, §12, §15). **A fact lives in one place; this document references, never restates, those facts.** |
 | **Horizon** | Designed to govern every PULSE feature for **at least five years**, across single-gym pilot → multi-tenant → future background workers, external integrations, and AI agents. |
+
+> **Ratification note (v1.0, 2026-07-09).** This document was reviewed and **accepted**; its technical content is complete and frozen at v1.0. Acceptance is *governance only* — it authorizes no implementation. The observability substrate remains intentionally unbuilt until after the pilot (§0, §15). The status change, the documentation-hierarchy insertion (constitution §12), the demotion of `logging-observability.md` to an implementation specification, and the decision register are recorded in **`observability-authority-ratification.md`**.
 
 > **How to read this document.** Every normative rule is a numbered **law (OBS-n)** — cite them like the ADR's `ADR-nnn` and the domain's `INV-nn`. Each substantive section separates **PRINCIPLE** (permanent), **CURRENT STATE** (what the repo actually does today — honest, and mostly *unwired*), and **ROADMAP** (deferred, dependency-gated). Heavy sections end with **⚖ Rejected alternatives** because a decision without its discarded options is an assertion, not an authority.
 
@@ -502,16 +507,20 @@ Incremental, dependency-honest. **No phase is authorized to add a dependency/lib
 
 ---
 
-## §16. Governance — Ratification Required (human decisions; not performed by this document)
+## §16. Governance — Ratification Record (enacted 2026-07-09)
 
-Per constitution §11 (human owns new patterns/authorities) and §13 (doc conflict → surface, ask, *then* fix the lower doc), the following are **surfaced for the human, not enacted here**:
+Per constitution §11 (human owns new patterns/authorities) and §13 (doc conflict → surface, ask, *then* fix the lower doc), the items below were surfaced at proposal and **ratified in the Governance Ratification Sprint (2026-07-09)**. The full report, supersession map, and decision register live in **`observability-authority-ratification.md`**; the canonical decision is **`decision-log.md` ADR-030**.
 
-1. **Insert this document into the §12 documentation hierarchy** as a ratified architecture-level authority (peer to the ADR on observability; subordinate to it on structural conflict). Until ratified, its status stays 📐 PROPOSED.
-2. **Reconcile the dual-authority collision with `logging-observability.md`** (currently "✅ Authoritative"). **Recommended, not performed:** demote it to *"implementation spec under the Engineering Observability Authority"* — it keeps the concrete field list/level table/redaction/perf-threshold; its `Monitoring` + `Future Observability` sections are **superseded** by §§9–12/§15 here and should point up to them. Exact edit: add a scope line to its header + supersession pointers on those two sections. **This authority makes zero edits to it this sprint** (ask-before-fix).
-3. **Ratify the additive log-schema fields** `family`, `eventName`, `traceId`/`actionId`, `releaseId` (§4.1) into `logging-observability.md` (they are a public-contract change to the log schema).
-4. **Future dependency approvals** (each a separate decision, ADR §15.4): a log drain/aggregator + metrics collector (Phase 2); a tracing library (Phase 3); an alerting/on-call channel (Phase 3 — note ADR-010 in-app-only); DB-level audit-immutability trigger + error-tracking (Phase 4); `/api/version` + build-id plumbing (Phase 2).
-5. **Correlation-id generation seam** (§5.4): confirm whether infra correlation/trace-id minting routes through the existing `lib/platform` clock/id seam (used by domain UUID-v7, ADR-026) or stays a distinct infrastructure concern. *Note:* the "no raw `Date.now()`/`crypto.randomUUID()`" expectation is enforced by code/fitness tests today but is **not** written in any ranked governance doc — deciding its scope for infra ids is part of this ratification, not an assumption this authority makes.
+| # | Item | Disposition at ratification |
+|---|---|---|
+| 1 | Insert into the constitution's §12 documentation hierarchy as a ratified architecture-level authority (peer to the ADR on observability; subordinate on structural conflict). | ✅ **Enacted** — added to `CLAUDE.md §12` (architecture tier). |
+| 2 | Reconcile the dual-authority collision with `logging-observability.md`. | ✅ **Enacted** — that doc is **demoted to an Implementation Specification** under this authority; its `Audit Logging`, `Monitoring`, and `Future Observability Strategy` sections now carry supersession pointers to §3/§9/§11/§12/§15 here. Its field schema/levels/redaction/perf-threshold remain owned there. No information deleted. |
+| 3 | Ratify the additive log-schema fields `family`, `eventName`, `traceId`/`actionId`, `releaseId` (§4.1). | ✅ **Ratified as a Phase-1 schema change** — recorded here and in the ratification report; the concrete field rows are applied to `logging-observability.md` when Phase 1 wires them (no implementation this sprint). |
+| 4 | Future dependency approvals (drain/metrics/tracing/alerting/error-tracking/`/api/version`). | ⏸ **Deferred until after the pilot** (§15 Phase 2+). Each remains a separate future decision (ADR §15.4); none approved now. |
+| 5 | Correlation-id generation seam (§5.4) — route infra id minting through the `lib/platform` seam or keep it distinct. | ⏸ **Deferred to the Phase-1 implementation slice.** Recorded as an open implementation question; the "no raw `Date.now()`/`crypto.randomUUID()`" expectation remains a code/fitness-test rule, not promoted to governance text here. |
+
+**Nothing in this ratification authorizes implementation.** The observability substrate stays intentionally unbuilt until after the pilot (§0, §15).
 
 ---
 
-*This is a proposed engineering authority. On ratification it becomes the permanent observability constitution for PULSE — superseded only by the human and the ranked documents the constitution's §12 places above it. Design-only: no code, tables, libraries, or configuration were changed to produce it.*
+*This is an **accepted** engineering authority (v1.0, 2026-07-09). It is the permanent observability constitution for PULSE — superseded only by the human and the ranked documents the constitution's §12 places above it. Design + governance only: no code, tables, libraries, or configuration were changed to produce or ratify it.*
